@@ -5,7 +5,8 @@ import os.path as osp
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from io import BytesIO
-from torch.utils.data import Dataset
+from typing import Iterable
+from torch.utils.data import Dataset, ConcatDataset
 import torch
 
 
@@ -78,3 +79,24 @@ class BaseDataset(Dataset):
             "text_output": answer_list,
             "data_type": "vqa",
         }
+
+class ConcatDataset(ConcatDataset):
+    def __init__(self, datasets: Iterable[Dataset]) -> None:
+        super().__init__(datasets)
+
+    def collater(self, samples):
+        # TODO For now only supports datasets with same underlying collater implementations
+
+        all_keys = set()
+        for s in samples:
+            all_keys.update(s)
+
+        shared_keys = all_keys
+        for s in samples:
+            shared_keys = shared_keys & set(s.keys())
+
+        samples_shared_keys = []
+        for s in samples:
+            samples_shared_keys.append({k: s[k] for k in s.keys() if k in shared_keys})
+
+        return self.datasets[0].collater(samples_shared_keys)
