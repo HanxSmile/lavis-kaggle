@@ -1,0 +1,5 @@
+datasets:
+  instruct_blip_jiahui_coco2017_vqga_test:
+    data_type: images
+    build_info:
+      images: /mnt/petrelfs/share_data/zhaozhiyuan/InstructBLIP/COCO2017/

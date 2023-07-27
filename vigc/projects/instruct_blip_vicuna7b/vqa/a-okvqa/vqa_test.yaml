@@ -1,0 +1,54 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: blip2_vicuna_instruct
+  model_type: vicuna7b
+  load_pretrained: True
+
+  pretrained: "/mnt/petrelfs/hanxiao/input/instruct-blip/evaluate_vqa/result/20230711174/checkpoint_best.pth"
+  llm_model: "/mnt/petrelfs/hanxiao/vicuna-7b"
+
+
+datasets:
+
+  ## A-OKVQA test
+  instruct_blip_aokvqa_test:
+    vis_processor:
+      eval:
+        name: "blip_image_eval"
+        image_size: 224
+    text_processor:
+      eval:
+        name: "blip_caption"
+        max_words: 100
+
+run:
+  runner: runner_iter
+  task: instruct_blip_vqa
+  report_metric: False
+
+  batch_size_train: 16
+  batch_size_eval: 16
+  num_workers: 4
+
+  iters_per_inner_epoch: 64
+  max_iters: 512
+
+  seed: 42
+  output_dir: "/mnt/petrelfs/hanxiao/input/instruct-blip/evaluate_vqa/result"
+
+  evaluate: True
+  test_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
+  generate_cfg:
+    max_len: 10
+    min_len: 1
+    num_beams: 5
