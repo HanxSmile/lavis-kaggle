@@ -32,7 +32,7 @@ run:
   max_iters: 60000
 
   seed: 42
-  output_dir: "/mnt/petrelfs/hanxiao/input/instruct-blip/generate/result"
+  output_dir: "/mnt/petrelfs/hanxiao/input/vigc/generate/result"
 
   evaluate: True
   test_splits: [ "eval" ]

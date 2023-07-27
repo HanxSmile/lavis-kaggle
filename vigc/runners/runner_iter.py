@@ -13,11 +13,11 @@ import time
 import torch
 import torch.distributed as dist
 import webdataset as wds
-from lavis.common.dist_utils import download_cached_file, is_main_process, main_process
-from lavis.common.registry import registry
-from lavis.common.utils import is_url
-from lavis.datasets.data_utils import concat_datasets, reorg_datasets_by_split
-from lavis.runners.runner_base import RunnerBase
+from vigc.common.dist_utils import download_cached_file, is_main_process, main_process
+from vigc.common.registry import registry
+from vigc.common.utils import is_url
+from vigc.datasets.data_utils import concat_datasets, reorg_datasets_by_split
+from vigc.runners.runner_base import RunnerBase
 from torch.utils.data.dataset import ChainDataset
 
 
