@@ -19,7 +19,7 @@ VIGA_INSTRUCTIONS = {
 class InstructBlipLLavaVQGATask(BaseTask):
 
     def __init__(self, num_beams, max_len, min_len, use_nucleus_sampling, evaluate, task, report_metric=False,
-                 answer_length=4):
+                 answer_length=1, gen_style="vqga"):
         super(InstructBlipLLavaVQGATask, self).__init__()
         self.num_beams = num_beams
         self.max_len = max_len
@@ -31,6 +31,9 @@ class InstructBlipLLavaVQGATask(BaseTask):
         task = task.lower()
         assert task in VIGA_INSTRUCTIONS
         self.prompt = VIGA_INSTRUCTIONS[task]
+        gen_style = gen_style.lower()
+        assert gen_style in ("vqga", "vqa")
+        self.gen_style = gen_style
 
     def build_model(self, cfg):
         model_config = cfg.model_cfg
@@ -83,7 +86,8 @@ class InstructBlipLLavaVQGATask(BaseTask):
         evaluate = run_cfg.evaluate
 
         report_metric = run_cfg.get("report_metric", False)
-        answer_len = run_cfg.get("answer_length")
+        answer_len = run_cfg.get("answer_length", 1)
+        gen_style = run_cfg.get("gen_style", "vqga")
         task = run_cfg.llava_task
 
         return cls(
@@ -94,31 +98,41 @@ class InstructBlipLLavaVQGATask(BaseTask):
             evaluate=evaluate,
             report_metric=report_metric,
             answer_length=answer_len,
-            task=task
+            task=task,
+            gen_style=gen_style
         )
 
     def _update(self, conversation, text):
         if conversation["question"] is None:  # update question and current text
             questions = []
+            ori_answers = []
             for i, QA in enumerate(text):
                 Q = None
+                A = None
                 if "Question:" in QA and "Answer:" in QA:
                     QA = QA.split("Question:")[-1].split("Answer:")
                     if len(QA) == 2:
                         Q = QA[0].strip()
+                        A = QA[1].strip()
                 questions.append(Q)
+                ori_answers.append(A)
                 if Q is None:
                     conversation["valid"][i] = False
             conversation["question"] = questions
+            conversation["original_answers"] = ori_answers
+
             current_texts = []
+
             for i, (c, q) in enumerate(zip(conversation["instruction"], conversation["question"])):
                 current_text = c
                 if q:
-                    current_text = f"{current_text} Question: {q} Answer:"
+                    current_text = f"{current_text} Question: {q} Answer:" if self.gen_style == "vqga" else q
                 current_texts.append(current_text)
             conversation["current_text"] = current_texts
         else:
             current_answers = []
+            if conversation["corrected_answers"] is None:
+                conversation["corrected_answers"] = text
             for answer in text:
                 A = ""
                 if "." in answer:
@@ -146,6 +160,8 @@ class InstructBlipLLavaVQGATask(BaseTask):
             "current_text": instructions,
             "answer": [""] * len(instructions),
             "question": None,
+            "original_answers": None,
+            "corrected_answers": None,
             "valid": [True] * len(instructions)
         }
         images = samples["image"]
