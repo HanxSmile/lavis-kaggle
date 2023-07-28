@@ -25,6 +25,7 @@ run:
   task: instruct_blip_llava_viqa
   answer_length: 4
   llava_task: desc  # desc, comp or conv
+  gen_style: vqga  # vqga or vqa
 
   batch_size_train: 16
   batch_size_eval: 8
