@@ -46,6 +46,41 @@ class MultiIterLoader:
         return sum([len(_) for _ in self.loaders])
 
 
+class ConcatLoader:
+    """
+    A simple wrapper for iterating over multiple iterators.
+
+    Args:
+        loaders (List[Loader]): List of Iterator loaders.
+        ratios (List[float]): List of ratios to sample from each loader. If None, all loaders are sampled uniformly.
+    """
+
+    def __init__(self, loaders):
+        # assert all loaders has __next__ method
+        for loader in loaders:
+            assert hasattr(
+                loader, "__len__"
+            ), "Loader {} has no __len__ method.".format(loader)
+
+        self._epoch = 0
+        self._loader_lens = [len(_) for _ in loaders]
+        self._rest_lens = self._loader_lens.copy()
+
+        self.loaders = loaders
+
+    def __next__(self):
+        # random sample from each loader by ratio
+        loader_idx = random.choices(range(len(self.loaders)), self._rest_lens, k=1)[0]
+        self._rest_lens[loader_idx] -= 1
+        if sum(self._rest_lens) == 0:
+            self._epoch += 1
+            self._rest_lens = self._loader_lens.copy()
+        return next(self.loaders[loader_idx])
+
+    def __len__(self):
+        return sum([len(_) for _ in self.loaders])
+
+
 class PrefetchLoader(object):
     """
     Modified from https://github.com/ChenRocks/UNITER.

@@ -16,7 +16,7 @@ import webdataset as wds
 from vigc.common.dist_utils import download_cached_file, is_main_process, main_process
 from vigc.common.registry import registry
 from vigc.common.utils import is_url
-from vigc.datasets.data_utils import concat_datasets, reorg_datasets_by_split
+from vigc.datasets.data_utils import reorg_datasets_by_split
 from vigc.runners.runner_base import RunnerBase
 from torch.utils.data.dataset import ChainDataset
 
@@ -78,7 +78,7 @@ class RunnerIter(RunnerBase):
         # resume from checkpoint if specified
         if not self.evaluate_only and self.resume_ckpt_path is not None:
             self._load_checkpoint(self.resume_ckpt_path)
-
+        cur_epoch = 0
         for start_iters in range(
                 self.start_iters, self.max_iters, self.iters_per_inner_epoch
         ):
@@ -119,8 +119,11 @@ class RunnerIter(RunnerBase):
                             self.log_stats(val_log, split_name)
             if self.evaluate_only:
                 break
+            if self.milestone and cur_epoch + 1 in self.milestone:
+                self._save_checkpoint(cur_epoch)
             self._save_checkpoint(end_iters, latest=True)
             dist.barrier()
+            cur_epoch += 1
 
         # testing phase
         self.evaluate(cur_epoch=self.cur_epoch)
@@ -301,37 +304,3 @@ class RunnerIter(RunnerBase):
             self._dataloaders = {k: v for k, v in zip(split_names, dataloaders)}
 
         return self._dataloaders
-
-    @property
-    def lr_scheduler(self):
-        """
-        A property to get and create learning rate scheduler by split just in need.
-        """
-        if self._lr_sched is None:
-            lr_sched_cls = registry.get_lr_scheduler_class(self.config.run_cfg.lr_sched)
-
-            # max_epoch = self.config.run_cfg.max_epoch
-            max_epoch = self.max_epoch
-            # min_lr = self.config.run_cfg.min_lr
-            min_lr = self.min_lr
-            # init_lr = self.config.run_cfg.init_lr
-            init_lr = self.init_lr
-
-            # optional parameters
-            decay_rate = self.config.run_cfg.get("lr_decay_rate", None)
-            warmup_start_lr = self.config.run_cfg.get("warmup_lr", -1)
-            warmup_steps = self.config.run_cfg.get("warmup_steps", 0)
-            iters_per_epoch = self.config.run_cfg.get("iters_per_inner_epoch")
-
-            self._lr_sched = lr_sched_cls(
-                optimizer=self.optimizer,
-                max_epoch=max_epoch,
-                min_lr=min_lr,
-                init_lr=init_lr,
-                decay_rate=decay_rate,
-                warmup_start_lr=warmup_start_lr,
-                warmup_steps=warmup_steps,
-                iters_per_epoch=iters_per_epoch,
-            )
-
-        return self._lr_sched

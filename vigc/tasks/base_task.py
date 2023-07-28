@@ -215,25 +215,25 @@ class BaseTask:
 
             lr_scheduler.step(cur_epoch=inner_epoch, cur_step=i)
 
-            for _ in range(accum_grad_iters):
-                with torch.cuda.amp.autocast(enabled=use_amp):
-                    loss, loss_dict = self.train_step(model=model, samples=samples)
-                    loss /= accum_grad_iters  # TODO: not affect loss_dict values for logging
+            with torch.cuda.amp.autocast(enabled=use_amp):
+                loss, loss_dict = self.train_step(model=model, samples=samples)
+                loss /= accum_grad_iters  # TODO: not affect loss_dict values for logging
 
-                # after_train_step()
-                if use_amp:
-                    scaler.scale(loss).backward()
-                else:
-                    loss.backward()
+            # after_train_step()
+            if use_amp:
+                scaler.scale(loss).backward()
+            else:
+                loss.backward()
 
             # update gradients every accum_grad_iters iterations
 
-            if use_amp:
-                scaler.step(optimizer)
-                scaler.update()
-            else:
-                optimizer.step()
-            optimizer.zero_grad()
+            if (i + 1) % accum_grad_iters == 0:
+                if use_amp:
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    optimizer.step()
+                optimizer.zero_grad()
 
             metric_logger.update(**loss_dict)
             metric_logger.update(lr=optimizer.param_groups[0]["lr"])

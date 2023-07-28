@@ -24,10 +24,11 @@ from vigc.common.dist_utils import (
 )
 from vigc.common.registry import registry
 from vigc.common.utils import is_url
-from vigc.datasets.data_utils import concat_datasets, reorg_datasets_by_split
+from vigc.datasets.data_utils import reorg_datasets_by_split
 from vigc.datasets.datasets.dataloader_utils import (
     IterLoader,
     MultiIterLoader,
+    ConcatLoader,
     PrefetchLoader,
 )
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -71,6 +72,10 @@ class RunnerBase:
             self._device = torch.device(self.config.run_cfg.device)
 
         return self._device
+
+    @property
+    def milestone(self):
+        return self.config.run_cfg.get("milestone", None)
 
     @property
     def use_distributed(self):
@@ -157,6 +162,7 @@ class RunnerBase:
             decay_rate = self.config.run_cfg.get("lr_decay_rate", None)
             warmup_start_lr = self.config.run_cfg.get("warmup_lr", -1)
             warmup_steps = self.config.run_cfg.get("warmup_steps", 0)
+            iters_per_epoch = self.config.run_cfg.get("iters_per_inner_epoch")
 
             self._lr_sched = lr_sched_cls(
                 optimizer=self.optimizer,
@@ -166,6 +172,7 @@ class RunnerBase:
                 decay_rate=decay_rate,
                 warmup_start_lr=warmup_start_lr,
                 warmup_steps=warmup_steps,
+                iters_per_epoch=iters_per_epoch,
             )
 
         return self._lr_sched
@@ -190,19 +197,12 @@ class RunnerBase:
         """
         if self._dataloaders is None:
             # reoganize datasets by split and concatenate/chain if necessary
-            dataset_ratios = self.config.run_cfg.get("train_dataset_ratios", None)
 
-            # concatenate map-style datasets and chain wds.DataPipe datasets separately
-            # training set becomes a tuple (ConcatDataset, ChainDataset), both are
-            # optional but at least one of them is required. The resultant ConcatDataset
-            # and ChainDataset will be sampled evenly.
-            logging.info(
-                "dataset_ratios not specified, datasets will be concatenated (map-style datasets) or chained (webdataset.DataPipeline)."
-            )
+            self.datasets = reorg_datasets_by_split(self.datasets)
 
-            datasets = reorg_datasets_by_split(self.datasets)
-
-            self.datasets = concat_datasets(datasets) if dataset_ratios is None else datasets
+            self.datasets = {
+                k: v[0] if len(v) == 1 else v for k, v in self.datasets.items()
+            }
 
             # print dataset statistics after concatenation/chaining
             for split_name in self.datasets:
@@ -263,7 +263,7 @@ class RunnerBase:
                 batch_sizes=batch_sizes,
                 is_trains=is_trains,
                 collate_fns=collate_fns,
-                dataset_ratios=dataset_ratios,
+                concat=True
             )
 
             self._dataloaders = {k: v for k, v in zip(split_names, dataloaders)}
@@ -395,15 +395,11 @@ class RunnerBase:
 
                             val_log.update({"best_epoch": best_epoch})
                             self.log_stats(val_log, split_name)
-
-            else:
-                # if no validation split is provided, we just save the checkpoint at the end of each epoch.
-                if not self.evaluate_only:
-                    self._save_checkpoint(cur_epoch, is_best=False)
-
             if self.evaluate_only:
                 break
-
+            if self.milestone and cur_epoch + 1 in self.milestone:
+                self._save_checkpoint(cur_epoch)
+            self._save_checkpoint(cur_epoch, latest=True)
             dist.barrier()
 
         # testing phase
@@ -488,7 +484,8 @@ class RunnerBase:
             num_workers,
             batch_sizes,
             is_trains,
-            collate_fns
+            collate_fns,
+            concat=False
     ):
         """
         Create dataloaders for training and validation.
@@ -548,14 +545,23 @@ class RunnerBase:
                 datasets, batch_sizes, is_trains, collate_fns
         ):
             if isinstance(dataset, list) or isinstance(dataset, tuple):
-                sample_ratios = [d.sample_ratio for d in dataset]
-                loader = MultiIterLoader(
-                    loaders=[
-                        _create_loader(d, num_workers, bsz, is_train, collate_fn[i])
-                        for i, d in enumerate(dataset)
-                    ],
-                    ratios=sample_ratios
-                )
+                if not concat:
+                    sample_ratios = [d.sample_ratio for d in dataset]
+                    loader = MultiIterLoader(
+                        loaders=[
+                            _create_loader(d, num_workers, bsz, is_train, collate_fn[i])
+                            for i, d in enumerate(dataset)
+                        ],
+                        ratios=sample_ratios
+                    )
+                else:
+                    loader = ConcatLoader(
+                        loaders=[
+                            _create_loader(d, num_workers, bsz, is_train, collate_fn[i])
+                            for i, d in enumerate(dataset)
+                        ]
+                    )
+
             else:
                 loader = _create_loader(dataset, num_workers, bsz, is_train, collate_fn)
 
