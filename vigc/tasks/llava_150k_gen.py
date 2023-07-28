@@ -177,20 +177,24 @@ class InstructBlipLLavaVQGATask(BaseTask):
             )
             self._update(all_res, answers)
 
-        for raw_samples, instruction, current_text, answer, question, valid in zip(raw_samples,
-                                                                                   all_res["instruction"],
-                                                                                   all_res["current_text"],
-                                                                                   all_res["answer"],
-                                                                                   all_res["question"],
-                                                                                   all_res["valid"]):
+        for raw_samples, instruction, current_text, answer, question, valid, original_answer, corrected_answer in zip(
+                raw_samples,
+                all_res["instruction"],
+                all_res["current_text"],
+                all_res["answer"],
+                all_res["question"],
+                all_res["valid"],
+                all_res["original_answers"],
+                all_res["corrected_answers"]):
             raw_samples = raw_samples.copy()
 
             raw_samples.update({
                 "instruction": instruction,
                 "whole_text": current_text,
                 "answer": answer,
+                "original_answer": original_answer,
+                "corrected_answer": corrected_answer,
                 "question": question,
-                "valid": valid
             })
             if valid:
                 results.append(raw_samples)
