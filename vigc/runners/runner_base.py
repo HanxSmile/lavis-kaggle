@@ -162,7 +162,7 @@ class RunnerBase:
             decay_rate = self.config.run_cfg.get("lr_decay_rate", None)
             warmup_start_lr = self.config.run_cfg.get("warmup_lr", -1)
             warmup_steps = self.config.run_cfg.get("warmup_steps", 0)
-            iters_per_epoch = self.config.run_cfg.get("iters_per_inner_epoch", len(self.dataloaders))
+            iters_per_epoch = self.config.run_cfg.get("iters_per_inner_epoch", len(self.train_loader))
 
             self._lr_sched = lr_sched_cls(
                 optimizer=self.optimizer,
