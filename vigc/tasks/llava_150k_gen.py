@@ -19,7 +19,7 @@ VIGA_INSTRUCTIONS = {
 class InstructBlipLLavaVQGATask(BaseTask):
 
     def __init__(self, num_beams, max_len, min_len, use_nucleus_sampling, evaluate, task, report_metric=False,
-                 answer_length=1, gen_style="vqga"):
+                 answer_length=1, gen_style="vqga", last_infer_all=False):
         super(InstructBlipLLavaVQGATask, self).__init__()
         self.num_beams = num_beams
         self.max_len = max_len
@@ -34,6 +34,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
         gen_style = gen_style.lower()
         assert gen_style in ("vqga", "vqa")
         self.gen_style = gen_style
+        self.last_infer_all = last_infer_all
 
     def build_model(self, cfg):
         model_config = cfg.model_cfg
@@ -88,6 +89,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
         report_metric = run_cfg.get("report_metric", False)
         answer_len = run_cfg.get("answer_length", 1)
         gen_style = run_cfg.get("gen_style", "vqga")
+        last_infer_all = run_cfg.get("last_infer_all", False)
         task = run_cfg.llava_task
 
         return cls(
@@ -99,10 +101,12 @@ class InstructBlipLLavaVQGATask(BaseTask):
             report_metric=report_metric,
             answer_length=answer_len,
             task=task,
-            gen_style=gen_style
+            gen_style=gen_style,
+            last_infer_all=last_infer_all,
         )
 
-    def _update(self, conversation, text):
+    def _update(self, conversation, text, step):
+        last_flag = step == self.answer_length
         if conversation["question"] is None:  # update question and current text
             questions = []
             ori_answers = []
@@ -137,6 +141,8 @@ class InstructBlipLLavaVQGATask(BaseTask):
                 A = ""
                 if "." in answer:
                     A = answer.split(".")[0].strip() + "."
+                if last_flag and self.last_infer_all:
+                    A = answer
                 current_answers.append(A)
             current_texts = []
             answers = []
@@ -166,7 +172,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
         }
         images = samples["image"]
 
-        for _ in range(self.answer_length + 1):
+        for i in range(self.answer_length + 1):
             this_sample = {"prompt": all_res["current_text"], "image": images}
             answers = model.generate(
                 this_sample,
@@ -175,7 +181,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
                 max_length=self.max_len,
                 min_length=self.min_len
             )
-            self._update(all_res, answers)
+            self._update(all_res, answers, step=i)
 
         for raw_samples, instruction, current_text, answer, question, valid, original_answer, corrected_answer in zip(
                 raw_samples,
