@@ -395,13 +395,11 @@ class RunnerBase:
 
                             val_log.update({"best_epoch": best_epoch})
                             self.log_stats(val_log, split_name)
-                        dist.barrier()
 
             if self.evaluate_only:
                 break
             if self.milestone and cur_epoch + 1 in self.milestone:
                 self._save_checkpoint(cur_epoch)
-                dist.barrier()
             self._save_checkpoint(cur_epoch, latest=True)
             dist.barrier()
 

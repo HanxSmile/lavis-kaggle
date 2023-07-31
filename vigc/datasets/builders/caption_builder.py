@@ -19,6 +19,7 @@ class CCSBUBuilder(BaseDatasetBuilder):
         self.build_processors()
 
         build_info = self.config.build_info
+        min_length = self.config.get("min_length", 1)
 
         datasets = dict()
         split = "train"
@@ -30,7 +31,8 @@ class CCSBUBuilder(BaseDatasetBuilder):
             vis_processor=self.vis_processors[split],
             text_processor=self.text_processors[split],
             location=build_info.storage,
-            length=self.config.get("length", 1)
+            length=self.config.get("length", 1),
+            min_length=min_length
         )
 
         return datasets

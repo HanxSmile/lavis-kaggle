@@ -73,9 +73,10 @@ class WdsCCSBUDataset:
 
 
 class CCSBUDataset(ChainDataset):
-    def __init__(self, vis_processor, text_processor, location, length=0):
+    def __init__(self, vis_processor, text_processor, location, length=0, min_length=1):
         self.vis_processor = vis_processor
         self.text_processor = text_processor
+        self.min_length = min_length
 
         datasets = [wds.DataPipeline(
             wds.ResampledShards(location),
@@ -107,7 +108,10 @@ class CCSBUDataset(ChainDataset):
         for d in self.datasets:
             assert isinstance(d, IterableDataset), "ChainDataset only supports IterableDataset"
             for x in d:
-                yield self.process_sample(x)
+                caption = x["caption"]
+                caption_words = caption.split(" ")
+                if len(caption_words) >= self.min_length:
+                    yield self.process_sample(x)
 
     def __len__(self):
         return self._length
