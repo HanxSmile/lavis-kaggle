@@ -8,7 +8,7 @@ model:
   model_type: vicuna13b
   load_pretrained: True
 
-  pretrained: "/mnt/petrelfs/share_data/zhonghuaping.p/pretrained_weights/pretrained_minigpt4.pth"
+  pretrained: "/mnt/petrelfs/hanxiao/input/instruct-blip/blip2_pretrained_flant5xxl.pth"
   llm_model: "/mnt/petrelfs/hanxiao/vicuna-13b"
 
 
