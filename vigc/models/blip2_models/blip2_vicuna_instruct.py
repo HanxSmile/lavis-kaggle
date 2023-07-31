@@ -38,6 +38,7 @@ class Blip2VicunaInstruct(Blip2Base):
             use_grad_checkpoint=False,
             vit_precision="fp16",
             freeze_vit=True,
+            freeze_vit_ln=False,
             num_query_token=32,
             llm_model="",
             prompt="",
@@ -63,6 +64,13 @@ class Blip2VicunaInstruct(Blip2Base):
             self.visual_encoder = self.visual_encoder.eval()
             self.visual_encoder.train = disabled_train
             logging.info("freeze vision encoder")
+
+        if freeze_vit_ln:
+            for name, param in self.ln_vision.named_parameters():
+                param.requires_grad = False
+            self.ln_vision = self.ln_vision.eval()
+            self.ln_vision.train = disabled_train
+            logging.info("freeze vit layner norm")
 
         self.Qformer, self.query_tokens = self.init_Qformer(
             num_query_token, self.visual_encoder.num_features
@@ -603,7 +611,7 @@ class Blip2VicunaInstruct(Blip2Base):
         use_grad_checkpoint = cfg.get("use_grad_checkpoint", False)
         vit_precision = cfg.get("vit_precision", "fp16")
         freeze_vit = cfg.get("freeze_vit", True)
-
+        freeze_vit_ln = cfg.get("freeze_vit_ln", False)
         prompt = cfg.get("prompt", "")
         max_txt_len = cfg.get("max_txt_len", 128)
         max_output_txt_len = cfg.get("max_output_txt_len", 256)
@@ -619,6 +627,7 @@ class Blip2VicunaInstruct(Blip2Base):
             use_grad_checkpoint=use_grad_checkpoint,
             vit_precision=vit_precision,
             freeze_vit=freeze_vit,
+            freeze_vit_ln=freeze_vit_ln,
             num_query_token=num_query_token,
             llm_model=llm_model,
             prompt=prompt,
