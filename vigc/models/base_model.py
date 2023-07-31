@@ -74,7 +74,7 @@ class BaseModel(nn.Module):
     @classmethod
     def default_config_path(cls, model_type):
         assert (
-            model_type in cls.PRETRAINED_MODEL_CONFIG_DICT
+                model_type in cls.PRETRAINED_MODEL_CONFIG_DICT
         ), "Unknown model type {}".format(model_type)
         return get_abs_path(cls.PRETRAINED_MODEL_CONFIG_DICT[model_type])
 
@@ -86,21 +86,23 @@ class BaseModel(nn.Module):
         When loading the pretrained model, each task-specific architecture may define their
         own load_from_pretrained() method.
         """
+        load_pretrained = cfg.get("load_pretrained", True)
         load_finetuned = cfg.get("load_finetuned", True)
+
+        if load_pretrained:
+            # load pre-trained weights
+            pretrain_path = cfg.get("pretrained", None)
+            assert "Found load_finetuned is False, but pretrain_path is None."
+            self.load_from_pretrained(url_or_filename=pretrain_path, **kwargs)
+            logging.info(f"Loaded pretrained model '{pretrain_path}'.")
+
         if load_finetuned:
             finetune_path = cfg.get("finetuned", None)
             assert (
-                finetune_path is not None
+                    finetune_path is not None
             ), "Found load_finetuned is True, but finetune_path is None."
             self.load_checkpoint(url_or_filename=finetune_path)
-        else:
-            load_pretrained = cfg.get("load_pretrained", True)
-            if load_pretrained:
-                # load pre-trained weights
-                pretrain_path = cfg.get("pretrained", None)
-                assert "Found load_finetuned is False, but pretrain_path is None."
-                self.load_from_pretrained(url_or_filename=pretrain_path, **kwargs)
-
+            logging.info(f"Loaded finetuned model '{finetune_path}'.")
 
     def before_evaluation(self, **kwargs):
         pass
@@ -150,12 +152,12 @@ class SharedQueueMixin:
         assert self.queue_size % batch_size == 0  # for simplicity
 
         # replace the keys at ptr (dequeue and enqueue)
-        self.image_queue[:, ptr : ptr + batch_size] = image_feats.T
-        self.text_queue[:, ptr : ptr + batch_size] = text_feats.T
+        self.image_queue[:, ptr: ptr + batch_size] = image_feats.T
+        self.text_queue[:, ptr: ptr + batch_size] = text_feats.T
 
         if idxs is not None:
             idxs = concat_all_gather(idxs)
-            self.idx_queue[:, ptr : ptr + batch_size] = idxs.T
+            self.idx_queue[:, ptr: ptr + batch_size] = idxs.T
 
         ptr = (ptr + batch_size) % self.queue_size  # move pointer
         self.queue_ptr[0] = ptr
@@ -166,7 +168,7 @@ class MomentumDistilationMixin:
     def copy_params(self):
         for model_pair in self.model_pairs:
             for param, param_m in zip(
-                model_pair[0].parameters(), model_pair[1].parameters()
+                    model_pair[0].parameters(), model_pair[1].parameters()
             ):
                 param_m.data.copy_(param.data)  # initialize
                 param_m.requires_grad = False  # not update by gradient
@@ -175,10 +177,10 @@ class MomentumDistilationMixin:
     def _momentum_update(self):
         for model_pair in self.model_pairs:
             for param, param_m in zip(
-                model_pair[0].parameters(), model_pair[1].parameters()
+                    model_pair[0].parameters(), model_pair[1].parameters()
             ):
                 param_m.data = param_m.data * self.momentum + param.data * (
-                    1.0 - self.momentum
+                        1.0 - self.momentum
                 )
 
 

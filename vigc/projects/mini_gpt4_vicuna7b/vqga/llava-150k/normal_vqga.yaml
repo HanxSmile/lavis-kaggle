@@ -7,8 +7,10 @@ model:
   arch: blip2_vicuna_instruct
   model_type: vicuna7b
   load_pretrained: True
+  load_finetuned: True
 
   pretrained: "/mnt/petrelfs/hanxiao/input/instruct-blip/blip2_pretrained_flant5xxl.pth"
+  finetuned: "/mnt/petrelfs/share_data/zhonghuaping.p/pretrained_weights/pretrained_minigpt4_7b_stage1.pth"
   llm_model: "/mnt/petrelfs/hanxiao/vicuna-7b"
 
 
