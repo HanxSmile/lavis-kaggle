@@ -9,6 +9,7 @@ from vigc.datasets.builders.base_dataset_builder import load_dataset_config
 
 from vigc.common.registry import registry
 
+from vigc.datasets.builders.caption_builder import CCSBUBuilder
 from vigc.datasets.builders.vqa_eval_builder import (
     AOKVQAEvalBuilder,
     VQAv2EvalBuilder,
@@ -77,6 +78,7 @@ __all__ = [
     "OKVQAEvalBuilder",
     "VQAv2EvalBuilder",
     "LlavaVQGAEvalBuilder",
+    "CCSBUBuilder",
 
 ]
 

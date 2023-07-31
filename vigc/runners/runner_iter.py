@@ -114,13 +114,15 @@ class RunnerIter(RunnerBase):
                                 best_iters, best_agg_metric = end_iters, agg_metrics
 
                                 self._save_checkpoint(end_iters, is_best=True)
-
+                                dist.barrier()
                             val_log.update({"best_iters": best_iters})
                             self.log_stats(val_log, split_name)
+
             if self.evaluate_only:
                 break
             if self.milestone and cur_epoch + 1 in self.milestone:
                 self._save_checkpoint(cur_epoch)
+                dist.barrier()
             self._save_checkpoint(end_iters, latest=True)
             dist.barrier()
             cur_epoch += 1
