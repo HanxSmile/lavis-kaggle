@@ -114,10 +114,11 @@ run:
 
   iters_per_inner_epoch: 2000
   max_iters: 60000
+  milestone: [10, 15, 20]
   accum_grad_iters: 2
 
   seed: 42
-  output_dir: "/mnt/petrelfs/hanxiao/input/vigc/viga/result"
+  output_dir: "output/minigpt4_13b_llava"
 
   amp: True
   resume_ckpt_path: null
