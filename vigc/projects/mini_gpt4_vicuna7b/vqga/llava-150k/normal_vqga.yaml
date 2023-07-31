@@ -8,9 +8,10 @@ model:
   model_type: vicuna7b
   load_pretrained: True
   load_finetuned: True
+  freeze_vit_ln: True
 
   pretrained: "/mnt/petrelfs/hanxiao/input/instruct-blip/blip2_pretrained_flant5xxl.pth"
-  finetuned: "/mnt/petrelfs/share_data/zhonghuaping.p/pretrained_weights/pretrained_minigpt4_7b_stage1.pth"
+  finetuned: "/mnt/petrelfs/hanxiao/input/instruct-blip/minigpt4_proj_7b.pth"
   llm_model: "/mnt/petrelfs/hanxiao/vicuna-7b"
 
 
