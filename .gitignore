@@ -146,6 +146,7 @@ cython_debug/
 
 # project-specific
 output/
+result/
 debug*/
 *.bak
 *.dir
