@@ -94,13 +94,13 @@ class BaseModel(nn.Module):
             pretrain_path = cfg.get("pretrained", None)
             assert pretrain_path, "Found load_finetuned is False, but pretrain_path is None."
             self.load_from_pretrained(url_or_filename=pretrain_path, **kwargs)
-            logging.info(f"Loaded pretrained model '{pretrain_path}'.")
+            print(f"Loaded pretrained model '{pretrain_path}'.")
 
         if load_finetuned:
             finetune_path = cfg.get("finetuned", None)
             assert finetune_path is not None, "Found load_finetuned is True, but finetune_path is None."
             self.load_checkpoint(url_or_filename=finetune_path)
-            logging.info(f"Loaded finetuned model '{finetune_path}'.")
+            print(f"Loaded finetuned model '{finetune_path}'.")
 
     def before_evaluation(self, **kwargs):
         pass
