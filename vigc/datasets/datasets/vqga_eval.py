@@ -137,6 +137,44 @@ class COCO2017_Eval_Dataset(A_OKVQA_VQGA_EvalDataset):
         return input_sample, raw_sample
 
 
+class Object365_Eval_Dataset(A_OKVQA_VQGA_EvalDataset):
+
+    def __init__(self, vis_processor, text_processor, vis_root, anno_file, image_ids_file, filter):
+        super().__init__(vis_processor, text_processor, vis_root, anno_file)
+        image_ids = json.load(open(image_ids_file))
+        _filter_image_ids = {k: v for k, v in image_ids.items() if k in filter}
+        filter_image_ids = []
+        for ids in _filter_image_ids.values():
+            filter_image_ids.extend(ids)
+        self.filter_image_ids = set(filter_image_ids)
+        filtered_samples = []
+
+        for sample in self.samples:
+            if sample["image_id"] not in filter_image_ids:
+                filtered_samples.append(sample)
+        self.samples = filtered_samples
+
+    def __getitem__(self, index):
+        ann = self.samples[index]
+
+        image = self.vis_processor(self._read_image(ann))
+
+        instruction = random.choice(self.VQGA_INSTRUCTIONS)
+        # question = self.text_processor(instruction)
+        question = instruction
+        image_path = ann["image"]
+        # image: train/patch38/objects365_v2_01805764.jpg
+        image_id = int(image_path.split("/")[-1].split('_')[-1][:-4])
+
+        raw_sample = {"image": ann["image"], "instruction": question, "image_id": image_id}
+
+        input_sample = {
+            "image": image,
+            "prompt": question
+        }
+        return input_sample, raw_sample
+
+
 class COCO2017_JiaHui_Eval_Dataset(A_OKVQA_VQGA_EvalDataset):
     PROMPTS = (
         "Question: {q} Short answer:",
