@@ -43,7 +43,7 @@ class MultiIterLoader:
         return next(self.loaders[loader_idx])
 
     def __len__(self):
-        return sum([len(_) for _ in self.loaders])
+        return sum([len(_) for _ in self.loaders if hasattr(_, "__len__")])
 
 
 class ConcatLoader:
@@ -78,7 +78,7 @@ class ConcatLoader:
         return next(self.loaders[loader_idx])
 
     def __len__(self):
-        return sum([len(_) for _ in self.loaders])
+        return sum([len(_) for _ in self.loaders if hasattr(_, "__len__")])
 
 
 class PrefetchLoader(object):
