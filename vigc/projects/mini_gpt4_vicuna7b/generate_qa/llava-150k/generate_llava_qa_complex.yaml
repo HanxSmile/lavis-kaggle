@@ -3,7 +3,7 @@ model:
   model_type: vicuna7b
   load_pretrained: True
 
-  pretrained: "/mnt/petrelfs/share_data/zhonghuaping.p/pretrained_weights/pretrained_minigpt4_7b_stage1.pth"
+  pretrained: "/mnt/petrelfs/share_data/wangbin/mllm/vigc/models/minigpt4_7b_best.pth"
   llm_model: "/mnt/petrelfs/hanxiao/vicuna-7b"
 
 datasets:
