@@ -24,6 +24,8 @@ from vigc.models.blip2_models.Qformer import BertConfig, BertLMHeadModel
 from vigc.models.eva_vit import create_eva_vit_g
 from vigc.models.clip_vit import create_clip_vit_L
 from transformers import BertTokenizer
+from transformers.utils import logging
+logging.set_verbosity_error()
 
 
 class Blip2Base(BaseModel):
