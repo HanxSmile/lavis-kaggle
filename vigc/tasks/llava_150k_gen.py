@@ -169,14 +169,13 @@ class InstructBlipLLavaVQGATask(BaseTask):
                 if last_flag and self.last_infer_all:
                     A = answer.strip()
                 current_answers.append(A)
-                if A:
-                    conversation["answer_lst"][i].append(A)
             current_texts = []
             answers = []
             for i, (c, old_a, a) in enumerate(
                     zip(conversation["current_text"], conversation["answer"], current_answers)):
                 current_text = f"{c} {a}".strip() if first_flag else f"{c} \n\n{a}".strip()
                 current_texts.append(current_text)
+                conversation["answer_lst"][i].append(a)
                 answer = f"{old_a} \n\n{a}".strip()
                 answers.append(answer)
             conversation["current_text"] = current_texts
@@ -193,7 +192,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
             "instruction": instructions,
             "current_text": instructions,
             "answer": [""] * len(instructions),
-            "answer_lst": [[] for _ in instructions],
+            "answer_lst": [list() for _ in instructions],
             "question": None,
             "original_answers": None,
             "corrected_answers": None,
