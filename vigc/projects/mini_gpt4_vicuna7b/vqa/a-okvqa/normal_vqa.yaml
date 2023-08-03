@@ -41,27 +41,26 @@ datasets:
         max_words: 100
 
 run:
-  runner: runner_iter
+  runner: runner_base
   task: instruct_blip_vqa
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 1e-5
-  min_lr: 0
-  warmup_lr: 1e-8
+  init_lr: 3e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-6
 
   weight_decay: 0.05
 
   batch_size_train: 16
   batch_size_eval: 16
   num_workers: 4
-  warmup_steps: 64
+  warmup_steps: 1000
 
-  iters_per_inner_epoch: 64
-  max_iters: 512
+  max_epoch: 30
   accum_grad_iters: 1
 
   seed: 42
-  output_dir: "/mnt/petrelfs/hanxiao/input/instruct-blip/evaluate_vqa/result"
+  output_dir: "/mnt/petrelfs/hanxiao/input/vigc/evaluate_vqa/result"
 
   amp: True
   resume_ckpt_path: null
