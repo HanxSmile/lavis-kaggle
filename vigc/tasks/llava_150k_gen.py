@@ -164,11 +164,13 @@ class InstructBlipLLavaVQGATask(BaseTask):
                 conversation["corrected_answers"] = text
             else:
                 first_flag = False
-            for answer in text:
+            for i, answer in enumerate(text):
                 A = answer.split("\n\n")[0].strip()
                 if last_flag and self.last_infer_all:
                     A = answer.strip()
                 current_answers.append(A)
+                if A:
+                    conversation["answer_lst"][i].append(A)
             current_texts = []
             answers = []
             for i, (c, old_a, a) in enumerate(
@@ -191,6 +193,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
             "instruction": instructions,
             "current_text": instructions,
             "answer": [""] * len(instructions),
+            "answer_lst": [[] for _ in instructions],
             "question": None,
             "original_answers": None,
             "corrected_answers": None,
@@ -209,7 +212,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
             )
             self._update(all_res, answers, step=i)
 
-        for raw_samples, instruction, current_text, answer, question, valid, original_answer, corrected_answer in zip(
+        for raw_samples, instruction, current_text, answer, question, valid, original_answer, corrected_answer, answer_lst in zip(
                 raw_samples,
                 all_res["instruction"],
                 all_res["current_text"],
@@ -217,7 +220,8 @@ class InstructBlipLLavaVQGATask(BaseTask):
                 all_res["question"],
                 all_res["valid"],
                 all_res["original_answers"],
-                all_res["corrected_answers"]):
+                all_res["corrected_answers"],
+                all_res["answer_lst"]):
             raw_samples = raw_samples.copy()
 
             raw_samples.update({
@@ -227,6 +231,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
                 "original_answer": original_answer,
                 "corrected_answer": corrected_answer,
                 "question": question,
+                "answer_lst": answer_lst
             })
             if valid:
                 results.append(raw_samples)
