@@ -4,6 +4,7 @@
  SPDX-License-Identifier: BSD-3-Clause
  For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
+
 import contextlib
 import logging
 import os
@@ -24,8 +25,9 @@ from vigc.models.blip2_models.Qformer import BertConfig, BertLMHeadModel
 from vigc.models.eva_vit import create_eva_vit_g
 from vigc.models.clip_vit import create_clip_vit_L
 from transformers import BertTokenizer
-from transformers.utils import logging
-logging.set_verbosity_error()
+from transformers.utils import logging as tf_logging
+
+tf_logging.set_verbosity_error()
 
 
 class Blip2Base(BaseModel):
@@ -63,7 +65,7 @@ class Blip2Base(BaseModel):
         return Qformer, query_tokens
 
     def init_vision_encoder(
-        self, model_name, img_size, drop_path_rate, use_grad_checkpoint, precision
+            self, model_name, img_size, drop_path_rate, use_grad_checkpoint, precision
     ):
         assert model_name in [
             "eva_clip_g",
@@ -74,10 +76,10 @@ class Blip2Base(BaseModel):
             visual_encoder = create_eva_vit_g(
                 img_size, drop_path_rate, use_grad_checkpoint, precision
             )
-#         elif model_name == "eva2_clip_L":
-#             visual_encoder = create_eva2_vit_L(
-#                 img_size, drop_path_rate, use_grad_checkpoint, precision
-#             )
+        #         elif model_name == "eva2_clip_L":
+        #             visual_encoder = create_eva2_vit_L(
+        #                 img_size, drop_path_rate, use_grad_checkpoint, precision
+        #             )
         elif model_name == "clip_L":
             visual_encoder = create_clip_vit_L(img_size, use_grad_checkpoint, precision)
         ln_vision = LayerNorm(visual_encoder.num_features)
@@ -122,7 +124,7 @@ class Blip2Base(BaseModel):
                     group_name = "decay"
                     this_weight_decay = weight_decay
                 if 'visual_encoder' in name:
-                    layer_id = self.visual_encoder.get_num_layer(name.replace('visual_encoder.',''))
+                    layer_id = self.visual_encoder.get_num_layer(name.replace('visual_encoder.', ''))
                     group_name = "vit_layer_%d_%s" % (layer_id, group_name)
                 else:
                     layer_id = None
@@ -149,7 +151,7 @@ class Blip2Base(BaseModel):
             optim_params = list(parameter_group_vars.values())
             return optim_params
         else:
-            return super().get_optimizer_params(weight_decay,lr_scale)
+            return super().get_optimizer_params(weight_decay, lr_scale)
 
     def _lemmatize(self, answers):
         def apply(answer):
@@ -188,6 +190,7 @@ class Blip2Base(BaseModel):
 
         return self._lemmatizer
 
+
 def disabled_train(self, mode=True):
     """Overwrite model.train with this function to make sure train/eval mode
     does not change anymore."""
@@ -219,7 +222,7 @@ def compute_sim_matrix(model, data_loader, **kwargs):
     text_embeds = []
     text_atts = []
     for i in range(0, num_text, text_bs):
-        text = texts[i : min(num_text, i + text_bs)]
+        text = texts[i: min(num_text, i + text_bs)]
         text_input = model.tokenizer(
             text,
             padding="max_length",
@@ -271,7 +274,7 @@ def compute_sim_matrix(model, data_loader, **kwargs):
     end = min(sims_matrix.size(0), start + step)
 
     for i, sims in enumerate(
-        metric_logger.log_every(sims_matrix[start:end], 50, header)
+            metric_logger.log_every(sims_matrix[start:end], 50, header)
     ):
         topk_sim, topk_idx = sims.topk(k=k_test, dim=0)
         image_inputs = vit_feats[start + i].repeat(k_test, 1, 1).to(model.device)
@@ -292,7 +295,7 @@ def compute_sim_matrix(model, data_loader, **kwargs):
     end = min(sims_matrix.size(0), start + step)
 
     for i, sims in enumerate(
-        metric_logger.log_every(sims_matrix[start:end], 50, header)
+            metric_logger.log_every(sims_matrix[start:end], 50, header)
     ):
         topk_sim, topk_idx = sims.topk(k=k_test, dim=0)
         image_inputs = vit_feats[topk_idx.cpu()].to(model.device)
