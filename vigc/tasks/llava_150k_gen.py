@@ -19,7 +19,7 @@ VIGA_INSTRUCTIONS = {
 class InstructBlipLLavaVQGATask(BaseTask):
 
     def __init__(self, num_beams, max_len, min_len, use_nucleus_sampling, evaluate, task, report_metric=False,
-                 answer_length=1, gen_style="vqga", last_infer_all=False):
+                 answer_length=1, gen_style="vqga", last_infer_all=False, in_section=False):
         super(InstructBlipLLavaVQGATask, self).__init__()
         self.num_beams = num_beams
         self.max_len = max_len
@@ -35,6 +35,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
         assert gen_style in ("vqga", "vqa")
         self.gen_style = gen_style
         self.last_infer_all = last_infer_all
+        self.in_section = in_section
 
     def build_model(self, cfg):
         model_config = cfg.model_cfg
@@ -90,6 +91,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
         answer_len = run_cfg.get("answer_length", 1)
         gen_style = run_cfg.get("gen_style", "vqga")
         last_infer_all = run_cfg.get("last_infer_all", False)
+        in_section = run_cfg.get("in_section", False)
         task = run_cfg.llava_task
 
         return cls(
@@ -103,6 +105,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
             task=task,
             gen_style=gen_style,
             last_infer_all=last_infer_all,
+            in_section=in_section
         )
 
     def _update(self, conversation, text, step):
@@ -133,7 +136,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
                     current_text = f"{current_text} Question: {q} Answer:" if self.gen_style == "vqga" else q
                 current_texts.append(current_text)
             conversation["current_text"] = current_texts
-        else:
+        elif not self.in_section:
             current_answers = []
             if conversation["corrected_answers"] is None:
                 conversation["corrected_answers"] = text
@@ -154,6 +157,29 @@ class InstructBlipLLavaVQGATask(BaseTask):
                 answers.append(answer)
             conversation["current_text"] = current_texts
             conversation["answer"] = answers
+        else:  # in_section
+            current_answers = []
+            first_flag = True
+            if conversation["corrected_answers"] is None:
+                conversation["corrected_answers"] = text
+            else:
+                first_flag = False
+            for answer in text:
+                A = answer.split("\n\n")[0].strip()
+                if last_flag and self.last_infer_all:
+                    A = answer.strip()
+                current_answers.append(A)
+            current_texts = []
+            answers = []
+            for i, (c, old_a, a) in enumerate(
+                    zip(conversation["current_text"], conversation["answer"], current_answers)):
+                current_text = f"{c} {a}".strip() if first_flag else f"{c} \n\n{a}".strip()
+                current_texts.append(current_text)
+                answer = f"{old_a} \n\n{a}".strip()
+                answers.append(answer)
+            conversation["current_text"] = current_texts
+            conversation["answer"] = answers
+
         return conversation
 
     def valid_step(self, model, samples):
