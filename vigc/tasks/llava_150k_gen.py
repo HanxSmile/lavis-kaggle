@@ -3,6 +3,7 @@ from vigc.tasks.base_task import BaseTask
 import torch
 import logging
 from vigc.models.blip2_models.blip2 import disabled_train
+from vigc.models import load_model_and_preprocess
 from peft import LoraConfig, get_peft_model
 
 VIGA_INSTRUCTIONS = {
@@ -38,6 +39,16 @@ class InstructBlipLLavaVQGATask(BaseTask):
         self.in_section = in_section
 
     def build_model(self, cfg):
+        model, vis_processors, _ = load_model_and_preprocess(
+            name=cfg.model_name,
+            model_type=cfg.model_type,
+            is_eval=True,
+        )
+
+        model.load_checkpoint(cfg.pretrained)
+        return model
+
+    def build_model_(self, cfg):
         model_config = cfg.model_cfg
 
         model_cls = registry.get_model_class(model_config.arch)
