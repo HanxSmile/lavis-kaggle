@@ -38,7 +38,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
         self.last_infer_all = last_infer_all
         self.in_section = in_section
 
-    def build_model(self, cfg):
+    def build_model_(self, cfg):
         model_config = cfg.model_cfg
         model, vis_processors, _ = load_model_and_preprocess(
             name=model_config.model_name,
@@ -49,7 +49,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
         model.load_checkpoint(model_config.pretrained)
         return model
 
-    def build_model_(self, cfg):
+    def build_model(self, cfg):
         model_config = cfg.model_cfg
 
         model_cls = registry.get_model_class(model_config.arch)
