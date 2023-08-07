@@ -24,7 +24,7 @@ from vigc.common.dist_utils import (
 )
 from vigc.common.registry import registry
 from vigc.common.utils import is_url
-from vigc.datasets.data_utils import reorg_datasets_by_split
+from vigc.datasets.data_utils import reorg_datasets_by_split, concat_datasets
 from vigc.datasets.datasets.dataloader_utils import (
     IterLoader,
     MultiIterLoader,
@@ -198,7 +198,8 @@ class RunnerBase:
         if self._dataloaders is None:
             # reoganize datasets by split and concatenate/chain if necessary
 
-            self.datasets = reorg_datasets_by_split(self.datasets)
+            datasets = reorg_datasets_by_split(self.datasets)
+            self.datasets = concat_datasets(datasets)
 
             self.datasets = {
                 k: v[0] if len(v) == 1 else v for k, v in self.datasets.items()
@@ -263,7 +264,7 @@ class RunnerBase:
                 batch_sizes=batch_sizes,
                 is_trains=is_trains,
                 collate_fns=collate_fns,
-                concat=True
+                # concat=True
             )
 
             self._dataloaders = {k: v for k, v in zip(split_names, dataloaders)}
