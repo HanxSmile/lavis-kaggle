@@ -41,7 +41,7 @@ class InstructBlipLLavaVQGATask(BaseTask):
     def build_model_(self, cfg):
         model_config = cfg.model_cfg
         model, vis_processors, _ = load_model_and_preprocess(
-            name=model_config.model_name,
+            name=model_config.arch,
             model_type=model_config.model_type,
             is_eval=True,
         )

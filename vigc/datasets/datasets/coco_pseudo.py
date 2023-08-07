@@ -34,7 +34,7 @@ class COCO_Pseudo_Dataset(LlavaBaseDataset):
                 filtered_samples.append(sample)
         try:
             if threshold > 0:
-                self.sampels = [_ for _ in filtered_samples if max(_["weight"]) > threshold]
+                self.samples = [_ for _ in filtered_samples if max(_["weight"]) > threshold]
             else:
                 self.samples = filtered_samples
         except KeyError:
