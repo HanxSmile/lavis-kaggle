@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import os.path as osp
 import datasets
-from datasets import Dataset, Audio
+import librosa
 import torch
 from typing import Dict, List, Union
 
@@ -27,25 +27,28 @@ class BengaliASR(torch_Dataset):
         annotations = pd.read_csv(self.anno_path)
         data = annotations[annotations["split"] == split]
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
-        inner_dataset = Dataset.from_pandas(data, split=SPLIT[split])
-        inner_dataset = inner_dataset.cast_column("audio", Audio())
-        inner_dataset = inner_dataset.remove_columns(["__index_level_0__", "split"])
+        self.inner_dataset = data
         self.transform = transform
-
-        self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=16_000))
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def __getitem__(self, index):
-        ann = self.inner_dataset[index]
-        audio = ann["audio"]
+        ann = self.inner_dataset.loc[index]
+        audio_path = ann.audio
+        array, sr = librosa.load(audio_path, sr=None)
+        array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
+        audio = {
+            "path": audio_path,
+            "array": array,
+            "sampling_rate": sr
+        }
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
         input_features = self.audio_processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
-        labels = self.text_processor(ann["sentence"]).input_ids
-        id_ = ann["id"]
-        return {"input_features": input_features, "labels": labels, "sentence": ann["sentence"], "id": id_}
+        labels = self.text_processor(ann.sentence).input_ids
+
+        return {"input_features": input_features, "labels": labels, "sentence": ann.sentence, "id": ann.id}
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
