@@ -8,7 +8,8 @@ model:
   load_finetuned: False
   finetuned: ""
   post_process_flag: True
-
+  arch: bengali_whisper
+  model_type: default
 
 datasets:
   # train
