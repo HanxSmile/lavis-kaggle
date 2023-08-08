@@ -19,7 +19,7 @@ import torch
 from torch.utils.data.dataset import IterableDataset, ChainDataset
 from decord import VideoReader
 from vigc.common.registry import registry
-from vigc.datasets.datasets.base_dataset import ConcatDataset
+from vigc.datasets.datasets.instruct_blip.base_dataset import ConcatDataset
 from tqdm import tqdm
 
 decord.bridge.set_bridge("torch")
