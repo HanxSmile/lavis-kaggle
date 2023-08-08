@@ -2,4 +2,4 @@ datasets:
   whisper_bengali_asr_eval:
     data_type: audios
     build_info:
-      images: /mnt/petrelfs/share_data/hanxiao/bengaliai-speech
+      data_root: /mnt/petrelfs/share_data/hanxiao/bengaliai-speech

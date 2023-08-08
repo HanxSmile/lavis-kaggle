@@ -14,7 +14,7 @@ SPLIT = {
 
 
 class BengaliASR(Dataset):
-    def __init__(self, feature_extractor, tokenizer, processor, data_root, split: str):
+    def __init__(self, feature_extractor, tokenizer, processor, data_root, split: str, transform=None):
         split = split.lower()
         assert split in ("train", "valid")
         self.processor = processor
@@ -28,6 +28,7 @@ class BengaliASR(Dataset):
         inner_dataset = Dataset.from_pandas(data, split=SPLIT[split])
         inner_dataset = inner_dataset.cast_column("audio", Audio())
         inner_dataset = inner_dataset.remove_columns(["__index_level_0__", "split"])
+        self.transform = transform
 
         self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=16_000))
 
@@ -37,6 +38,8 @@ class BengaliASR(Dataset):
     def __getitem__(self, index):
         ann = self.inner_dataset[index]
         audio = ann["audio"]
+        if self.transform is not None:
+            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
         input_features = self.audio_processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
         labels = self.text_processor(ann["sentence"]).input_ids
         id_ = ann["id"]
