@@ -1,4 +1,4 @@
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset as torch_Dataset
 import pandas as pd
 import os
 import os.path as osp
@@ -7,13 +7,15 @@ from datasets import Dataset, Audio
 import torch
 from typing import Dict, List, Union
 
+pd.options.mode.chained_assignment = None
+
 SPLIT = {
     "train": datasets.Split.TRAIN,
     "valid": datasets.Split.TEST
 }
 
 
-class BengaliASR(Dataset):
+class BengaliASR(torch_Dataset):
     def __init__(self, feature_extractor, tokenizer, processor, data_root, split: str, transform=None):
         split = split.lower()
         assert split in ("train", "valid")
