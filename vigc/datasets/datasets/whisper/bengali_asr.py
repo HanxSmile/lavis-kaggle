@@ -34,7 +34,7 @@ class BengaliASR(torch_Dataset):
         return len(self.inner_dataset)
 
     def __getitem__(self, index):
-        ann = self.inner_dataset.loc[index]
+        ann = self.inner_dataset.iloc[index]
         audio_path = ann.audio
         array, sr = librosa.load(audio_path, sr=None)
         array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
@@ -68,8 +68,9 @@ class BengaliASR(torch_Dataset):
         # cut bos token here as it's append later anyways
         if (labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
             labels = labels[:, 1:]
-
-        batch["labels"] = labels
-        batch["sentences"] = [_["sentence"] for _ in features]
-        batch["ids"] = [_["id"] for _ in features]
-        return batch
+        result = {}
+        result["input_features"] = batch["input_features"]
+        result["labels"] = labels
+        result["sentences"] = [_["sentence"] for _ in features]
+        result["ids"] = [_["id"] for _ in features]
+        return result
