@@ -1,8 +1,9 @@
 import logging
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
-from vigc.datasets.datasets.vqga_eval import A_OKVQA_VQGA_EvalDataset, COCO2017_Eval_Dataset, OKVQA_VQGA_EvalDataset, \
-    VQAv2_VQGA_EvalDataset, LlavaEvalDataset, COCO2017_JiaHui_Eval_Dataset, Object365_Eval_Dataset
+from vigc.datasets.datasets.instruct_blip.vqga_eval import A_OKVQA_VQGA_EvalDataset, COCO2017_Eval_Dataset, \
+    OKVQA_VQGA_EvalDataset, VQAv2_VQGA_EvalDataset, LlavaEvalDataset, COCO2017_JiaHui_Eval_Dataset, \
+    Object365_Eval_Dataset
 
 
 @registry.register_builder("instruct_blip_aokvqa_vqga_eval")

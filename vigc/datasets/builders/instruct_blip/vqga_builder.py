@@ -2,9 +2,9 @@ import logging
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
 
-from vigc.datasets.datasets.vqga import LlavaCompDataset, LlavaDescDataset, LlavaConvDataset, A_OKVQADataset, \
+from vigc.datasets.datasets.instruct_blip.vqga import LlavaCompDataset, LlavaDescDataset, LlavaConvDataset, A_OKVQADataset, \
     OKVQADataset, VQAv2Dataset
-from vigc.datasets.datasets.coco_pseudo import COCO_Pseudo_Dataset
+from vigc.datasets.datasets.instruct_blip.coco_pseudo import COCO_Pseudo_Dataset
 
 TRAIN_DATASET_DICT = {
     "llava_comp": LlavaCompDataset,

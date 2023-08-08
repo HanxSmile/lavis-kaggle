@@ -1,6 +1,6 @@
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
-from vigc.datasets.datasets.cc_sbu import CCSBUDataset
+from vigc.datasets.datasets.instruct_blip.cc_sbu import CCSBUDataset
 
 
 @registry.register_builder("cc_sbu")

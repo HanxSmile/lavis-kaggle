@@ -9,14 +9,14 @@ from vigc.datasets.builders.base_dataset_builder import load_dataset_config
 
 from vigc.common.registry import registry
 
-from vigc.datasets.builders.caption_builder import CCSBUBuilder
-from vigc.datasets.builders.vqa_eval_builder import (
+from vigc.datasets.builders.instruct_blip.caption_builder import CCSBUBuilder
+from vigc.datasets.builders.instruct_blip.vqa_eval_builder import (
     AOKVQAEvalBuilder,
     VQAv2EvalBuilder,
     OKVQAEvalBuilder,
 )
 
-from vigc.datasets.builders.vqga_builder import (
+from vigc.datasets.builders.instruct_blip.vqga_builder import (
     LlavaCompVQGABuilder,
     LlavaDescVQGABuilder,
     LlavaConvVQGABuilder,
@@ -38,7 +38,7 @@ from vigc.datasets.builders.vqga_builder import (
     OKVQA_VQGBuilder,
     COCO_Pseudo_VQGBuilder,
 )
-from vigc.datasets.builders.vqga_eval_builder import (
+from vigc.datasets.builders.instruct_blip.vqga_eval_builder import (
     AOKVQAEvalBuilder,
     COCO_Jiahui_VQGBuilder,
     COCOPseudoEvalBuilder,
@@ -46,6 +46,8 @@ from vigc.datasets.builders.vqga_eval_builder import (
     VQAv2EvalBuilder,
     LlavaVQGAEvalBuilder,
 )
+
+from vigc.datasets.builders.whisper.bengali_asr import BengaliASRBuilder, BengaliASREvalBuilder
 
 __all__ = [
     # "AOKVQA_Train_Builder",
@@ -79,6 +81,9 @@ __all__ = [
     "VQAv2EvalBuilder",
     "LlavaVQGAEvalBuilder",
     "CCSBUBuilder",
+
+    "BengaliASRBuilder",
+    "BengaliASREvalBuilder"
 
 ]
 

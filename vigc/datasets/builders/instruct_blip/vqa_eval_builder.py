@@ -1,7 +1,7 @@
 import logging
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
-from vigc.datasets.datasets.vqa_eval import A_OKVQAEvalDataset, VQAv2EvalDataset, A_OKVQATestDataset
+from vigc.datasets.datasets.instruct_blip.vqa_eval import A_OKVQAEvalDataset, VQAv2EvalDataset, A_OKVQATestDataset
 
 
 @registry.register_builder("instruct_blip_aokvqa_eval")
