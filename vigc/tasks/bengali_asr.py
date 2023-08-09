@@ -95,5 +95,5 @@ class WhisperBengaliASRTask(BaseTask):
         ) as f:
             f.write(json.dumps(log_stats) + "\n")
 
-        res = {"agg_metrics": -wer}
+        res = {"agg_metrics": 100 - wer, "wer": wer}
         return res
