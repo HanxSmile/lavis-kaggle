@@ -16,7 +16,8 @@ SPLIT = {
 
 
 class BengaliASR(torch_Dataset):
-    def __init__(self, feature_extractor, tokenizer, processor, data_root, split: str, transform=None):
+    def __init__(self, feature_extractor, tokenizer, processor, data_root, split: str, max_label_length: int,
+                 transform=None):
         split = split.lower()
         assert split in ("train", "valid")
         self.processor = processor
@@ -29,6 +30,7 @@ class BengaliASR(torch_Dataset):
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
         self.inner_dataset = data
         self.transform = transform
+        self.max_label_length = max_label_length
 
     def __len__(self):
         return len(self.inner_dataset)
@@ -46,7 +48,7 @@ class BengaliASR(torch_Dataset):
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
         input_features = self.audio_processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
-        labels = self.text_processor(ann.sentence).input_ids
+        labels = self.text_processor(ann.sentence, truncation=True, max_length=self.max_label_length).input_ids
 
         return {"input_features": input_features, "labels": labels, "sentence": ann.sentence, "id": ann.id}
 

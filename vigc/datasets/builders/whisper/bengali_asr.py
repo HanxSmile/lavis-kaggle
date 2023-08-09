@@ -49,13 +49,15 @@ class BengaliASRBuilder(BaseDatasetBuilder):
         feature_extractor = WhisperFeatureExtractor.from_pretrained(cfg.model_name)
         tokenizer = WhisperTokenizer.from_pretrained(cfg.model_name, language="bn", task="transcribe")
         processor = WhisperProcessor.from_pretrained(cfg.model_name, language="bn", task="transcribe")
+        max_label_length = cfg.get("max_label_length", 448)
         datasets["train"] = self.train_dataset_cls(
             feature_extractor=feature_extractor,
             tokenizer=tokenizer,
             processor=processor,
             data_root=data_root,
             split="train",
-            transform=transform
+            transform=transform,
+            max_label_length=max_label_length
         )
         _ = datasets["train"][0]
         return datasets
@@ -78,12 +80,14 @@ class BengaliASREvalBuilder(BaseDatasetBuilder):
         feature_extractor = WhisperFeatureExtractor.from_pretrained(cfg.model_name)
         tokenizer = WhisperTokenizer.from_pretrained(cfg.model_name, language="bn", task="transcribe")
         processor = WhisperProcessor.from_pretrained(cfg.model_name, language="bn", task="transcribe")
+        max_label_length = cfg.get("max_label_length", 448)
         datasets["eval"] = self.eval_dataset_cls(
             feature_extractor=feature_extractor,
             tokenizer=tokenizer,
             processor=processor,
             data_root=data_root,
-            split="valid"
+            split="valid",
+            max_label_length=max_label_length
         )
         _ = datasets["eval"][0]
         return datasets
