@@ -4,7 +4,7 @@ from vigc.tasks.base_task import BaseTask
 import os
 import json
 from bnunicodenormalizer import Normalizer
-import evaluate
+import jiwer
 
 bnorm = Normalizer()
 
@@ -82,12 +82,12 @@ class WhisperBengaliASRTask(BaseTask):
 
     @main_process
     def _report_metrics(self, eval_result_file, split_name):
-        metric = evaluate.load("wer")
+
         with open(eval_result_file) as f:
             results = json.load(f)
         gts = [_["gt"] for _ in results]
         preds = [_["pred"] for _ in results]
-        wer = 100 * metric.compute(predictions=preds, references=gts)
+        wer = 100 * jiwer.wer(gts, preds)
         log_stats = {split_name: {"wer": wer}}
 
         with open(
