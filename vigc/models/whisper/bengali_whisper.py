@@ -26,7 +26,9 @@ def dari(sentence):
 @registry.register_model("bengali_whisper")
 class BengaliWhisper(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/bengali_whisper.yaml",
+        "default": "configs/models/bengali_whisper_medium.yaml",
+        "medium": "configs/models/bengali_whisper_medium.yaml",
+        "small": "configs/models/bengali_whisper_small.yaml",
     }
 
     LANGUAGE = "bn"
