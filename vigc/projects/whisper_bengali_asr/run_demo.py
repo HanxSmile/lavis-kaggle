@@ -1,0 +1,260 @@
+from accelerate import Accelerator, DistributedDataParallelKwargs, notebook_launcher
+import pandas as pd
+import torch.nn as nn
+import logging
+import torch
+import contextlib
+from torch.utils.data import Dataset as torch_Dataset, DataLoader
+import librosa
+from typing import Dict, List, Union
+from dataclasses import dataclass
+from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor, WhisperForConditionalGeneration
+from bnunicodenormalizer import Normalizer
+import os.path as osp
+import os
+import json
+from tqdm.auto import tqdm
+
+# Helper
+bnorm = Normalizer()
+
+
+def normalize(sen):
+    _words = [bnorm(word)['normalized'] for word in sen.split()]
+    return " ".join([word for word in _words if word is not None])
+
+
+def dari(sentence):
+    try:
+        if sentence[-1] != "।":
+            sentence += "।"
+    except:
+        print(sentence)
+    return sentence
+
+
+## Config
+@dataclass
+class InferenceConfig:
+    # model
+    model_name = ""
+    post_process_flag = True
+    ckpt = ""
+
+    # data
+    data_root = "/kaggle/input/bengaliai-speech/test_mp3s"
+    batch_size = 8
+    num_workers = 4
+
+    # runtime
+    mixed_precision = "fp16"
+    output_dir = "./"
+    num_processes = 2
+
+
+config = InferenceConfig()
+
+
+## Model
+class BengaliWhisper(nn.Module):
+    LANGUAGE = "bn"
+    TASK = "transcribe"
+
+    def __init__(
+            self,
+            model_name="openai/whisper-medium",
+            post_process_flag=True
+    ):
+        super().__init__()
+        self.post_process_flag = post_process_flag
+        self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
+        self.model.config.forced_decoder_ids = None
+        self.model.config.suppress_tokens = []
+
+        self.tokenizer = WhisperTokenizer.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
+        self.processor = WhisperProcessor.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
+        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name)
+
+    def load_checkpoint(self, ckpt, **kwargs):
+        """
+        Load checkpoint as specified in the config file.
+
+        If load_finetuned is True, load the finetuned model; otherwise, load the pretrained model.
+        When loading the pretrained model, each task-specific architecture may define their
+        own load_from_pretrained() method.
+        """
+        checkpoint = torch.load(ckpt, map_location="cpu")
+
+        if "model" in checkpoint.keys():
+            state_dict = checkpoint["model"]
+        else:
+            state_dict = checkpoint
+
+        msg = self.load_state_dict(state_dict, strict=False)
+
+        # logging.info("Missing keys {}".format(msg.missing_keys))
+        logging.info(f"Missing keys exist when loading '{ckpt}'.")
+        logging.info("load checkpoint from %s" % ckpt)
+
+    @torch.no_grad()
+    def generate(
+            self,
+            samples,
+            **kwargs
+    ):
+        inputs = samples["input_features"]
+        forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
+        with self.maybe_autocast():
+            generated_ids = self.model.generate(
+                inputs=inputs,
+                forced_decoder_ids=forced_decoder_ids
+            )
+        transcription = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
+        if self.post_process_flag:
+            transcription = [dari(normalize(_)) for _ in transcription]
+        return transcription
+
+    def forward(self, samples, **kwargs):
+        input_features = samples["input_features"]
+        labels = samples["labels"]
+        with self.maybe_autocast():
+            outputs = self.model(
+                input_features=input_features,
+                labels=labels,
+                return_dict=True,
+            )
+        loss = outputs.loss
+        return {"loss": loss}
+
+    def maybe_autocast(self, dtype=torch.float16):
+        # if on cpu, don't use autocast
+        # if on gpu, use autocast with dtype if provided, otherwise use torch.float16
+        enable_autocast = self.device != torch.device("cpu")
+
+        if enable_autocast:
+            return torch.cuda.amp.autocast(dtype=dtype)
+        else:
+            return contextlib.nullcontext()
+
+
+## Dataset
+class BengaliASR(torch_Dataset):
+    def __init__(self, feature_extractor, processor, data_root):
+        self.processor = processor
+        self.audio_processor = feature_extractor
+
+        all_data = [(osp.join(data_root, _), _.replace(".mp3", "")) for _ in os.listdir(data_root) if
+                    _.endswith(".mp3")]
+        self.all_files = [_[0] for _ in all_data]
+        self.all_ids = [_[1] for _ in all_data]
+
+    def __len__(self):
+        return len(self.all_files)
+
+    def __getitem__(self, index):
+        audio_path = self.all_files[index]
+        audio_id = self.all_ids[index]
+        array, sr = librosa.load(audio_path, sr=None)
+        array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
+        audio = {
+            "path": audio_path,
+            "array": array,
+            "sampling_rate": sr
+        }
+
+        input_features = self.audio_processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
+
+        return {"input_features": input_features, "id": audio_id}
+
+    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        # split inputs and labels since they have to be of different lengths and need different padding methods
+        # first treat the audio inputs by simply returning torch tensors
+        input_features = [{"input_features": feature["input_features"]} for feature in features]
+        batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
+
+        result = {}
+        result["input_features"] = batch["input_features"]
+        result["ids"] = [_["id"] for _ in features]
+        return result
+
+
+## Factory
+class Factory:
+
+    @classmethod
+    def prepare_model(cls, cfg: InferenceConfig):
+        model = BengaliWhisper(
+            model_name=cfg.model_name,
+            post_process_flag=cfg.post_process_flag
+        )
+        model.load_checkpoint(cfg.ckpt)
+        return model
+
+    @classmethod
+    def prepare_dataset(cls, cfg: InferenceConfig):
+        feature_extractor = WhisperFeatureExtractor.from_pretrained(cfg.model_name)
+        processor = WhisperProcessor.from_pretrained(cfg.model_name, language="bn", task="transcribe")
+        dataset = BengaliASR(feature_extractor, processor, cfg.data_root)
+
+        loader = DataLoader(
+            dataset,
+            batch_size=cfg.batch_size,
+            num_workers=cfg.num_workers,
+            pin_memory=True,
+            shuffle=False,
+            collate_fn=dataset.collater,
+            drop_last=False,
+        )
+        return loader
+
+
+# Inference Loop
+
+def inference_loop(cfg: InferenceConfig):
+    # Initialize accelerator
+    ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
+    accelerator = Accelerator(mixed_precision=cfg.mixed_precision, kwargs_handlers=[ddp_kwargs])
+
+    dataloader = Factory.prepare_dataset(config)
+    model = Factory.prepare_model(config)
+
+    # Freeze the base model
+    for param in model.parameters():
+        param.requires_grad = False
+
+    model, dataloader = accelerator.prepare(model, dataloader)
+    model.eval()
+    all_results = {}
+    for batch in tqdm(dataloader, disable=not accelerator.is_main_process):
+        unwrapped_model = accelerator.unwrap_model(model)
+        unwrapped_model.eval()
+        ids = batch["ids"]
+        with torch.no_grad():
+            preds = model.generate(batch)
+        for id_, pred in zip(ids, preds):
+            all_results[id_] = pred
+    rank = accelerator.local_process_index
+    dst_path = osp.join(cfg.output_dir, f"rank_{rank}.json")
+    with open(dst_path, "w") as f:
+        json.dump(all_results, f)
+    accelerator.print("Done inference.")
+
+
+notebook_launcher(inference_loop, (config,), num_processes=config.num_processes)
+
+##  Submit
+all_json = [osp.join(config.output_dir, _) for _ in os.listdir(config.output_dir) if
+            _.endswith(".json") and _.startswith("rank_")]
+final_result = {}
+for file in all_json:
+    with open(file) as f:
+        this_res = json.load(f)
+    final_result.update(this_res)
+ids, preds = [], []
+for k, v in final_result.items():
+    ids.append(k)
+    if len(v) == 0:
+        v = '।'
+    preds.append(v)
+submission = pd.DataFrame({"id": ids, "sentence": preds})
+submission.to_csv("submission.csv", index=False)
