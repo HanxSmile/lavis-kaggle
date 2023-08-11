@@ -44,7 +44,7 @@ class InferenceConfig:
     # data
     data_root = "/kaggle/input/bengaliai-speech/test_mp3s"
     batch_size = 8
-    num_workers = 4
+    num_workers = 2
 
     # runtime
     mixed_precision = "fp16"
@@ -104,11 +104,10 @@ class BengaliWhisper(nn.Module):
     ):
         inputs = samples["input_features"]
         forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
-        with self.maybe_autocast():
-            generated_ids = self.model.generate(
-                inputs=inputs,
-                forced_decoder_ids=forced_decoder_ids
-            )
+        generated_ids = self.model.generate(
+            inputs=inputs,
+            forced_decoder_ids=forced_decoder_ids
+        )
         transcription = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
@@ -117,24 +116,13 @@ class BengaliWhisper(nn.Module):
     def forward(self, samples, **kwargs):
         input_features = samples["input_features"]
         labels = samples["labels"]
-        with self.maybe_autocast():
-            outputs = self.model(
-                input_features=input_features,
-                labels=labels,
-                return_dict=True,
-            )
+        outputs = self.model(
+            input_features=input_features,
+            labels=labels,
+            return_dict=True,
+        )
         loss = outputs.loss
         return {"loss": loss}
-
-    def maybe_autocast(self, dtype=torch.float16):
-        # if on cpu, don't use autocast
-        # if on gpu, use autocast with dtype if provided, otherwise use torch.float16
-        enable_autocast = self.device != torch.device("cpu")
-
-        if enable_autocast:
-            return torch.cuda.amp.autocast(dtype=dtype)
-        else:
-            return contextlib.nullcontext()
 
 
 ## Dataset
@@ -223,14 +211,13 @@ def inference_loop(cfg: InferenceConfig):
         param.requires_grad = False
 
     model, dataloader = accelerator.prepare(model, dataloader)
-    model.eval()
+    unwrapped_model = accelerator.unwrap_model(model)
+    unwrapped_model.eval()
     all_results = {}
     for batch in tqdm(dataloader, disable=not accelerator.is_main_process):
-        unwrapped_model = accelerator.unwrap_model(model)
-        unwrapped_model.eval()
         ids = batch["ids"]
         with torch.no_grad():
-            preds = model.generate(batch)
+            preds = unwrapped_model.generate(batch)
         for id_, pred in zip(ids, preds):
             all_results[id_] = pred
     rank = accelerator.local_process_index
