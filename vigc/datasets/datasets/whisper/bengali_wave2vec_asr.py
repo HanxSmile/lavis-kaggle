@@ -125,24 +125,24 @@ class Wav2VecBengaliASRTest(torch_Dataset):
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
         # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_features": feature["input_features"]} for feature in features]
-        batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
-
-        # get the tokenized label sequences
+        input_features = [{"input_values": feature["input_values"]} for feature in features]
         label_features = [{"input_ids": feature["labels"]} for feature in features]
-        # pad the labels to max length
-        labels_batch = self.processor.tokenizer.pad(label_features, return_tensors="pt")
 
+        batch = self.processor.pad(
+            input_features,
+            padding=True,
+            return_tensors="pt",
+        )
+        with self.processor.as_target_processor():
+            labels_batch = self.processor.pad(
+                label_features,
+                padding=True,
+                return_tensors="pt",
+            )
         # replace padding with -100 to ignore loss correctly
         labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
 
-        # if bos token is appended in previous tokenization step,
-        # cut bos token here as it's append later anyways
-        if (labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
-            labels = labels[:, 1:]
-        result = {}
-        result["input_features"] = batch["input_features"]
-        result["labels"] = labels
-        result["sentences"] = [_["sentence"] for _ in features]
-        result["ids"] = [_["id"] for _ in features]
-        return result
+        batch["labels"] = labels
+        batch["sentences"] = [_["sentence"] for _ in features]
+        batch["ids"] = [_["id"] for _ in features]
+        return batch
