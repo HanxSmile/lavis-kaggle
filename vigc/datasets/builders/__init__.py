@@ -47,7 +47,11 @@ from vigc.datasets.builders.instruct_blip.vqga_eval_builder import (
     LlavaVQGAEvalBuilder,
 )
 
-from vigc.datasets.builders.whisper.bengali_asr import BengaliASRBuilder, BengaliASREvalBuilder
+from vigc.datasets.builders.whisper.bengali_asr import (
+    BengaliASRBuilder,
+    BengaliASREvalBuilder,
+    BengaliASRTestBuilder
+)
 
 __all__ = [
     # "AOKVQA_Train_Builder",
@@ -83,8 +87,8 @@ __all__ = [
     "CCSBUBuilder",
 
     "BengaliASRBuilder",
-    "BengaliASREvalBuilder"
-
+    "BengaliASREvalBuilder",
+    "BengaliASRTestBuilder",
 ]
 
 
