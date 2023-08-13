@@ -2,7 +2,7 @@ import logging
 import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
-from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
+from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM
 from bnunicodenormalizer import Normalizer
 import contextlib
 
@@ -43,7 +43,7 @@ class BengaliWhisper(BaseModel):
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
         if freeze_encoder:
             self.model.freeze_feature_encoder()
-        self.processor = Wav2Vec2Processor.from_pretrained(processor_name)
+        self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -67,14 +67,16 @@ class BengaliWhisper(BaseModel):
             samples,
             **kwargs
     ):
-        inputs = samples["input_values"]
-        forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
+        input_values = samples["input_values"]
+        attention_mask = samples["attention_mask"]
         with self.maybe_autocast():
-            generated_ids = self.model.generate(
-                inputs=inputs,
-                forced_decoder_ids=forced_decoder_ids
-            )
-        transcription = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
+            logits = self.model(
+                input_values=input_values,
+                attention_mask=attention_mask,
+                return_dict=True
+            ).logits
+        predicted_ids = torch.argmax(logits, dim=-1)
+        transcription = self.processor.batch_decode(predicted_ids)
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
         return transcription
