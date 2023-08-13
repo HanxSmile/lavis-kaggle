@@ -10,6 +10,7 @@ model:
   post_process_flag: True
   arch: bengali_whisper
   model_type: small
+  freeze_encoder: True
 
 datasets:
   # train

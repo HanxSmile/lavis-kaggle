@@ -37,11 +37,14 @@ class BengaliWhisper(BaseModel):
     def __init__(
             self,
             model_name="openai/whisper-medium",
+            freeze_encoder=False,
             post_process_flag=True
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
+        if freeze_encoder:
+            self.model.freeze_encoder()
         self.model.config.forced_decoder_ids = None
         self.model.config.suppress_tokens = []
 
@@ -109,6 +112,7 @@ class BengaliWhisper(BaseModel):
     def from_config(cls, cfg):
         model_name = cfg.get("model_name")
         post_process_flag = cfg.get("post_process_flag", True)
-        model = cls(model_name=model_name, post_process_flag=post_process_flag)
+        freeze_encoder = cfg.get("freeze_encoder", False)
+        model = cls(model_name=model_name, freeze_encoder=freeze_encoder, post_process_flag=post_process_flag)
         model.load_checkpoint_from_config(cfg)
         return model
