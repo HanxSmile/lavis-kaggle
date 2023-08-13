@@ -16,8 +16,12 @@ datasets:
   whisper_bengali_asr:
     model_name: /mnt/petrelfs/hanxiao/work/whisper-small
 
-  ## Llava 150k VQGA eval
-  whisper_bengali_asr_eval:
+  ## eval
+#  whisper_bengali_asr_eval:
+#    model_name: /mnt/petrelfs/hanxiao/work/whisper-small
+
+  ## test
+  whisper_bengali_asr_test:
     model_name: /mnt/petrelfs/hanxiao/work/whisper-small
 
 run:
