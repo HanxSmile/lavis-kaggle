@@ -39,6 +39,7 @@ class BengaliWav2Vec(BaseModel):
         super().__init__()
         self.post_process_flag = post_process_flag
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
+        self.model.config.ctc_zero_infinity = True
         if freeze_encoder:
             self.model.freeze_feature_encoder()
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
