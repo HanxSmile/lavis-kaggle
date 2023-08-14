@@ -6,5 +6,5 @@ model:
   arch: bengali_wav2vec
   model_type: default
   freeze_encoder: False
-#  processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
-  processor_name: arijitx/wav2vec2-xls-r-300m-bengali
+  processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+#  processor_name: arijitx/wav2vec2-xls-r-300m-bengali
