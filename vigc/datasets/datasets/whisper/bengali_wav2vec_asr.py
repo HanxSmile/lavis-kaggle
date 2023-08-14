@@ -8,6 +8,7 @@ import torch
 import re
 from typing import Dict, List, Union
 from bnunicodenormalizer import Normalizer
+from datasets import load_dataset, Audio
 
 bnorm = Normalizer()
 
@@ -25,6 +26,65 @@ def normalize(sentence):
     _words = [bnorm(word)['normalized'] for word in sentence.split()]
     sentence = " ".join([word for word in _words if word is not None])
     return sentence
+
+
+class Wav2VecBengaliCVBN(torch_Dataset):
+    DATASET_NAME = "bengaliAI/cvbn"
+
+    def __init__(self, processor, split: str, transform=None):
+        split = split.lower()
+        assert split in ("train", "validation")
+        self.inner_dataset = load_dataset(self.DATASET_NAME, split=split)
+        self.inner_dataset = self.inner_dataset.remove_columns(
+            ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment'])
+        self.inner_dataset = self.inner_dataset.cast_column("audio", Audio(sampling_rate=16_000))
+
+        self.processor = processor
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.inner_dataset)
+
+    def __getitem__(self, index):
+        ann = self.inner_dataset[index]
+        audio = ann["audio"]
+        audio["array"] = np.trim_zeros(audio["array"], "fb")
+        if self.transform is not None:
+            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
+        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
+        input_length = len(input_values)
+        sentence = normalize(remove_special_characters(ann["sentence"]))
+        labels = self.processor.tokenizer(sentence).input_ids
+
+        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": str(index),
+                "input_length": input_length}
+
+    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        # split inputs and labels since they have to be of different lengths and need different padding methods
+        # first treat the audio inputs by simply returning torch tensors
+        input_features = [{"input_values": feature["input_values"]} for feature in features]
+        label_features = [{"input_ids": feature["labels"]} for feature in features]
+
+        batch = self.processor.pad(
+            input_features,
+            padding=True,
+            return_tensors="pt",
+        )
+        with self.processor.as_target_processor():
+            labels_batch = self.processor.pad(
+                label_features,
+                padding=True,
+                return_tensors="pt",
+            )
+        # replace padding with -100 to ignore loss correctly
+        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
+
+        batch["labels"] = labels
+        batch["sentences"] = [_["sentence"] for _ in features]
+        batch["ids"] = [_["id"] for _ in features]
+        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids"]
+        result = {k: batch[k] for k in all_keys}
+        return result
 
 
 class Wav2VecBengaliASR(torch_Dataset):

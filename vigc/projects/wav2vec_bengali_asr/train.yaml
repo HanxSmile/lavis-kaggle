@@ -11,7 +11,9 @@ model:
 datasets:
   # train
   wav2vec_bengali_asr:
-    placeholder: null
+    sample_ratio: 1
+  wav2vec_bengali_cvbn:
+    sample_ratio: 1
 
   ## eval
 #  whisper_bengali_asr_eval:
@@ -19,7 +21,7 @@ datasets:
 
   ## test
   wav2vec_bengali_asr_test:
-        placeholder: null
+    placeholder: null
 
 run:
   runner: runner_iter
