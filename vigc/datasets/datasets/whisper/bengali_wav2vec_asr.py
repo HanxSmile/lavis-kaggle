@@ -87,7 +87,9 @@ class Wav2VecBengaliASR(torch_Dataset):
         batch["labels"] = labels
         batch["sentences"] = [_["sentence"] for _ in features]
         batch["ids"] = [_["id"] for _ in features]
-        return batch
+        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids"]
+        result = {k: batch[k] for k in all_keys}
+        return result
 
 
 class Wav2VecBengaliASRTest(torch_Dataset):
@@ -142,4 +144,6 @@ class Wav2VecBengaliASRTest(torch_Dataset):
         batch["labels"] = labels
         batch["sentences"] = [_["sentence"] for _ in features]
         batch["ids"] = [_["id"] for _ in features]
-        return batch
+        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids"]
+        result = {k: batch[k] for k in all_keys}
+        return result
