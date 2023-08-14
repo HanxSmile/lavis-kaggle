@@ -1,3 +1,4 @@
+import datasets
 from torch.utils.data import Dataset as torch_Dataset
 import pandas as pd
 import os
@@ -29,12 +30,12 @@ def normalize(sentence):
 
 
 class Wav2VecBengaliCVBN(torch_Dataset):
-    DATASET_NAME = "/mnt/petrelfs/share_data/hanxiao/cvbn/raw_dataset"
+    DATASET_NAME = "/mnt/petrelfs/share_data/hanxiao/cvbn"
 
     def __init__(self, processor, split: str, transform=None):
         split = split.lower()
         assert split in ("train", "validation")
-        self.inner_dataset = load_dataset(self.DATASET_NAME, split=split)
+        self.inner_dataset = datasets.load_from_disk(self.DATASET_NAME)[split]
         self.inner_dataset = self.inner_dataset.remove_columns(
             ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment'])
         self.inner_dataset = self.inner_dataset.cast_column("audio", Audio(sampling_rate=16_000))
