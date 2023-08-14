@@ -56,10 +56,10 @@ class Wav2VecBengaliASR(torch_Dataset):
         }
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
-        input_values = self.processor(audio["array"], sampling_rate=16_000).input_values[0]
+        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
         input_length = len(input_values)
         sentence = normalize(remove_special_characters(ann.sentence))
-        labels = self.processor(sentence).input_ids
+        labels = self.processor.tokenizer(sentence).input_ids
 
         return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann.id,
                 "input_length": input_length}
@@ -111,10 +111,10 @@ class Wav2VecBengaliASRTest(torch_Dataset):
             "array": array,
             "sampling_rate": sr
         }
-        input_values = self.processor(audio["array"], sampling_rate=16_000).input_values[0]
+        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
         input_length = len(input_values)
         sentence = normalize(remove_special_characters(ann.sentence))
-        labels = self.processor(sentence).input_ids
+        labels = self.processor.tokenizer(sentence).input_ids
 
         return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann.file,
                 "input_length": input_length}
