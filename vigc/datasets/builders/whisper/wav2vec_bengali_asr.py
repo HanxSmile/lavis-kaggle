@@ -2,7 +2,7 @@ import logging
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
 from vigc.datasets.datasets.whisper.bengali_wav2vec_asr import Wav2VecBengaliASR, Wav2VecBengaliASRTest
-from transformers import WhisperProcessor
+from transformers import Wav2Vec2Processor
 from audiomentations import (
     AddBackgroundNoise,
     AddGaussianNoise,
@@ -46,7 +46,7 @@ class Wav2VecBengaliASRBuilder(BaseDatasetBuilder):
         )
 
         cfg = self.config
-        processor = WhisperProcessor.from_pretrained(cfg.model_name)
+        processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
         datasets["train"] = self.train_dataset_cls(
             processor=processor,
             data_root=data_root,
@@ -71,7 +71,7 @@ class Wav2VecBengaliASREvalBuilder(BaseDatasetBuilder):
         data_root = build_info.data_root
 
         cfg = self.config
-        processor = WhisperProcessor.from_pretrained(cfg.model_name)
+        processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
 
         datasets["eval"] = self.eval_dataset_cls(
             processor=processor,
@@ -96,7 +96,7 @@ class Wav2VecBengaliASRTestBuilder(BaseDatasetBuilder):
         data_root = build_info.data_root
 
         cfg = self.config
-        processor = WhisperProcessor.from_pretrained(cfg.model_name)
+        processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
         datasets["eval"] = self.eval_dataset_cls(
             processor=processor,
             data_root=data_root,
