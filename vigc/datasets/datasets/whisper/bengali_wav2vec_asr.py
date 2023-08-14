@@ -29,7 +29,7 @@ def normalize(sentence):
 
 
 class Wav2VecBengaliCVBN(torch_Dataset):
-    DATASET_NAME = "bengaliAI/cvbn"
+    DATASET_NAME = "/mnt/petrelfs/share_data/hanxiao/cvbn/raw_dataset"
 
     def __init__(self, processor, split: str, transform=None):
         split = split.lower()
