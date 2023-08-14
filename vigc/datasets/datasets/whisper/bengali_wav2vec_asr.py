@@ -28,8 +28,7 @@ def normalize(sentence):
 
 
 class Wav2VecBengaliASR(torch_Dataset):
-    def __init__(self, processor, data_root, split: str, max_label_length: int,
-                 transform=None):
+    def __init__(self, processor, data_root, split: str, transform=None):
         split = split.lower()
         assert split in ("train", "valid")
         self.processor = processor
@@ -40,7 +39,6 @@ class Wav2VecBengaliASR(torch_Dataset):
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
         self.inner_dataset = data
         self.transform = transform
-        self.max_label_length = max_label_length
 
     def __len__(self):
         return len(self.inner_dataset)
@@ -93,12 +91,11 @@ class Wav2VecBengaliASR(torch_Dataset):
 
 
 class Wav2VecBengaliASRTest(torch_Dataset):
-    def __init__(self, processor, data_root, max_label_length: int):
+    def __init__(self, processor, data_root):
         self.processor = processor
         self.media_root = osp.join(data_root, "examples")
         self.anno_path = osp.join(data_root, "annoated.csv")
         self.inner_dataset = pd.read_csv(self.anno_path, sep="\t")
-        self.max_label_length = max_label_length
 
     def __len__(self):
         return len(self.inner_dataset)

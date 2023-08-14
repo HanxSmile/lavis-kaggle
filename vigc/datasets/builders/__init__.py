@@ -53,6 +53,12 @@ from vigc.datasets.builders.whisper.bengali_asr import (
     BengaliASRTestBuilder
 )
 
+from vigc.datasets.builders.whisper.wav2vec_bengali_asr import (
+    Wav2VecBengaliASRBuilder,
+    Wav2VecBengaliASREvalBuilder,
+    Wav2VecBengaliASRTest
+)
+
 __all__ = [
     # "AOKVQA_Train_Builder",
     "VQAv2EvalBuilder",
@@ -89,6 +95,10 @@ __all__ = [
     "BengaliASRBuilder",
     "BengaliASREvalBuilder",
     "BengaliASRTestBuilder",
+
+    "Wav2VecBengaliASRBuilder",
+    "Wav2VecBengaliASREvalBuilder",
+    "Wav2VecBengaliASRTest",
 ]
 
 

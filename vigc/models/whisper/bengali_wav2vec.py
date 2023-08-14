@@ -2,7 +2,7 @@ import logging
 import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
-from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM
+from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM
 from bnunicodenormalizer import Normalizer
 import contextlib
 
@@ -23,12 +23,10 @@ def dari(sentence):
     return sentence
 
 
-@registry.register_model("bengali_whisper")
-class BengaliWhisper(BaseModel):
+@registry.register_model("bengali_wav2vec")
+class BengaliWav2Vec(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/bengali_whisper_medium.yaml",
-        "medium": "configs/models/bengali_whisper_medium.yaml",
-        "small": "configs/models/bengali_whisper_small.yaml",
+        "default": "configs/models/bengali_wav2vec.yaml",
     }
 
     def __init__(
