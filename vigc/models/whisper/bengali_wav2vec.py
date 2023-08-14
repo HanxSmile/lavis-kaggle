@@ -2,7 +2,7 @@ import logging
 import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
-from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM
+from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, Wav2Vec2Processor
 from bnunicodenormalizer import Normalizer
 import contextlib
 
@@ -42,7 +42,7 @@ class BengaliWav2Vec(BaseModel):
         self.model.config.ctc_zero_infinity = True
         if freeze_encoder:
             self.model.freeze_feature_encoder()
-        self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
+        self.processor = Wav2Vec2Processor.from_pretrained(processor_name)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
