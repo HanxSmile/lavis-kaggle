@@ -1,0 +1,67 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  model_name: /mnt/petrelfs/hanxiao/work/whisper-small-bn
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_whisper
+  model_type: small
+  freeze_encoder: True
+
+datasets:
+  # train
+  whisper_bengali_asr:
+    model_name: /mnt/petrelfs/hanxiao/work/whisper-small-bn
+    sample_ratio: 1
+
+  whisper_bengali_cvbn:
+    model_name: /mnt/petrelfs/hanxiao/work/whisper-small-bn
+    sample_ratio: 1
+  ## eval
+#  whisper_bengali_asr_eval:
+#    model_name: /mnt/petrelfs/hanxiao/work/whisper-small
+
+  ## test
+  whisper_bengali_asr_test:
+    model_name: /mnt/petrelfs/hanxiao/work/whisper-small-bn
+
+run:
+  runner: runner_iter
+  task: whisper_bengali_asr_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 3e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 8
+  batch_size_eval: 8
+  accum_grad_iters: 2
+
+  num_workers: 4
+  warmup_steps: 1000
+
+  iters_per_inner_epoch: 2000
+  max_iters: 60000
+
+  seed: 42
+  output_dir: "./output/whisper_bengali_asr_small"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
