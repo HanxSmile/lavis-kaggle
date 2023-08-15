@@ -104,7 +104,8 @@ class BengaliASRTest(torch_Dataset):
         input_features = self.audio_processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
         labels = self.text_processor(ann.sentence, truncation=True, max_length=self.max_label_length).input_ids
 
-        return {"input_features": input_features, "labels": labels, "sentence": ann.sentence, "id": ann.file}
+        return {"input_features": input_features, "labels": labels, "sentence": ann.sentence, "id": ann.file,
+                "audio": audio}
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
@@ -129,4 +130,5 @@ class BengaliASRTest(torch_Dataset):
         result["labels"] = labels
         result["sentences"] = [_["sentence"] for _ in features]
         result["ids"] = [_["id"] for _ in features]
+        result["raw_audios"] = [_["audio"] for _ in features]
         return result

@@ -5,6 +5,7 @@ from vigc.models.base_model import BaseModel
 from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor, WhisperForConditionalGeneration
 from bnunicodenormalizer import Normalizer
 import contextlib
+from transformers import pipeline
 
 bnorm = Normalizer()
 
@@ -74,16 +75,27 @@ class BengaliWhisper(BaseModel):
             samples,
             **kwargs
     ):
-        inputs = samples["input_features"]
+        inputs = samples["raw_audios"]
         forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
+        ori_forced_decoder_ids = self.model.config.forced_decoder_ids
+        self.model.config.forced_decoder_ids = forced_decoder_ids
+        pipe = pipeline(
+            "automatic-speech-recognition",
+            model=self.model,
+            chunk_length_s=8,
+            device=self.device,
+            tokenizer=self.tokenizer,
+            feature_extractor=self.feature_extractor
+        )
+        transcription = []
         with self.maybe_autocast():
-            generated_ids = self.model.generate(
-                inputs=inputs,
-                forced_decoder_ids=forced_decoder_ids
-            )
-        transcription = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
+            for input_ in inputs:
+                pred = pipe(input_.copy(), batch_size=8)
+                transcription.append(pred)
+
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
+        self.model.config.forced_decoder_ids = ori_forced_decoder_ids
         return transcription
 
     def forward(self, samples, **kwargs):
