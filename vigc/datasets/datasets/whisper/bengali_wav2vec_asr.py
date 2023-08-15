@@ -145,7 +145,11 @@ class Wav2VecBengaliASR(torch_Dataset):
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
         input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
+        input_values = trim_silence(input_values)
         input_length = len(input_values)
+        input_secs = input_length / 16_000
+        if input_secs <= 1 or input_secs >= 10:
+            return self[(index + 1) % len(self)]  # filter too long or too short audio
         sentence = normalize(remove_special_characters(ann.sentence))
         labels = self.processor.tokenizer(sentence).input_ids
 
