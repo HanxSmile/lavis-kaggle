@@ -88,8 +88,8 @@ class BengaliWhisper(BaseModel):
             feature_extractor=self.feature_extractor
         )
         with self.maybe_autocast():
-            transcription = pipe(inputs.copy(), batch_size=8)["text"]
-
+            transcription = pipe(inputs.copy(), batch_size=8)
+        transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
         self.model.config.forced_decoder_ids = ori_forced_decoder_ids
