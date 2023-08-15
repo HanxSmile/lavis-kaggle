@@ -50,6 +50,70 @@ def trim_silence(arr):
     return arr
 
 
+class Wav2VecBengaliOpenSLR(torch_Dataset):
+    def __init__(self, ann_file, data_root, processor, transform=None):
+        self.inner_dataset = pd.read_table(ann_file, names=["id", "hash", "sentence"])
+        self.processor = processor
+        self.media_root = data_root
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.inner_dataset)
+
+    def __getitem__(self, index):
+        ann = self.inner_dataset.iloc[index]
+        id_ = ann.id
+        audio_path = osp.join(self.media_root, id_[:2], id_ + ".flac")
+        array, sr = librosa.load(audio_path, sr=None)
+        array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
+        array = np.trim_zeros(array, "fb")
+        audio = {
+            "path": audio_path,
+            "array": array,
+            "sampling_rate": sr
+        }
+        if self.transform is not None:
+            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
+        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
+        input_values = trim_silence(input_values)
+        input_length = len(input_values)
+        input_secs = input_length / 16_000
+        if input_secs <= 1 or input_secs >= 10:
+            return self[(index + 1) % len(self)]  # filter too long or too short audio
+        sentence = normalize(remove_special_characters(ann.sentence))
+        labels = self.processor.tokenizer(sentence).input_ids
+
+        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann.id,
+                "input_length": input_length}
+
+    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        # split inputs and labels since they have to be of different lengths and need different padding methods
+        # first treat the audio inputs by simply returning torch tensors
+        input_features = [{"input_values": feature["input_values"]} for feature in features]
+        label_features = [{"input_ids": feature["labels"]} for feature in features]
+
+        batch = self.processor.pad(
+            input_features,
+            padding=True,
+            return_tensors="pt",
+        )
+        with self.processor.as_target_processor():
+            labels_batch = self.processor.pad(
+                label_features,
+                padding=True,
+                return_tensors="pt",
+            )
+        # replace padding with -100 to ignore loss correctly
+        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
+
+        batch["labels"] = labels
+        batch["sentences"] = [_["sentence"] for _ in features]
+        batch["ids"] = [_["id"] for _ in features]
+        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids"]
+        result = {k: batch[k] for k in all_keys}
+        return result
+
+
 class Wav2VecBengaliCVBN(torch_Dataset):
     DATASET_NAME = "/mnt/petrelfs/share_data/hanxiao/cvbn"
 

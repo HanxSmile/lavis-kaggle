@@ -10,8 +10,12 @@ model:
 
 datasets:
   # train
-#  wav2vec_bengali_asr:
-#    sample_ratio: 1
+  wav2vec_bengali_asr:
+    sample_ratio: 1
+
+  wav2vec_bengali_openslr:
+    sample_ratio: 1
+
   wav2vec_bengali_cvbn:
     sample_ratio: 1
 
@@ -41,8 +45,8 @@ run:
   num_workers: 4
   warmup_steps: 1000
 
-  iters_per_inner_epoch: 2000
-  max_iters: 60000
+  iters_per_inner_epoch: 1000
+  max_iters: 30000
 
   seed: 42
   output_dir: "./output/wav2vec_bengali_asr"
