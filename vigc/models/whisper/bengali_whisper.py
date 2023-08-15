@@ -87,11 +87,8 @@ class BengaliWhisper(BaseModel):
             tokenizer=self.tokenizer,
             feature_extractor=self.feature_extractor
         )
-        transcription = []
         with self.maybe_autocast():
-            for input_ in inputs:
-                pred = pipe(input_.copy(), batch_size=8)
-                transcription.append(pred)
+            transcription = pipe(inputs.copy(), batch_size=8)["text"]
 
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
