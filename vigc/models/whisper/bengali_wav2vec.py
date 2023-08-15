@@ -2,7 +2,7 @@ import logging
 import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
-from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, Wav2Vec2Processor
+from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, Wav2Vec2Processor, pipeline
 from bnunicodenormalizer import Normalizer
 import contextlib
 
@@ -42,7 +42,7 @@ class BengaliWav2Vec(BaseModel):
         self.model.config.ctc_zero_infinity = True
         if freeze_encoder:
             self.model.freeze_feature_encoder()
-        self.processor = Wav2Vec2Processor.from_pretrained(processor_name)
+        self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -66,16 +66,18 @@ class BengaliWav2Vec(BaseModel):
             samples,
             **kwargs
     ):
-        input_values = samples["input_values"]
-        attention_mask = samples["attention_mask"]
+        inputs = samples["raw_audios"]
+        pipe = pipeline(
+            "automatic-speech-recognition",
+            model=self.model,
+            feature_extractor=self.processor.feature_extractor,
+            tokenizer=self.processor.tokenizer,
+            decoder=self.processor.decoder,
+            device=self.device
+        )
         with self.maybe_autocast():
-            logits = self.model(
-                input_values=input_values,
-                attention_mask=attention_mask,
-                return_dict=True
-            ).logits
-        predicted_ids = torch.argmax(logits, dim=-1)
-        transcription = self.processor.batch_decode(predicted_ids)
+            transcription = pipe(inputs, batch_size=8)
+        transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
         return transcription

@@ -10,8 +10,8 @@ model:
 
 datasets:
   # train
-  wav2vec_bengali_asr:
-    sample_ratio: 1
+#  wav2vec_bengali_asr:
+#    sample_ratio: 1
   wav2vec_bengali_cvbn:
     sample_ratio: 1
 
