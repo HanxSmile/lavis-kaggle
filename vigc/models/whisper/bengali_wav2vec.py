@@ -70,6 +70,7 @@ class BengaliWav2Vec(BaseModel):
         pipe = pipeline(
             "automatic-speech-recognition",
             model=self.model,
+            chunk_length_s=10,
             feature_extractor=self.processor.feature_extractor,
             tokenizer=self.processor.tokenizer,
             decoder=self.processor.decoder,
