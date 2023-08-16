@@ -7,8 +7,7 @@ from torch.utils.data import Dataset as torch_Dataset, DataLoader
 import librosa
 from typing import Dict, List, Union, Any
 from dataclasses import dataclass
-from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor, WhisperForConditionalGeneration, \
-    pipeline
+from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, pipeline
 from bnunicodenormalizer import Normalizer
 import os.path as osp
 import os
@@ -39,6 +38,7 @@ def dari(sentence):
 class InferenceConfig:
     # model
     model_name = ""
+    processor_name = ""
     post_process_flag = True
     ckpt = ""
 
@@ -49,7 +49,7 @@ class InferenceConfig:
 
     # runtime
     mixed_precision = "fp16"
-    output_dir = "./"
+    output_dir = "/kaggle/working/"
     num_processes = 2
 
 
@@ -57,24 +57,19 @@ config = InferenceConfig()
 
 
 ## Model
-class BengaliWhisper(nn.Module):
-    LANGUAGE = "bn"
-    TASK = "transcribe"
+class BengaliWav2Vec(nn.Module):
 
     def __init__(
             self,
-            model_name="openai/whisper-medium",
+            model_name="Sameen53/cv_bn_bestModel_1",
+            processor_name="arijitx/wav2vec2-xls-r-300m-bengali",
             post_process_flag=True
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
-        self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
-        self.model.config.forced_decoder_ids = None
-        self.model.config.suppress_tokens = []
-
-        self.tokenizer = WhisperTokenizer.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
-        self.processor = WhisperProcessor.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
-        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name)
+        self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
+        self.model.config.ctc_zero_infinity = True
+        self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
 
     @property
     def device(self):
@@ -108,32 +103,26 @@ class BengaliWhisper(nn.Module):
             **kwargs
     ):
         inputs = samples["raw_audios"]
-        forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
-        ori_forced_decoder_ids = self.model.config.forced_decoder_ids
-        self.model.config.forced_decoder_ids = forced_decoder_ids
         pipe = pipeline(
             "automatic-speech-recognition",
             model=self.model,
-            chunk_length_s=30,
-            device=self.device,
-            tokenizer=self.tokenizer,
-            feature_extractor=self.feature_extractor
+            chunk_length_s=10,
+            feature_extractor=self.processor.feature_extractor,
+            tokenizer=self.processor.tokenizer,
+            decoder=self.processor.decoder,
+            device=self.device
         )
 
-        transcription = pipe(inputs.copy(), batch_size=8)
+        transcription = pipe(inputs, batch_size=8)
         transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
-        self.model.config.forced_decoder_ids = ori_forced_decoder_ids
         return transcription
 
 
 ## Dataset
 class BengaliASR(torch_Dataset):
-    def __init__(self, feature_extractor, processor, data_root):
-        self.processor = processor
-        self.audio_processor = feature_extractor
-
+    def __init__(self, data_root):
         all_data = [(osp.join(data_root, _), _.replace(".mp3", "")) for _ in os.listdir(data_root) if
                     _.endswith(".mp3")]
         self.all_files = [_[0] for _ in all_data]
@@ -167,8 +156,9 @@ class Factory:
 
     @classmethod
     def prepare_model(cls, cfg: InferenceConfig):
-        model = BengaliWhisper(
+        model = BengaliWav2Vec(
             model_name=cfg.model_name,
+            processor_name=cfg.processor_name,
             post_process_flag=cfg.post_process_flag
         )
         model.load_checkpoint(cfg.ckpt)
@@ -176,10 +166,7 @@ class Factory:
 
     @classmethod
     def prepare_dataset(cls, cfg: InferenceConfig):
-        feature_extractor = WhisperFeatureExtractor.from_pretrained(cfg.model_name)
-        processor = WhisperProcessor.from_pretrained(cfg.model_name, language="bn", task="transcribe")
-        dataset = BengaliASR(feature_extractor, processor, cfg.data_root)
-
+        dataset = BengaliASR(cfg.data_root)
         loader = DataLoader(
             dataset,
             batch_size=cfg.batch_size,
@@ -199,8 +186,8 @@ def inference_loop(cfg: InferenceConfig):
     ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
     accelerator = Accelerator(mixed_precision=cfg.mixed_precision, kwargs_handlers=[ddp_kwargs])
 
-    dataloader = Factory.prepare_dataset(config)
-    model = Factory.prepare_model(config)
+    dataloader = Factory.prepare_dataset(cfg)
+    model = Factory.prepare_model(cfg)
 
     # Freeze the base model
     for param in model.parameters():
