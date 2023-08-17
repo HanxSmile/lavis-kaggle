@@ -2,7 +2,7 @@ import logging
 import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
-from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, Wav2Vec2Processor, pipeline
+from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, pipeline
 from bnunicodenormalizer import Normalizer
 import contextlib
 
