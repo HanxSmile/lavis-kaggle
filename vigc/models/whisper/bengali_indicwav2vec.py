@@ -43,6 +43,7 @@ class BengaliIndicWav2Vec(BaseModel):
         self.post_process_flag = post_process_flag
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
         self.model.config.ctc_zero_infinity = True
+        self.model.config.ctc_loss_reduction = "mean"
         if freeze_encoder:
             self.model.freeze_feature_encoder()
         processor = Wav2Vec2Processor.from_pretrained(model_name)
