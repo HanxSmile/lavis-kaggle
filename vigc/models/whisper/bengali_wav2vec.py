@@ -34,6 +34,7 @@ class BengaliWav2Vec(BaseModel):
             model_name="Sameen53/cv_bn_bestModel_1",
             processor_name="arijitx/wav2vec2-xls-r-300m-bengali",
             freeze_encoder=False,
+            only_finetune_head=False,
             post_process_flag=True
     ):
         super().__init__()
@@ -42,6 +43,10 @@ class BengaliWav2Vec(BaseModel):
         self.model.config.ctc_zero_infinity = True
         if freeze_encoder:
             self.model.freeze_feature_encoder()
+        if only_finetune_head:
+            for name, param in self.model.named_parameters():
+                if "lm_head" not in name:
+                    param.requires_grad = False
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
@@ -113,7 +118,8 @@ class BengaliWav2Vec(BaseModel):
         processor_name = cfg.get("processor_name")
         post_process_flag = cfg.get("post_process_flag", True)
         freeze_encoder = cfg.get("freeze_encoder", False)
+        only_finetune_head = cfg.get("only_finetune_head", False)
         model = cls(model_name=model_name, processor_name=processor_name, freeze_encoder=freeze_encoder,
-                    post_process_flag=post_process_flag)
+                    post_process_flag=post_process_flag, only_finetune_head=only_finetune_head)
         model.load_checkpoint_from_config(cfg)
         return model
