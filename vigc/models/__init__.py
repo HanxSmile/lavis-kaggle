@@ -20,6 +20,7 @@ from vigc.processors.base_processor import BaseProcessor
 
 from vigc.models.whisper.bengali_whisper import BengaliWhisper
 from vigc.models.whisper.bengali_wav2vec import BengaliWav2Vec
+from vigc.models.whisper.bengali_indicwav2vec import BengaliIndicWav2Vec
 
 __all__ = [
     "load_model",
@@ -29,6 +30,7 @@ __all__ = [
     "VisionTransformerEncoder",
     "BengaliWhisper",
     "BengaliWav2Vec",
+    "BengaliIndicWav2Vec"
 ]
 
 
