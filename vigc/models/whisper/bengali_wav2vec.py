@@ -5,6 +5,7 @@ from vigc.models.base_model import BaseModel
 from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, pipeline
 from bnunicodenormalizer import Normalizer
 import contextlib
+import random
 
 bnorm = Normalizer()
 
@@ -35,7 +36,8 @@ class BengaliWav2Vec(BaseModel):
             processor_name="arijitx/wav2vec2-xls-r-300m-bengali",
             freeze_encoder=False,
             only_finetune_head=False,
-            post_process_flag=True
+            post_process_flag=True,
+            mixup_flag=False
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
@@ -48,6 +50,7 @@ class BengaliWav2Vec(BaseModel):
                 if "lm_head" not in name:
                     param.requires_grad = False
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
+        self.mixup_flag = mixup_flag
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -89,6 +92,12 @@ class BengaliWav2Vec(BaseModel):
         return transcription
 
     def forward(self, samples, **kwargs):
+        if self.mixup_flag:
+            return self.mixup_forward(samples, **kwargs)
+        else:
+            return self.normal_forward(samples, **kwargs)
+
+    def normal_forward(self, samples, **kwargs):
         input_values = samples["input_values"]
         attention_mask = samples["attention_mask"]
         labels = samples["labels"]
@@ -100,6 +109,37 @@ class BengaliWav2Vec(BaseModel):
                 return_dict=True,
             )
         loss = outputs.loss
+        return {"loss": loss}
+
+    def mixup_forward(self, samples, **kwargs):
+        input_values = samples["input_values"]
+        attention_mask = samples["attention_mask"]
+        labels = samples["labels"]
+        bs = int(input_values.shape[0])
+        bs_idx = list(range(bs))
+        random.shuffle(bs_idx)
+        input_values2 = input_values[bs_idx]
+        attention_mask2 = attention_mask[bs_idx]
+        labels2 = labels[bs_idx]
+
+        weight = random.uniform(0, 1)
+        mixup_input_values = weight * input_values + (1 - weight) * input_values2
+
+        with self.maybe_autocast():
+            outputs = self.model(
+                input_values=mixup_input_values,
+                attention_mask=attention_mask,
+                labels=labels,
+                return_dict=True,
+            )
+            outputs2 = self.model(
+                input_values=mixup_input_values,
+                attention_mask=attention_mask2,
+                labels=labels2,
+                return_dict=True,
+            )
+
+        loss = outputs.loss * weight + outputs2.loss * (1 - weight)
         return {"loss": loss}
 
     def maybe_autocast(self, dtype=torch.float16):
@@ -119,7 +159,8 @@ class BengaliWav2Vec(BaseModel):
         post_process_flag = cfg.get("post_process_flag", True)
         freeze_encoder = cfg.get("freeze_encoder", False)
         only_finetune_head = cfg.get("only_finetune_head", False)
+        mixup_flag = cfg.get("mixup_flag", False)
         model = cls(model_name=model_name, processor_name=processor_name, freeze_encoder=freeze_encoder,
-                    post_process_flag=post_process_flag, only_finetune_head=only_finetune_head)
+                    post_process_flag=post_process_flag, only_finetune_head=only_finetune_head, mixup_flag=mixup_flag)
         model.load_checkpoint_from_config(cfg)
         return model
