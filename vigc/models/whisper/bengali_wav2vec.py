@@ -2,7 +2,7 @@ import logging
 import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
-from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, pipeline
+from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, pipeline, Wav2Vec2Tokenizer
 from bnunicodenormalizer import Normalizer
 import contextlib
 import random
@@ -48,6 +48,7 @@ class BengaliWav2Vec(BaseModel):
             self.model.freeze_feature_encoder()
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
         self.correction = BengaliSpellCorrection(w2v_model_path, length_threshold)
+        self.tokenizer = Wav2Vec2Tokenizer.from_pretrained(model_name)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -81,7 +82,7 @@ class BengaliWav2Vec(BaseModel):
             )
         logits = outputs.logits
         pred_ids = torch.argmax(logits, dim=-1)
-        transcription = self.processor.tokenizer.batch_decode(pred_ids)[0]
+        transcription = self.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)[0]
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
         transcription = [self.correction.correction_sen(_) for _ in transcription]
