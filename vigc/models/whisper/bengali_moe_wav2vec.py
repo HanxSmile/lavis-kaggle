@@ -106,6 +106,7 @@ class BengaliMoEWav2Vec(BaseModel):
                 outputs = model(
                     input_values=input_values,
                     attention_mask=attention_mask,
+                    output_hidden_states=True,
                     return_dict=True,
                 )
                 all_hidden_states.append(outputs.hidden_states * weights[i])
