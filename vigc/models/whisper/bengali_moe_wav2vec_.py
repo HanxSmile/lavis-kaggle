@@ -51,11 +51,6 @@ class BengaliMoEWav2Vec(BaseModel):
                     param.requires_grad = False
                 elif freeze_lm_head:
                     param.requires_grad = False
-        self.dropout = nn.Dropout(self.config.final_dropout)
-        output_hidden_size = (
-            self.config.output_hidden_size if hasattr(self.config, "add_adapter") and self.config.add_adapter else self.config.hidden_size
-        )
-        self.lm_head = nn.Linear(output_hidden_size, self.config.vocab_size)
         self.weights = nn.Parameter(torch.zeros(len(model_name_list)))
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
 
@@ -99,7 +94,7 @@ class BengaliMoEWav2Vec(BaseModel):
         return transcription
 
     def extract_logits(self, input_values, attention_mask=None):
-        all_hidden_states = []
+        all_logits = []
         weights = F.softmax(self.weights, dim=0)
         with self.maybe_autocast():
             for i, model in enumerate(self.model_list):
@@ -108,10 +103,8 @@ class BengaliMoEWav2Vec(BaseModel):
                     attention_mask=attention_mask,
                     return_dict=True,
                 )
-                all_hidden_states.append(outputs.hidden_states * weights[i])
-        hidden_states = torch.sum(torch.stack(all_hidden_states, dim=0), dim=0)
-        hidden_states = self.dropout(hidden_states)
-        logits = self.lm_head(hidden_states)
+                all_logits.append(outputs.logits * weights[i])
+        logits = torch.sum(torch.stack(all_logits, dim=0), dim=0)
         return logits
 
     def forward(self, samples, **kwargs):
