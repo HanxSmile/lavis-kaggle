@@ -109,7 +109,8 @@ class BengaliMoEWav2Vec(BaseModel):
                     output_hidden_states=True,
                     return_dict=True,
                 )
-                all_hidden_states.append(outputs.hidden_states * weights[i])
+                this_weight = weights[i]
+                all_hidden_states.append(outputs.hidden_states * this_weight)
         hidden_states = torch.sum(torch.stack(all_hidden_states, dim=0), dim=0)
         hidden_states = self.dropout(hidden_states)
         logits = self.lm_head(hidden_states)
