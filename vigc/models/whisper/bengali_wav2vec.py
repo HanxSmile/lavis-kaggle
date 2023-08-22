@@ -65,7 +65,7 @@ class BengaliWav2Vec(BaseModel):
             logging.info(f"Loaded finetuned model '{finetune_path}'.")
 
     @torch.no_grad()
-    def generate(
+    def generate_(
             self,
             samples,
             **kwargs
@@ -87,7 +87,7 @@ class BengaliWav2Vec(BaseModel):
         return transcription
 
     @torch.no_grad()
-    def generate_(
+    def generate(
             self,
             samples,
             **kwargs
