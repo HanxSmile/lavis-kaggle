@@ -51,7 +51,7 @@ class BengaliMoEWav2Vec(BaseModel):
                     param.requires_grad = False
                 elif freeze_lm_head:
                     param.requires_grad = False
-        self.weights = nn.Parameter(torch.zeros(len(self.model_name_list)))
+        self.weights = nn.Parameter(torch.zeros(len(model_name_list)))
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
