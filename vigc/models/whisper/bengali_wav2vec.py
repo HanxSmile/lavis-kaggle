@@ -6,6 +6,7 @@ from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, pipeline
 from bnunicodenormalizer import Normalizer
 import contextlib
 import random
+from .post_process import BengaliSpellCorrection
 
 bnorm = Normalizer()
 
@@ -36,6 +37,8 @@ class BengaliWav2Vec(BaseModel):
             processor_name="arijitx/wav2vec2-xls-r-300m-bengali",
             freeze_encoder=False,
             post_process_flag=True,
+            w2v_model_path="/mnt/petrelfs/hanxiao/work/bengali_utils/model/bn_w2v_model.text",
+            length_threshold=None,
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
@@ -44,6 +47,7 @@ class BengaliWav2Vec(BaseModel):
         if freeze_encoder:
             self.model.freeze_feature_encoder()
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
+        self.correction = BengaliSpellCorrection(w2v_model_path, length_threshold)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -63,6 +67,28 @@ class BengaliWav2Vec(BaseModel):
 
     @torch.no_grad()
     def generate(
+            self,
+            samples,
+            **kwargs
+    ):
+        input_values = samples["input_values"]
+        attention_mask = samples["attention_mask"]
+        with self.maybe_autocast():
+            outputs = self.model(
+                input_values=input_values,
+                attention_mask=attention_mask,
+                return_dict=True,
+            )
+        logits = outputs.logits
+        pred_ids = torch.argmax(logits, dim=-1)
+        transcription = self.processor.tokenizer.batch_decode(pred_ids)[0]
+        if self.post_process_flag:
+            transcription = [dari(normalize(_)) for _ in transcription]
+        transcription = [self.correction.correction_sen(_) for _ in transcription]
+        return transcription
+
+    @torch.no_grad()
+    def generate_(
             self,
             samples,
             **kwargs
