@@ -35,9 +35,7 @@ class BengaliWav2Vec(BaseModel):
             model_name="Sameen53/cv_bn_bestModel_1",
             processor_name="arijitx/wav2vec2-xls-r-300m-bengali",
             freeze_encoder=False,
-            only_finetune_head=False,
             post_process_flag=True,
-            mixup_flag=False
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
@@ -45,12 +43,7 @@ class BengaliWav2Vec(BaseModel):
         self.model.config.ctc_zero_infinity = True
         if freeze_encoder:
             self.model.freeze_feature_encoder()
-        if only_finetune_head:
-            for name, param in self.model.named_parameters():
-                if "lm_head" not in name:
-                    param.requires_grad = False
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
-        self.mixup_flag = mixup_flag
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -92,12 +85,6 @@ class BengaliWav2Vec(BaseModel):
         return transcription
 
     def forward(self, samples, **kwargs):
-        if self.mixup_flag:
-            return self.mixup_forward(samples, **kwargs)
-        else:
-            return self.normal_forward(samples, **kwargs)
-
-    def normal_forward(self, samples, **kwargs):
         input_values = samples["input_values"]
         attention_mask = samples["attention_mask"]
         labels = samples["labels"]
@@ -158,9 +145,8 @@ class BengaliWav2Vec(BaseModel):
         processor_name = cfg.get("processor_name")
         post_process_flag = cfg.get("post_process_flag", True)
         freeze_encoder = cfg.get("freeze_encoder", False)
-        only_finetune_head = cfg.get("only_finetune_head", False)
-        mixup_flag = cfg.get("mixup_flag", False)
+
         model = cls(model_name=model_name, processor_name=processor_name, freeze_encoder=freeze_encoder,
-                    post_process_flag=post_process_flag, only_finetune_head=only_finetune_head, mixup_flag=mixup_flag)
+                    post_process_flag=post_process_flag)
         model.load_checkpoint_from_config(cfg)
         return model

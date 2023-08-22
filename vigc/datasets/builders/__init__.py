@@ -59,6 +59,8 @@ from vigc.datasets.builders.whisper.wav2vec_bengali_asr import (
     Wav2VecBengaliASRTest
 )
 
+from vigc.datasets.builders.whisper.wav2vec_aug_asr import Wav2VecSegAugASRBuilder
+
 __all__ = [
     # "AOKVQA_Train_Builder",
     "VQAv2EvalBuilder",
@@ -99,6 +101,8 @@ __all__ = [
     "Wav2VecBengaliASRBuilder",
     "Wav2VecBengaliASREvalBuilder",
     "Wav2VecBengaliASRTest",
+
+    "Wav2VecSegAugASRBuilder"
 ]
 
 

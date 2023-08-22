@@ -13,6 +13,10 @@ datasets:
   wav2vec_bengali_asr:
     sample_ratio: 1
 
+  wav2vec_seg_aug_asr:
+    seg_nums: 3
+    sample_ratio: 1
+
   wav2vec_bengali_shrutilipi:
     sample_ratio: 1
 
