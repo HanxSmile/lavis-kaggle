@@ -79,9 +79,9 @@ class BengaliWav2Vec(BaseModel):
                 return_dict=True,
             )
         logits = outputs.logits
-        transcription = self.processor.decode(logits)
-        transcription = [_.text for _ in transcription]
-
+        transcription = []
+        for l in logits:
+            transcription.append(self.processor.decode(l).text)
         if self.post_process_flag:
             transcription = [dari(normalize(_)) for _ in transcription]
         return transcription

@@ -327,6 +327,7 @@ class Wav2VecBengaliASRTest(torch_Dataset):
             "sampling_rate": sr
         }
         input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
+        input_values = trim_silence(input_values)
         input_length = len(input_values)
         sentence = normalize(remove_special_characters(ann.sentence))
         labels = self.processor.tokenizer(sentence).input_ids
