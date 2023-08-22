@@ -1,5 +1,4 @@
 from transformers import AutomaticSpeechRecognitionPipeline
-import torch
 
 
 class MoEAutomaticSpeechRecognitionPipeline(AutomaticSpeechRecognitionPipeline):
@@ -10,12 +9,10 @@ class MoEAutomaticSpeechRecognitionPipeline(AutomaticSpeechRecognitionPipeline):
             *,
             decoder=None,
             moe_list=None,
-            weights=None,
             **kwargs,
     ):
         super().__init__(feature_extractor=feature_extractor, decoder=decoder, **kwargs)
         self.moe_list = moe_list
-        self.weights = weights if weights is not None else [1] * len(moe_list)
 
     @staticmethod
     def rescale_stride(stride, ratio):
@@ -44,31 +41,25 @@ class MoEAutomaticSpeechRecognitionPipeline(AutomaticSpeechRecognitionPipeline):
             generate_kwargs["return_timestamps"] = return_timestamps
         is_last = model_inputs.pop("is_last")
 
-        if 1:
-            all_outputs = []
-            stride = model_inputs.pop("stride", None)
-            input_values = model_inputs.pop("input_values")
-            attention_mask = model_inputs.pop("attention_mask", None)
-            for model, weight in zip(self.moe_list, self.weights):
-                this_output = model(input_values=input_values, attention_mask=attention_mask)
-                this_logit = this_output.logits * weight
-                all_outputs.append(this_logit)
+        stride = model_inputs.pop("stride", None)
+        input_values = model_inputs.pop("input_values")
+        attention_mask = model_inputs.pop("attention_mask", None)
 
-            logits = torch.sum(torch.stack(all_outputs, dim=0), dim=0) / sum(self.weights)
+        logits = self.moe_list.extract_logits(input_values, attention_mask)
 
-            if self.type == "ctc_with_lm":
-                out = {"logits": logits}
+        if self.type == "ctc_with_lm":
+            out = {"logits": logits}
+        else:
+            out = {"tokens": logits.argmax(dim=-1)}
+        if stride is not None:
+            # Send stride to `postprocess`.
+            # it needs to be handled there where
+            # the pieces are to be concatenated.
+            ratio = 1 / self.model.config.inputs_to_logits_ratio
+            if isinstance(stride, tuple):
+                out["stride"] = self.rescale_stride([stride], ratio)[0]
             else:
-                out = {"tokens": logits.argmax(dim=-1)}
-            if stride is not None:
-                # Send stride to `postprocess`.
-                # it needs to be handled there where
-                # the pieces are to be concatenated.
-                ratio = 1 / self.model.config.inputs_to_logits_ratio
-                if isinstance(stride, tuple):
-                    out["stride"] = self.rescale_stride([stride], ratio)[0]
-                else:
-                    out["stride"] = self.rescale_stride(stride, ratio)
+                out["stride"] = self.rescale_stride(stride, ratio)
         # Leftover
         extra = model_inputs
         return {"is_last": is_last, **out, **extra}
