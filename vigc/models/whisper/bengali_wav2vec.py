@@ -78,7 +78,7 @@ class BengaliWav2Vec(BaseModel):
                 attention_mask=attention_mask,
                 return_dict=True,
             )
-        logits = outputs.logits
+        logits = outputs.logits.detach().cpu().numpy()
         transcription = []
         for l in logits:
             transcription.append(self.processor.decode(l).text)
