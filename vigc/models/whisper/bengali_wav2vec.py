@@ -48,7 +48,7 @@ class BengaliWav2Vec(BaseModel):
             self.model.freeze_feature_encoder()
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
         self.correction = BengaliSpellCorrection(w2v_model_path, length_threshold)
-        self.tokenizer = Wav2Vec2Tokenizer.from_pretrained(model_name)
+        self.tokenizer = Wav2Vec2Tokenizer.from_pretrained(processor_name)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
