@@ -248,6 +248,7 @@ class Wav2VecBengaliASR(torch_Dataset):
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
         self.inner_dataset = data
         self.transform = transform
+        self.split = split
 
     def __len__(self):
         return len(self.inner_dataset)
@@ -269,7 +270,7 @@ class Wav2VecBengaliASR(torch_Dataset):
         input_values = trim_silence(input_values)
         input_length = len(input_values)
         input_secs = input_length / 16_000
-        if input_secs <= 1 or input_secs >= 10:
+        if (input_secs <= 1 or input_secs >= 10) and self.split == "train":
             return self[(index + 1) % len(self)]  # filter too long or too short audio
         sentence = normalize(remove_special_characters(ann.sentence))
         labels = self.processor.tokenizer(sentence).input_ids
