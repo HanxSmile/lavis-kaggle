@@ -278,7 +278,7 @@ class Wav2VecBengaliASR(torch_Dataset):
                 data = annotations[annotations['fold'] == self.fold_idx].reset_index(drop=True)
                 if self.sample_nums is None:
                     pass
-                data = data.sample(frac=1).reset_index(drop=True).head(self.sample_nums)
+                data = data.sample(frac=1, random_state=self.seed).reset_index(drop=True).head(self.sample_nums)
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
         return data
 
