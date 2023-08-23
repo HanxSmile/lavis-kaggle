@@ -34,4 +34,4 @@ class Wav2VecSegAugASR(Wav2VecBengaliASR):
         labels = self.processor.tokenizer(sentence).input_ids
 
         return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann.id,
-                "input_length": input_length}
+                "input_length": input_length, "audio": audio}
