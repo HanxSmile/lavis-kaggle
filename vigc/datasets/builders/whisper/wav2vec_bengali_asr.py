@@ -204,7 +204,8 @@ class Wav2VecBengaliASREvalBuilder(BaseDatasetBuilder):
             split_style=cfg.get("split_style", "default"),
             fold_idx=cfg.get("fold_idx", None),
             fold_nums=cfg.get("fold_nums", None),
-            seed=cfg.get("seed", None)
+            seed=cfg.get("seed", None),
+            sample_nums=cfg.get("sample_nums", None)
         )
         _ = datasets["eval"][0]
         return datasets

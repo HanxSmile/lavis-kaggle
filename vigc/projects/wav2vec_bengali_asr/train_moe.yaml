@@ -39,6 +39,7 @@ datasets:
     fold_idx: 1
     fold_nums: 5
     seed: 42
+    sample_nums: 10000
 
   ## test
   # wav2vec_bengali_asr_test:

@@ -239,7 +239,7 @@ class Wav2VecBengaliCVBN(torch_Dataset):
 
 class Wav2VecBengaliASR(torch_Dataset):
     def __init__(self, processor, data_root, split: str, transform=None, split_style="default", fold_idx=None,
-                 fold_nums=None, seed=None):
+                 fold_nums=None, seed=None, sample_nums=None):
         split = split.lower()
         split_style = split_style.lower()
         assert split_style in ("k-fold", "default")
@@ -253,6 +253,7 @@ class Wav2VecBengaliASR(torch_Dataset):
         self.fold_nums = fold_nums
         self.seed = seed
         self.split = split
+        self.sample_nums = sample_nums
 
         self.processor = processor
         self.media_root = osp.join(data_root, "train_mp3s")
@@ -275,6 +276,9 @@ class Wav2VecBengaliASR(torch_Dataset):
                 data = annotations[annotations['fold'] != self.fold_idx].reset_index(drop=True)
             else:
                 data = annotations[annotations['fold'] == self.fold_idx].reset_index(drop=True)
+                if self.sample_nums is None:
+                    pass
+                data = data.sample(frac=1).reset_index(drop=True).head(self.sample_nums)
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
         return data
 
