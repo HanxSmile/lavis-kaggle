@@ -52,6 +52,10 @@ class Wav2VecSegAugASRBuilder(BaseDatasetBuilder):
             data_root=data_root,
             split="train",
             transform=transform,
+            split_style=cfg.get("split_style", "default"),
+            fold_idx=cfg.get("fold_idx", None),
+            fold_nums=cfg.get("fold_nums", None),
+            seed=cfg.get("seed", None),
             seg_nums=cfg.get("seg_nums", 3),
         )
         _ = datasets["train"][0]

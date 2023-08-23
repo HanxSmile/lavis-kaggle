@@ -10,6 +10,7 @@ import re
 from typing import Dict, List, Union
 from bnunicodenormalizer import Normalizer
 from datasets import load_dataset, Audio, concatenate_datasets
+from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
 bnorm = Normalizer()
 
@@ -237,18 +238,45 @@ class Wav2VecBengaliCVBN(torch_Dataset):
 
 
 class Wav2VecBengaliASR(torch_Dataset):
-    def __init__(self, processor, data_root, split: str, transform=None):
+    def __init__(self, processor, data_root, split: str, transform=None, split_style="default", fold_idx=None,
+                 fold_nums=None, seed=None):
         split = split.lower()
+        split_style = split_style.lower()
+        assert split_style in ("k-fold", "default")
+        if split_style == "k-fold":
+            assert fold_idx is not None and fold_nums is not None and seed is not None
+            assert fold_idx in list(range(1, fold_nums + 1))
         assert split in ("train", "valid")
+
+        self.split_style = split_style
+        self.fold_idx = fold_idx
+        self.fold_nums = fold_nums
+        self.seed = seed
+        self.split = split
+
         self.processor = processor
         self.media_root = osp.join(data_root, "train_mp3s")
         self.anno_path = osp.join(data_root, "train.csv")
-        annotations = pd.read_csv(self.anno_path)
-        data = annotations[annotations["split"] == split]
-        data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
-        self.inner_dataset = data
+
+        self.inner_dataset = self._extract_data()
         self.transform = transform
         self.split = split
+
+    def _extract_data(self):
+        annotations = pd.read_csv(self.anno_path)
+        if self.split_style == "default":
+            data = annotations[annotations["split"] == self.split]
+        else:
+            Fold = MultilabelStratifiedKFold(n_splits=self.fold_nums, shuffle=True, random_state=self.seed)
+            for n, (train_index, val_index) in enumerate(Fold.split(annotations, annotations[["sentence", "split"]])):
+                annotations.loc[val_index, 'fold'] = int(n + 1)
+            annotations['fold'] = annotations['fold'].astype(int)
+            if self.split == "train":
+                data = annotations[annotations['fold'] != self.fold_idx].reset_index(drop=True)
+            else:
+                data = annotations[annotations['fold'] == self.fold_idx].reset_index(drop=True)
+        data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
+        return data
 
     def __len__(self):
         return len(self.inner_dataset)

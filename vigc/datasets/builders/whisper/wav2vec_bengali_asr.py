@@ -166,11 +166,16 @@ class Wav2VecBengaliASRBuilder(BaseDatasetBuilder):
 
         cfg = self.config
         processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
+
         datasets["train"] = self.train_dataset_cls(
             processor=processor,
             data_root=data_root,
             split="train",
             transform=transform,
+            split_style=cfg.get("split_style", "default"),
+            fold_idx=cfg.get("fold_idx", None),
+            fold_nums=cfg.get("fold_nums", None),
+            seed=cfg.get("seed", None)
         )
         _ = datasets["train"][0]
         return datasets
@@ -196,6 +201,10 @@ class Wav2VecBengaliASREvalBuilder(BaseDatasetBuilder):
             processor=processor,
             data_root=data_root,
             split="valid",
+            split_style=cfg.get("split_style", "default"),
+            fold_idx=cfg.get("fold_idx", None),
+            fold_nums=cfg.get("fold_nums", None),
+            seed=cfg.get("seed", None)
         )
         _ = datasets["eval"][0]
         return datasets

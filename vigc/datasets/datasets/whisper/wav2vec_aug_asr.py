@@ -4,8 +4,9 @@ import numpy as np
 
 
 class Wav2VecSegAugASR(Wav2VecBengaliASR):
-    def __init__(self, processor, data_root, split: str, transform=None, seg_nums: int = 3):
-        super().__init__(processor, data_root, split, transform)
+    def __init__(self, processor, data_root, split: str, transform=None, split_style="default", fold_idx=None,
+                 fold_nums=None, seed=None, seg_nums: int = 3):
+        super().__init__(processor, data_root, split, transform, split_style, fold_idx, fold_nums, seed)
         self.seg_nums = seg_nums
 
     def __getitem__(self, index):

@@ -2,6 +2,7 @@ model:
   model_name_list:
     - "/mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/20230822163/best_hf"
     - "/mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/20230817210/best_hf"
+    - "/mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/20230822175/best_hf"
   load_finetuned: False
   finetuned: ""
   post_process_flag: True
@@ -12,29 +13,36 @@ model:
 
 datasets:
   # train
-  wav2vec_bengali_asr:
-    sample_ratio: 1
+  # wav2vec_bengali_asr:
+  #   sample_ratio: 1
 
   wav2vec_seg_aug_asr:
     seg_nums: 3
     sample_ratio: 1
+    split_style: k-fold
+    fold_idx: 1
+    fold_nums: 5
+    seed: 42
 
-  wav2vec_bengali_shrutilipi:
-    sample_ratio: 1
+  # wav2vec_bengali_shrutilipi:
+  #   sample_ratio: 1
 
-  wav2vec_bengali_openslr:
-    sample_ratio: 1
+  # wav2vec_bengali_openslr:
+  #   sample_ratio: 1
 
-  wav2vec_bengali_cvbn:
-    sample_ratio: 1
+  # wav2vec_bengali_cvbn:
+  #   sample_ratio: 1
 
-  ## eval
-#  whisper_bengali_asr_eval:
-#    model_name: /mnt/petrelfs/hanxiao/work/whisper-small
+    # eval
+  wav2vec_bengali_asr_eval:
+    split_style: k-fold
+    fold_idx: 1
+    fold_nums: 5
+    seed: 42
 
   ## test
-  wav2vec_bengali_asr_test:
-    placeholder: null
+  # wav2vec_bengali_asr_test:
+  #   placeholder: null
 
 run:
   runner: runner_iter
