@@ -46,7 +46,7 @@ class BengaliWav2Vec(BaseModel):
         if freeze_encoder:
             # self.model.freeze_feature_encoder()
             for n, p in self.model.named_parameters():
-                if n.startswith("lm_head."):
+                if not n.startswith("lm_head."):
                     p.requires_grad = False
         self.processor = Wav2Vec2ProcessorWithLM.from_pretrained(processor_name)
         # self.correction = BengaliSpellCorrection(w2v_model_path, length_threshold)
