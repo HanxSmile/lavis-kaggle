@@ -83,6 +83,29 @@ class BengaliIndicWav2Vec(BaseModel):
             samples,
             **kwargs
     ):
+        transcription = []
+        input_values = samples["input_values"]
+        attention_mask = samples["attention_mask"]
+        with self.maybe_autocast():
+            logits = self.model(
+                input_values=input_values,
+                attention_mask=attention_mask,
+                return_dict=True
+            ).logits
+        logits = logits.detach().cpu().numpy()
+        for l in logits:
+            sentence = self.processor.decode(l, beam_width=512).text
+            transcription.append(sentence)
+        if self.post_process_flag:
+            transcription = [dari(normalize(_)) for _ in transcription]
+        return transcription
+
+    @torch.no_grad()
+    def generate_(
+            self,
+            samples,
+            **kwargs
+    ):
         inputs = samples["raw_audios"]
         pipe = pipeline(
             "automatic-speech-recognition",
