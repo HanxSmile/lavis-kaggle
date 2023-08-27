@@ -31,15 +31,22 @@ from vigc.processors import *
 from vigc.runners import *
 from vigc.tasks import *
 
+PROCESSOR_NAME = {
+    "bengali_wav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
+    "bengali_indicwav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+}
+
+MODEL_NAME = {
+    "bengali_wav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/cv_bn_bestModel_1",
+    "bengali_indicwav2vec": "/mnt/lustre/hanxiao/work/bengali_utils/indic_wav2vec"
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Training")
+    parser.add_argument("--model-type", required=True)
     parser.add_argument("--src-path", required=True)
     parser.add_argument("--dst-path", required=True, help="path to save to hf weights.")
-    parser.add_argument("--model-name", default="/mnt/petrelfs/hanxiao/work/bengali_utils/cv_bn_bestModel_1")
-    parser.add_argument(
-        "--processor-name",
-        default="/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali")
 
     args = parser.parse_args()
 
@@ -49,10 +56,16 @@ def parse_args():
 def main():
     cfg = parse_args()
     # from vigc.models.whisper.bengali_wav2vec import BengaliWav2Vec
-    model = BengaliWav2Vec(
-        model_name=cfg.model_name,
-        processor_name=cfg.processor_name
-    )
+    if cfg.model_type == "bengali_wav2vec":
+        model = BengaliWav2Vec(
+            model_name=MODEL_NAME[cfg.model_type],
+            processor_name=PROCESSOR_NAME[cfg.model_type]
+        )
+    else:
+        model = BengaliIndicWav2Vec(
+            model_name=MODEL_NAME[cfg.model_type],
+            processor_name=PROCESSOR_NAME[cfg.model_type]
+        )
     model.load_checkpoint(cfg.src_path)
     hf_model = model.model
     hf_model.save_pretrained(cfg.dst_path)
