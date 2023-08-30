@@ -29,29 +29,6 @@ def normalize(sentence):
     return sentence
 
 
-def trim_silence(arr):
-    try:
-        _max = max(max(arr), -min(arr))
-        old_length = len(arr)
-
-        threshold = 30
-
-        for i, e in enumerate(arr):
-            if threshold * e > _max:
-                break
-
-        for j, e in enumerate(reversed(arr)):
-            if threshold * e > _max:
-                break
-
-        arr = arr[i:old_length - j]
-    except:
-        pass
-    return arr
-
-
-
-
 class Wav2VecBase(torch_Dataset):
 
     def __init__(self, inner_dataset, processor, transform=None):
@@ -71,7 +48,7 @@ class Wav2VecBase(torch_Dataset):
         return input_secs > 1 and input_secs < 10
 
     def transform_array(self, audio):
-        audio["array"] = trim_silence(np.trim_zeros(audio["array"], "fb"))
+        audio["array"] = np.trim_zeros(audio["array"], "fb")
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
         return audio
@@ -126,7 +103,11 @@ class Wav2VecBengaliShrutilipi(Wav2VecBase):
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        return ann["audio"], ann["transcriptions"], str(index)
+        audio = ann["audio"]
+        array, sr = librosa.resample(audio["array"], orig_sr=audio["sampling_rate"], target_sr=16_000), 16_000
+        audio["array"] = array
+        audio["sampling_rate"] = sr
+        return audio, ann["transcriptions"], str(index)
 
 
 class Wav2VecBengaliOpenSLR(Wav2VecBase):
