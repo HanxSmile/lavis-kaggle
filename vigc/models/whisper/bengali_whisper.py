@@ -10,17 +10,16 @@ from transformers import pipeline
 bnorm = Normalizer()
 
 
-def normalize(sen):
-    _words = [bnorm(word)['normalized'] for word in sen.split()]
-    return " ".join([word for word in _words if word is not None])
-
-
-def dari(sentence):
+def postprocess(sentence):
+    period_set = [".", "?", "!", "।"]
+    _words = [bnorm(word)['normalized'] for word in sentence.split()]
+    sentence = " ".join([word for word in _words if word is not None])
     try:
-        if sentence[-1] != "।":
+        if sentence[-1] not in period_set:
             sentence += "।"
     except:
-        print(sentence)
+        # print(sentence)
+        sentence = "।"
     return sentence
 
 
@@ -91,7 +90,7 @@ class BengaliWhisper(BaseModel):
             transcription = pipe(inputs.copy(), batch_size=8)
         transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
-            transcription = [dari(normalize(_)) for _ in transcription]
+            transcription = [postprocess(_) for _ in transcription]
         self.model.config.forced_decoder_ids = ori_forced_decoder_ids
         return transcription
 

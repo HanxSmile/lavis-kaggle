@@ -12,17 +12,16 @@ import torch.nn as nn
 bnorm = Normalizer()
 
 
-def normalize(sen):
-    _words = [bnorm(word)['normalized'] for word in sen.split()]
-    return " ".join([word for word in _words if word is not None])
-
-
-def dari(sentence):
+def postprocess(sentence):
+    period_set = [".", "?", "!", "।"]
+    _words = [bnorm(word)['normalized'] for word in sentence.split()]
+    sentence = " ".join([word for word in _words if word is not None])
     try:
-        if sentence[-1] != "।":
+        if sentence[-1] not in period_set:
             sentence += "।"
     except:
-        print(sentence)
+        # print(sentence)
+        sentence = "।"
     return sentence
 
 
@@ -95,7 +94,7 @@ class BengaliMoEWav2Vec(BaseModel):
             transcription = pipe(inputs, batch_size=8)
         transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
-            transcription = [dari(normalize(_)) for _ in transcription]
+            transcription = [postprocess(_) for _ in transcription]
         return transcription
 
     def extract_logits(self, input_values, attention_mask=None):
