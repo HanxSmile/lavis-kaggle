@@ -9,22 +9,19 @@ import torch
 import re
 from typing import Dict, List, Union
 from bnunicodenormalizer import Normalizer
-from datasets import load_dataset, Audio, concatenate_datasets
+from datasets import Audio, concatenate_datasets
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
 bnorm = Normalizer()
 
 pd.options.mode.chained_assignment = None
 
-chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'
-
-
-def remove_special_characters(sentence):
-    sentence = re.sub(chars_to_ignore_regex, '', sentence) + " "
-    return sentence
+# chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'  # 全部符号都去除
+chars_to_ignore_regex = '[\.\-\;\:\"\—\‘\'\‚\“\”\…]'  # 保留 , ? !
 
 
 def normalize(sentence):
+    sentence = re.sub(chars_to_ignore_regex, '', sentence) + " "
     _words = [bnorm(word)['normalized'] for word in sentence.split()]
     sentence = " ".join([word for word in _words if word is not None])
     return sentence
@@ -51,34 +48,42 @@ def trim_silence(arr):
     return arr
 
 
-class Wav2VecBengaliShrutilipi(torch_Dataset):
-    DATASET_NAME = "ucalyptus/shrutilipi_bengali"
+class Wav2VecBase(torch_Dataset):
 
-    def __init__(self, cache_file, processor, transform=None):
-        self.inner_dataset = datasets.load_dataset(self.DATASET_NAME, cache_dir=cache_file)["train"]
+    def __init__(self, inner_dataset, processor, transform=None):
+        self.inner_dataset = inner_dataset
         self.processor = processor
         self.transform = transform
+
+    def _parse_ann_info(self, index):
+        raise NotImplementedError
 
     def __len__(self):
         return len(self.inner_dataset)
 
-    def __getitem__(self, index):
-        ann = self.inner_dataset[index]
-        audio = ann["audio"]
+    def is_valid(self, input_values):
+        input_length = len(input_values)
+        input_secs = input_length / 16_000
+        return input_secs > 1 and input_secs < 10
+
+    def transform_array(self, audio):
         audio["array"] = np.trim_zeros(audio["array"], "fb")
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
+        return audio
+
+    def __getitem__(self, index):
+        audio, sentence, ann_id = self._parse_ann_info(index)
+        audio = self.transform_array(audio)
         input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
         input_values = trim_silence(input_values)
-        input_length = len(input_values)
-        input_secs = input_length / 16_000
-        if input_secs <= 1 or input_secs >= 10:
+        if not self.is_valid(input_values):
             return self[(index + 1) % len(self)]  # filter too long or too short audio
-        sentence = normalize(remove_special_characters(ann["transcriptions"]))
+        sentence = normalize(sentence)
         labels = self.processor.tokenizer(sentence).input_ids
 
-        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": str(index),
-                "input_length": input_length}
+        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann_id,
+                "input_length": len(input_values), "audio": audio}
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
@@ -103,141 +108,63 @@ class Wav2VecBengaliShrutilipi(torch_Dataset):
         batch["labels"] = labels
         batch["sentences"] = [_["sentence"] for _ in features]
         batch["ids"] = [_["id"] for _ in features]
-        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids"]
+        batch["raw_audios"] = [_["audio"] for _ in features]
+        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids", "raw_audios"]
         result = {k: batch[k] for k in all_keys}
         return result
 
 
-class Wav2VecBengaliOpenSLR(torch_Dataset):
+class Wav2VecBengaliShrutilipi(Wav2VecBase):
+    DATASET_NAME = "ucalyptus/shrutilipi_bengali"
+
+    def __init__(self, cache_file, processor, transform=None):
+        inner_dataset = datasets.load_dataset(self.DATASET_NAME, cache_dir=cache_file)["train"]
+        super().__init__(inner_dataset, processor, transform)
+
+    def _parse_ann_info(self, index):
+        ann = self.inner_dataset[index]
+        return ann["audio"], ann["transcriptions"], str(index)
+
+
+class Wav2VecBengaliOpenSLR(Wav2VecBase):
     def __init__(self, ann_file, data_root, processor, transform=None):
-        self.inner_dataset = pd.read_table(ann_file, names=["id", "hash", "sentence"])
-        self.processor = processor
         self.media_root = data_root
-        self.transform = transform
+        inner_dataset = pd.read_table(ann_file, names=["id", "hash", "sentence"])
+        super().__init__(inner_dataset, processor, transform)
 
-    def __len__(self):
-        return len(self.inner_dataset)
-
-    def __getitem__(self, index):
+    def _parse_ann_info(self, index):
         ann = self.inner_dataset.iloc[index]
-        id_ = ann.id
-        audio_path = osp.join(self.media_root, id_[:2], id_ + ".flac")
+        ann_id = ann.id
+        audio_path = osp.join(self.media_root, ann_id[:2], ann_id + ".flac")
         array, sr = librosa.load(audio_path, sr=None)
         array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
-        array = np.trim_zeros(array, "fb")
         audio = {
             "path": audio_path,
             "array": array,
             "sampling_rate": sr
         }
-        if self.transform is not None:
-            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
-        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
-        input_values = trim_silence(input_values)
-        input_length = len(input_values)
-        input_secs = input_length / 16_000
-        if input_secs <= 1 or input_secs >= 10:
-            return self[(index + 1) % len(self)]  # filter too long or too short audio
-        sentence = normalize(remove_special_characters(ann.sentence))
-        labels = self.processor.tokenizer(sentence).input_ids
-
-        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann.id,
-                "input_length": input_length}
-
-    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # split inputs and labels since they have to be of different lengths and need different padding methods
-        # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_values": feature["input_values"]} for feature in features]
-        label_features = [{"input_ids": feature["labels"]} for feature in features]
-
-        batch = self.processor.pad(
-            input_features,
-            padding=True,
-            return_tensors="pt",
-        )
-        with self.processor.as_target_processor():
-            labels_batch = self.processor.pad(
-                label_features,
-                padding=True,
-                return_tensors="pt",
-            )
-        # replace padding with -100 to ignore loss correctly
-        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
-
-        batch["labels"] = labels
-        batch["sentences"] = [_["sentence"] for _ in features]
-        batch["ids"] = [_["id"] for _ in features]
-        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids"]
-        result = {k: batch[k] for k in all_keys}
-        return result
+        return audio, ann.sentence, ann_id
 
 
-class Wav2VecBengaliCVBN(torch_Dataset):
+class Wav2VecBengaliCVBN(Wav2VecBase):
     DATASET_NAME = "/mnt/petrelfs/share_data/hanxiao/cvbn"
 
-    def __init__(self, processor, split: str, transform=None):
-        split = split.lower()
-        assert split in ("train", "validation")
+    def __init__(self, processor, split: str = "", transform=None):
         whole_dataset = datasets.load_from_disk(self.DATASET_NAME)
-        self.inner_dataset = concatenate_datasets([whole_dataset["train"], whole_dataset["validation"]])
-        self.inner_dataset = self.inner_dataset.filter(lambda x, y: x > y, input_columns=["up_votes", "down_votes"])
-        self.inner_dataset = self.inner_dataset.remove_columns(
+        inner_dataset = concatenate_datasets([whole_dataset["train"], whole_dataset["validation"]])
+        inner_dataset = inner_dataset.filter(lambda x, y: x > y, input_columns=["up_votes", "down_votes"])
+        inner_dataset = inner_dataset.remove_columns(
             ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment'])
-        self.inner_dataset = self.inner_dataset.cast_column("audio", Audio(sampling_rate=16_000))
+        inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=16_000))
 
-        self.processor = processor
-        self.transform = transform
+        super().__init__(inner_dataset, processor, transform)
 
-    def __len__(self):
-        return len(self.inner_dataset)
-
-    def __getitem__(self, index):
+    def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        audio = ann["audio"]
-        audio["array"] = np.trim_zeros(audio["array"], "fb")
-        if self.transform is not None:
-            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
-        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
-        input_values = trim_silence(input_values)
-        input_length = len(input_values)
-        input_secs = input_length / 16_000
-        if input_secs <= 1 or input_secs >= 10:
-            return self[(index + 1) % len(self)]  # filter too long or too short audio
-        sentence = normalize(remove_special_characters(ann["sentence"]))
-        labels = self.processor.tokenizer(sentence).input_ids
-
-        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": str(index),
-                "input_length": input_length}
-
-    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # split inputs and labels since they have to be of different lengths and need different padding methods
-        # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_values": feature["input_values"]} for feature in features]
-        label_features = [{"input_ids": feature["labels"]} for feature in features]
-
-        batch = self.processor.pad(
-            input_features,
-            padding=True,
-            return_tensors="pt",
-        )
-        with self.processor.as_target_processor():
-            labels_batch = self.processor.pad(
-                label_features,
-                padding=True,
-                return_tensors="pt",
-            )
-        # replace padding with -100 to ignore loss correctly
-        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
-
-        batch["labels"] = labels
-        batch["sentences"] = [_["sentence"] for _ in features]
-        batch["ids"] = [_["id"] for _ in features]
-        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids"]
-        result = {k: batch[k] for k in all_keys}
-        return result
+        return ann["audio"], ann["sentence"], str(index)
 
 
-class Wav2VecBengaliASR(torch_Dataset):
+class Wav2VecBengaliASR(Wav2VecBase):
     def __init__(self, processor, data_root, split: str, transform=None, split_style="default", fold_idx=None,
                  fold_nums=None, seed=None, sample_nums=None):
         split = split.lower()
@@ -247,7 +174,7 @@ class Wav2VecBengaliASR(torch_Dataset):
             assert fold_idx is not None and fold_nums is not None and seed is not None
             assert fold_idx in list(range(1, fold_nums + 1))
         assert split in ("train", "valid")
-
+        self.split = split
         self.split_style = split_style
         self.fold_idx = fold_idx
         self.fold_nums = fold_nums
@@ -255,13 +182,11 @@ class Wav2VecBengaliASR(torch_Dataset):
         self.split = split
         self.sample_nums = sample_nums
 
-        self.processor = processor
         self.media_root = osp.join(data_root, "train_mp3s")
         self.anno_path = osp.join(data_root, "train.csv")
 
-        self.inner_dataset = self._extract_data()
-        self.transform = transform
-        self.split = split
+        inner_dataset = self._extract_data()
+        super().__init__(inner_dataset, processor, transform)
 
     def _extract_data(self):
         annotations = pd.read_csv(self.anno_path)
@@ -282,117 +207,44 @@ class Wav2VecBengaliASR(torch_Dataset):
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
         return data
 
-    def __len__(self):
-        return len(self.inner_dataset)
+    def is_valid(self, input_values):
+        if self.split != "train":
+            return True
+        input_length = len(input_values)
+        input_secs = input_length / 16_000
+        return input_secs > 1 and input_secs < 10
 
-    def __getitem__(self, index):
+    def _parse_ann_info(self, index):
         ann = self.inner_dataset.iloc[index]
         audio_path = ann.audio
         array, sr = librosa.load(audio_path, sr=None)
         array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
-        array = np.trim_zeros(array, "fb")
         audio = {
             "path": audio_path,
             "array": array,
             "sampling_rate": sr
         }
-        if self.transform is not None:
-            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
-        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
-        input_values = trim_silence(input_values)
-        input_length = len(input_values)
-        input_secs = input_length / 16_000
-        if (input_secs <= 1 or input_secs >= 10) and self.split == "train":
-            return self[(index + 1) % len(self)]  # filter too long or too short audio
-        sentence = normalize(remove_special_characters(ann.sentence))
-        labels = self.processor.tokenizer(sentence).input_ids
-
-        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann.id,
-                "input_length": input_length, "audio": audio}
-
-    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # split inputs and labels since they have to be of different lengths and need different padding methods
-        # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_values": feature["input_values"]} for feature in features]
-        label_features = [{"input_ids": feature["labels"]} for feature in features]
-
-        batch = self.processor.pad(
-            input_features,
-            padding=True,
-            return_tensors="pt",
-        )
-        with self.processor.as_target_processor():
-            labels_batch = self.processor.pad(
-                label_features,
-                padding=True,
-                return_tensors="pt",
-            )
-        # replace padding with -100 to ignore loss correctly
-        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
-
-        batch["labels"] = labels
-        batch["sentences"] = [_["sentence"] for _ in features]
-        batch["ids"] = [_["id"] for _ in features]
-        batch["raw_audios"] = [_["audio"] for _ in features]
-        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids", "raw_audios"]
-        result = {k: batch[k] for k in all_keys}
-        return result
+        return audio, ann.sentence, ann.id
 
 
-class Wav2VecBengaliASRTest(torch_Dataset):
+class Wav2VecBengaliASRTest(Wav2VecBase):
     def __init__(self, processor, data_root):
-        self.processor = processor
         self.media_root = osp.join(data_root, "examples")
         self.anno_path = osp.join(data_root, "annoated.csv")
-        self.inner_dataset = pd.read_csv(self.anno_path, sep="\t")
+        inner_dataset = pd.read_csv(self.anno_path, sep="\t")
+        super().__init__(inner_dataset, processor)
 
-    def __len__(self):
-        return len(self.inner_dataset)
+    def is_valid(self, input_values):
+        return True
 
-    def __getitem__(self, index):
+    def _parse_ann_info(self, index):
         ann = self.inner_dataset.iloc[index]
         audio_path = osp.join(self.media_root, ann.file)
         array, sr = librosa.load(audio_path, sr=None)
         array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
-        array = np.trim_zeros(array, "fb")
         audio = {
             "path": audio_path,
             "array": array,
             "sampling_rate": sr
         }
-        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
-        input_values = trim_silence(input_values)
-        input_length = len(input_values)
-        sentence = normalize(remove_special_characters(ann.sentence))
-        labels = self.processor.tokenizer(sentence).input_ids
-
-        return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann.file,
-                "input_length": input_length, "audio": audio}
-
-    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # split inputs and labels since they have to be of different lengths and need different padding methods
-        # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_values": feature["input_values"]} for feature in features]
-        label_features = [{"input_ids": feature["labels"]} for feature in features]
-
-        batch = self.processor.pad(
-            input_features,
-            padding=True,
-            return_tensors="pt",
-        )
-        with self.processor.as_target_processor():
-            labels_batch = self.processor.pad(
-                label_features,
-                padding=True,
-                return_tensors="pt",
-            )
-        # replace padding with -100 to ignore loss correctly
-        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
-
-        batch["labels"] = labels
-        batch["sentences"] = [_["sentence"] for _ in features]
-        batch["ids"] = [_["id"] for _ in features]
-        batch["raw_audios"] = [_["audio"] for _ in features]
-        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids", "raw_audios"]
-        result = {k: batch[k] for k in all_keys}
-        return result
+        return audio, ann.sentence, ann.file
