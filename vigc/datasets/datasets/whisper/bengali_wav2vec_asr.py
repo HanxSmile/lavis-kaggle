@@ -97,7 +97,7 @@ class Wav2VecBase(torch_Dataset):
         audio, sentence, ann_id = self._parse_ann_info(index)
         audio = self.transform_array(audio)
         input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
-        input_values = trim_silence(input_values)
+        # input_values = trim_silence(input_values)
         if not self.is_valid(input_values):
             return self[(index + 1) % len(self)]  # filter too long or too short audio
         sentence = normalize(sentence)
