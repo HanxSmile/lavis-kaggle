@@ -16,13 +16,15 @@ bnorm = Normalizer()
 
 pd.options.mode.chained_assignment = None
 
-chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'  # 全部符号都去除
-
-
 # chars_to_ignore_regex = '[\.\-\;\:\"\—\‘\'\‚\“\”\…]'  # 保留 , ? !
+
+MIN_SECS = 1
+MAX_SECS = 10
+TARGET_SR = 16_000
 
 
 def normalize(sentence):
+    chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'  # 全部符号都去除
     sentence = re.sub(chars_to_ignore_regex, '', sentence) + " "
     _words = [bnorm(word)['normalized'] for word in sentence.split()]
     sentence = " ".join([word for word in _words if word is not None])
@@ -44,8 +46,8 @@ class Wav2VecBase(torch_Dataset):
 
     def is_valid(self, input_values):
         input_length = len(input_values)
-        input_secs = input_length / 16_000
-        return input_secs > 1 and input_secs < 10
+        input_secs = input_length / TARGET_SR
+        return MAX_SECS > input_secs > MIN_SECS
 
     def transform_array(self, audio):
         audio["array"] = np.trim_zeros(audio["array"], "fb")
@@ -56,7 +58,7 @@ class Wav2VecBase(torch_Dataset):
     def __getitem__(self, index):
         audio, sentence, ann_id = self._parse_ann_info(index)
         audio = self.transform_array(audio)
-        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=16_000).input_values[0]
+        input_values = self.processor.feature_extractor(audio["array"], sampling_rate=TARGET_SR).input_values[0]
         # input_values = trim_silence(input_values)
         if not self.is_valid(input_values):
             return self[(index + 1) % len(self)]  # filter too long or too short audio
@@ -104,7 +106,7 @@ class Wav2VecBengaliShrutilipi(Wav2VecBase):
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
         audio = ann["audio"]
-        array, sr = librosa.resample(audio["array"], orig_sr=audio["sampling_rate"], target_sr=16_000), 16_000
+        array, sr = librosa.resample(audio["array"], orig_sr=audio["sampling_rate"], target_sr=TARGET_SR), 16_000
         audio["array"] = array
         audio["sampling_rate"] = sr
         return audio, ann["transcriptions"], str(index)
@@ -125,7 +127,7 @@ class Wav2VecBengaliOpenSLR(Wav2VecBase):
         ann_id = ann.id
         audio_path = osp.join(self.media_root, ann_id[:2], ann_id + ".flac")
         array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
+        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
         audio = {
             "path": audio_path,
             "array": array,
@@ -143,7 +145,7 @@ class Wav2VecBengaliCVBN(Wav2VecBase):
         inner_dataset = inner_dataset.filter(lambda x, y: x > y, input_columns=["up_votes", "down_votes"])
         inner_dataset = inner_dataset.remove_columns(
             ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment'])
-        inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=16_000))
+        inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
 
         super().__init__(inner_dataset, processor, transform)
 
@@ -199,14 +201,14 @@ class Wav2VecBengaliASR(Wav2VecBase):
         if self.split != "train":
             return True
         input_length = len(input_values)
-        input_secs = input_length / 16_000
-        return input_secs > 1 and input_secs < 10
+        input_secs = input_length / TARGET_SR
+        return MAX_SECS > input_secs > MIN_SECS
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset.iloc[index]
         audio_path = ann.audio
         array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
+        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
         audio = {
             "path": audio_path,
             "array": array,
@@ -229,7 +231,7 @@ class Wav2VecBengaliASRTest(Wav2VecBase):
         ann = self.inner_dataset.iloc[index]
         audio_path = osp.join(self.media_root, ann.file)
         array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=16_000), 16_000
+        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
         audio = {
             "path": audio_path,
             "array": array,
