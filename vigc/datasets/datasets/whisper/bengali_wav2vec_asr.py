@@ -109,6 +109,10 @@ class Wav2VecBengaliShrutilipi(Wav2VecBase):
         audio["sampling_rate"] = sr
         return audio, ann["transcriptions"], str(index)
 
+    def transform_array(self, audio):
+        audio["array"] = np.trim_zeros(audio["array"], "fb")
+        return audio
+
 
 class Wav2VecBengaliOpenSLR(Wav2VecBase):
     def __init__(self, ann_file, data_root, processor, transform=None):
