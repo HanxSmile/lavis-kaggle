@@ -41,6 +41,20 @@ class Wav2VecBase(torch_Dataset):
     def _parse_ann_info(self, index):
         raise NotImplementedError
 
+    @staticmethod
+    def read_and_resample_audio(audio_path, return_dict=False):
+        array, sr = librosa.load(audio_path, sr=None)
+        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
+        if return_dict:
+            audio = {
+                "path": audio_path,
+                "array": array,
+                "sampling_rate": sr
+            }
+            return audio
+
+        return array, sr
+
     def __len__(self):
         return len(self.inner_dataset)
 
@@ -126,13 +140,7 @@ class Wav2VecBengaliOpenSLR(Wav2VecBase):
         ann = self.inner_dataset.iloc[index]
         ann_id = ann.id
         audio_path = osp.join(self.media_root, ann_id[:2], ann_id + ".flac")
-        array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
-        audio = {
-            "path": audio_path,
-            "array": array,
-            "sampling_rate": sr
-        }
+        audio = self.read_and_resample_audio(audio_path, return_dict=True)
         return audio, ann.sentence, ann_id
 
 
@@ -207,13 +215,7 @@ class Wav2VecBengaliASR(Wav2VecBase):
     def _parse_ann_info(self, index):
         ann = self.inner_dataset.iloc[index]
         audio_path = ann.audio
-        array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
-        audio = {
-            "path": audio_path,
-            "array": array,
-            "sampling_rate": sr
-        }
+        audio = self.read_and_resample_audio(audio_path, return_dict=True)
         return audio, ann.sentence, ann.id
 
 
@@ -230,11 +232,5 @@ class Wav2VecBengaliASRTest(Wav2VecBase):
     def _parse_ann_info(self, index):
         ann = self.inner_dataset.iloc[index]
         audio_path = osp.join(self.media_root, ann.file)
-        array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
-        audio = {
-            "path": audio_path,
-            "array": array,
-            "sampling_rate": sr
-        }
+        audio = self.read_and_resample_audio(audio_path, return_dict=True)
         return audio, ann.sentence, ann.file

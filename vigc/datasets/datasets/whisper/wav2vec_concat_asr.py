@@ -1,5 +1,4 @@
 from .bengali_wav2vec_asr import Wav2VecBengaliASR, MIN_SECS, MAX_SECS, TARGET_SR
-import librosa
 import random
 import numpy as np
 
@@ -13,14 +12,12 @@ class Wav2VecConcatAugASR(Wav2VecBengaliASR):
         ann = self.inner_dataset.iloc[index]
 
         audio_path = ann.audio
-        array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
+        array, sr = self.read_and_resample_audio(audio_path)
 
         other_index = random.choice(range(len(self)))
         other_ann = self.inner_dataset.iloc[other_index]
         other_audio_path = other_ann.audio
-        other_array, other_sr = librosa.load(other_audio_path, sr=None)
-        other_array = librosa.resample(other_array, orig_sr=other_sr, target_sr=TARGET_SR)
+        other_array, other_sr = self.read_and_resample_audio(other_audio_path)
 
         audio = {
             "path": audio_path,
