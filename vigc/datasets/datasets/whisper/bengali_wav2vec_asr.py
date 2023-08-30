@@ -16,8 +16,8 @@ bnorm = Normalizer()
 
 pd.options.mode.chained_assignment = None
 
-# chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'  # 全部符号都去除
-chars_to_ignore_regex = '[\.\-\;\:\"\—\‘\'\‚\“\”\…]'  # 保留 , ? !
+chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'  # 全部符号都去除
+# chars_to_ignore_regex = '[\.\-\;\:\"\—\‘\'\‚\“\”\…]'  # 保留 , ? !
 
 
 def normalize(sentence):
@@ -27,7 +27,7 @@ def normalize(sentence):
     return sentence
 
 
-def trim_silence(arr):
+def trim_silence_(arr):
     try:
         _max = max(max(arr), -min(arr))
         old_length = len(arr)
@@ -40,6 +40,27 @@ def trim_silence(arr):
 
         for j, e in enumerate(reversed(arr)):
             if threshold * e > _max:
+                break
+
+        arr = arr[i:old_length - j]
+    except:
+        pass
+    return arr
+
+
+def trim_silence(arr):
+    try:
+        _max = max(max(arr), -min(arr))
+        old_length = len(arr)
+
+        threshold = 30
+
+        for i, e in enumerate(arr):
+            if abs(threshold * e) > _max:
+                break
+
+        for j, e in enumerate(reversed(arr)):
+            if abs(threshold * e) > _max:
                 break
 
         arr = arr[i:old_length - j]
