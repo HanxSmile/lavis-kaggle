@@ -17,6 +17,8 @@ bnorm = Normalizer()
 pd.options.mode.chained_assignment = None
 
 chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'  # 全部符号都去除
+
+
 # chars_to_ignore_regex = '[\.\-\;\:\"\—\‘\'\‚\“\”\…]'  # 保留 , ? !
 
 
@@ -27,27 +29,6 @@ def normalize(sentence):
     return sentence
 
 
-def trim_silence_(arr):
-    try:
-        _max = max(max(arr), -min(arr))
-        old_length = len(arr)
-
-        threshold = 30
-
-        for i, e in enumerate(arr):
-            if threshold * e > _max:
-                break
-
-        for j, e in enumerate(reversed(arr)):
-            if threshold * e > _max:
-                break
-
-        arr = arr[i:old_length - j]
-    except:
-        pass
-    return arr
-
-
 def trim_silence(arr):
     try:
         _max = max(max(arr), -min(arr))
@@ -56,17 +37,19 @@ def trim_silence(arr):
         threshold = 30
 
         for i, e in enumerate(arr):
-            if abs(threshold * e) > _max:
+            if threshold * e > _max:
                 break
 
         for j, e in enumerate(reversed(arr)):
-            if abs(threshold * e) > _max:
+            if threshold * e > _max:
                 break
 
         arr = arr[i:old_length - j]
     except:
         pass
     return arr
+
+
 
 
 class Wav2VecBase(torch_Dataset):
@@ -88,7 +71,7 @@ class Wav2VecBase(torch_Dataset):
         return input_secs > 1 and input_secs < 10
 
     def transform_array(self, audio):
-        audio["array"] = np.trim_zeros(audio["array"], "fb")
+        audio["array"] = trim_silence(np.trim_zeros(audio["array"], "fb"))
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
         return audio
@@ -136,10 +119,9 @@ class Wav2VecBase(torch_Dataset):
 
 
 class Wav2VecBengaliShrutilipi(Wav2VecBase):
-    DATASET_NAME = "ucalyptus/shrutilipi_bengali"
 
     def __init__(self, cache_file, processor, transform=None):
-        inner_dataset = datasets.load_dataset(self.DATASET_NAME, cache_dir=cache_file)["train"]
+        inner_dataset = datasets.load_from_disk(cache_file)["train"]
         super().__init__(inner_dataset, processor, transform)
 
     def _parse_ann_info(self, index):
