@@ -13,6 +13,7 @@ from audiomentations import (
     PitchShift,
     PolarityInversion,
     TimeStretch,
+    Resample,
 )
 
 
@@ -152,6 +153,7 @@ class Wav2VecBengaliASRBuilder(BaseDatasetBuilder):
                 TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
                 Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
                 PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
+                Resample(min_sample_rate=14_000, max_sample_rate=18_000, p=0.2),
                 OneOf(
                     [
                         AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
