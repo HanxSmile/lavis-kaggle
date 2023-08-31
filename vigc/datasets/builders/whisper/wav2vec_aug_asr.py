@@ -104,6 +104,7 @@ class Wav2VecConcatAugASRBuilder(BaseDatasetBuilder):
             fold_idx=cfg.get("fold_idx", None),
             fold_nums=cfg.get("fold_nums", None),
             seed=cfg.get("seed", None),
+            seg_nums=cfg.get("seg_nums", 2),
         )
         _ = datasets["train"][0]
         return datasets
