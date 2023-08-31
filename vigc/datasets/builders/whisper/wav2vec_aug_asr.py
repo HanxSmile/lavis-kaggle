@@ -35,7 +35,6 @@ class Wav2VecSegAugASRBuilder(BaseDatasetBuilder):
                 TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
                 Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
                 PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                Resample(min_sample_rate=14_000, max_sample_rate=18_000, p=0.2),
                 OneOf(
                     [
                         AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
@@ -79,20 +78,20 @@ class Wav2VecConcatAugASRBuilder(BaseDatasetBuilder):
         data_root = build_info.data_root
         musan_dir = self.config.get("musan_dir")
         transform = Compose(
-            [
-                TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
-                Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
-                PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                OneOf(
-                    [
-                        AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
-                                           noise_transform=PolarityInversion(), p=1.0),
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
-                    ] if musan_dir is not None else [
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.2,
-                ),
-            ]
+            [Resample(min_sample_rate=14_000, max_sample_rate=18_000, p=0.2),
+             TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
+             Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
+             PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
+             OneOf(
+                 [
+                     AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
+                                        noise_transform=PolarityInversion(), p=1.0),
+                     AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
+                 ] if musan_dir is not None else [
+                     AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
+                 p=0.2,
+             ),
+             ]
         )
 
         cfg = self.config
