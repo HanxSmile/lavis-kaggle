@@ -42,7 +42,7 @@ class Wav2VecSegAugASRBuilder(BaseDatasetBuilder):
                         AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
                     ] if musan_dir is not None else [
                         AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.2,
+                    p=0.5,
                 ),
             ]
         )
@@ -89,7 +89,7 @@ class Wav2VecConcatAugASRBuilder(BaseDatasetBuilder):
                         AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
                     ] if musan_dir is not None else [
                         AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.2,
+                    p=0.5,
                 ),
             ]
         )
