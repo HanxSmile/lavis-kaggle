@@ -19,7 +19,7 @@ pd.options.mode.chained_assignment = None
 # chars_to_ignore_regex = '[\.\-\;\:\"\—\‘\'\‚\“\”\…]'  # 保留 , ? !
 
 MIN_SECS = 1
-MAX_SECS = 15
+MAX_SECS = 10
 TARGET_SR = 16_000
 
 
