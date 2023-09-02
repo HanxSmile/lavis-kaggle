@@ -164,7 +164,7 @@ class Wav2VecFilteredSegAugASRBuilder(BaseDatasetBuilder):
 class Wav2VecFilteredConcatAugASRBuilder(BaseDatasetBuilder):
     train_dataset_cls = Wav2VecFilteredConcatAugDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/wav2vec_bengali_asr/filtered_concat_aug_train.yaml"
+        "default": "configs/datasets/wav2vec_bengali_asr/concat_filtered_aug_train.yaml"
     }
 
     def build_datasets(self):
