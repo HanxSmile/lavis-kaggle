@@ -1,0 +1,36 @@
+model:
+  model_name: /mnt/petrelfs/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/baseline-0901/best_hf
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_indicwav2vec
+  model_type: default
+  freeze_encoder: True
+  processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+
+datasets:
+  # test
+  wav2vec_bengali_asr_whole:
+    model_name: /mnt/lustre/hanxiao/work/bengali_utils/indic_wav2vec
+
+run:
+  runner: runner_iter
+  task: bengali_asr_infer_task
+
+  batch_size_train: 16
+  batch_size_eval: 16
+  num_workers: 4
+
+  iters_per_inner_epoch: 1000
+  max_iters: 30000
+
+  seed: 42
+  output_dir: "./output/wav2vec_bengali_asr"
+
+  evaluate: True
+  test_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True

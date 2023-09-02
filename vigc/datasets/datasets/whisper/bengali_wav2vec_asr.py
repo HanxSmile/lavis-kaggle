@@ -80,7 +80,7 @@ class Wav2VecBase(torch_Dataset):
         labels = self.processor.tokenizer(sentence).input_ids
 
         return {"input_values": input_values, "labels": labels, "sentence": sentence, "id": ann_id,
-                "input_length": len(input_values), "audio": audio}
+                "input_length": len(input_values), "audio": audio, "input_secs": len(input_values) / TARGET_SR}
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
@@ -106,7 +106,8 @@ class Wav2VecBase(torch_Dataset):
         batch["sentences"] = [_["sentence"] for _ in features]
         batch["ids"] = [_["id"] for _ in features]
         batch["raw_audios"] = [_["audio"] for _ in features]
-        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids", "raw_audios"]
+        batch["input_secs"] = [_["input_secs"] for _ in features]
+        all_keys = ["input_values", "labels", "attention_mask", "sentences", "ids", "raw_audios", "input_secs"]
         result = {k: batch[k] for k in all_keys}
         return result
 

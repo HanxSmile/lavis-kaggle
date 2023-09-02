@@ -3,6 +3,7 @@ from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
 from vigc.datasets.datasets.whisper.bengali_wav2vec_asr import Wav2VecBengaliASR, Wav2VecBengaliASRTest, \
     Wav2VecBengaliCVBN, Wav2VecBengaliOpenSLR, Wav2VecBengaliShrutilipi
+from vigc.datasets.datasets.whisper.bengali_whole_asr import Wav2VecWholeDataset
 from transformers import Wav2Vec2Processor
 from audiomentations import (
     AddBackgroundNoise,
@@ -220,6 +221,29 @@ class Wav2VecBengaliASRTestBuilder(BaseDatasetBuilder):
 
     def build_datasets(self):
         logging.info("Building Wav2vec Bengali ASR test datasets ...")
+        build_info = self.config.build_info
+        datasets = dict()
+        data_root = build_info.data_root
+
+        cfg = self.config
+        processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
+        datasets["eval"] = self.eval_dataset_cls(
+            processor=processor,
+            data_root=data_root,
+        )
+        _ = datasets["eval"][0]
+        return datasets
+
+
+@registry.register_builder("wav2vec_bengali_asr_whole")
+class Wav2VecBengaliASRTestBuilder(BaseDatasetBuilder):
+    eval_dataset_cls = Wav2VecWholeDataset
+    DATASET_CONFIG_DICT = {
+        "default": "configs/datasets/wav2vec_bengali_asr/whole.yaml"
+    }
+
+    def build_datasets(self):
+        logging.info("Building Wav2vec Bengali ASR whole datasets ...")
         build_info = self.config.build_info
         datasets = dict()
         data_root = build_info.data_root
