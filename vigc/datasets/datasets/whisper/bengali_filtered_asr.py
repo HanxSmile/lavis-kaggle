@@ -1,4 +1,4 @@
-from .bengali_wav2vec_asr import Wav2VecBase, MIN_SECS, MAX_SECS
+from .bengali_wav2vec_asr import Wav2VecBase, MIN_SECS, MAX_SECS, TARGET_SR
 import pandas as pd
 import numpy as np
 import os
@@ -9,7 +9,7 @@ class Wav2VecFilteredDataset(Wav2VecBase):
     def __init__(self, anno_path, data_root, ratio, processor, transform=None):
         self.media_root = os.path.join(data_root, "train_mp3s")
         data = pd.read_csv(anno_path)
-        data = data.loc[(data.input_sec > MIN_SECS) & (data.input_sec < MAX_SECS)]
+        # data = data.loc[(data.input_sec > MIN_SECS) & (data.input_sec < MAX_SECS)]
         data = data.reset_index(drop=True)
         data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
         inner_dataset = data.head(int(len(data) * ratio))
@@ -82,3 +82,8 @@ class Wav2VecFilteredConcatAugDataset(Wav2VecFilteredDataset):
                 array_lst[i] = self.transform(array, sample_rate=sampling_rate)
 
         return {"array": np.concatenate(array_lst, axis=0), "path": audio["path"], "sampling_rate": sampling_rate}
+
+    def is_valid(self, input_values):
+        input_length = len(input_values)
+        input_secs = input_length / TARGET_SR
+        return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
