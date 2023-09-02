@@ -7,7 +7,7 @@ import random
 
 class Wav2VecFilteredDataset(Wav2VecBase):
     def __init__(self, anno_path, data_root, ratio, processor, transform=None):
-        self.media_root = data_root
+        self.media_root = os.path.join(data_root, "train_mp3s")
         data = pd.read_csv(anno_path)
         data = data.loc[(data.input_sec > MIN_SECS) & (data.input_sec < MAX_SECS)]
         data = data.reset_index(drop=True)
