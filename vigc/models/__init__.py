@@ -22,6 +22,7 @@ from vigc.models.whisper.bengali_whisper import BengaliWhisper
 from vigc.models.whisper.bengali_wav2vec import BengaliWav2Vec
 from vigc.models.whisper.bengali_indicwav2vec import BengaliIndicWav2Vec
 from vigc.models.whisper.bengali_moe_wav2vec import BengaliMoEWav2Vec
+from vigc.models.whisper.bengali_umongwav2vec import BengaliUmongWav2Vec
 
 __all__ = [
     "load_model",
@@ -32,7 +33,8 @@ __all__ = [
     "BengaliWhisper",
     "BengaliWav2Vec",
     "BengaliIndicWav2Vec",
-    "BengaliMoEWav2Vec"
+    "BengaliMoEWav2Vec",
+    "BengaliUmongWav2Vec"
 ]
 
 
