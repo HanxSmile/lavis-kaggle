@@ -5,7 +5,7 @@ import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, Wav2Vec2Processor
-from transformers import EncoderDecoderModel, BertTokenizer
+from transformers import EncoderDecoderModel, BertTokenizer, BertGenerationEncoder, BertGenerationDecoder
 from bnunicodenormalizer import Normalizer
 import contextlib
 import pyctcdecode
@@ -39,10 +39,12 @@ class BengaliSpellingCorrection(BaseModel):
             asr_model_name: str,
             asr_processor_name: str,
             bert_model_name: str = "sagorsarker/bangla-bert-base",
-            post_process_flag=True
+            post_process_flag=True,
+            normalize_flag=False,
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
+        self.normalize_flag = normalize_flag
         self.asr_model = Wav2Vec2ForCTC.from_pretrained(asr_model_name)
 
         for name, param in self.asr_model.named_parameters():
@@ -66,14 +68,24 @@ class BengaliSpellingCorrection(BaseModel):
             decoder=decoder
         )
 
-        self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(bert_model_name, bert_model_name)
         self.tokenizer = BertTokenizer.from_pretrained(bert_model_name)
-        self.tokenizer.bos_token = self.tokenizer.cls_token
-        self.tokenizer.eos_token = self.tokenizer.sep_token
+        encoder = BertGenerationEncoder.from_pretrained(
+            bert_model_name,
+            bos_token_id=self.tokenizer.cls_token_id,
+            eos_token_id=self.tokenizer.sep_token_id
+        )
+        decoder = BertGenerationDecoder.from_pretrained(
+            bert_model_name,
+            add_cross_attention=True,
+            is_decoder=True,
+            bos_token_id=self.tokenizer.cls_token_id,
+            eos_token_id=self.tokenizer.sep_token_id
+        )
 
-        self.model.config.decoder_start_token_id = self.tokenizer.bos_token_id
-        self.model.config.eos_token_id = self.tokenizer.eos_token_id
-        self.model.config.pad_token_id = self.tokenizer.pad_token_id
+        self.model = EncoderDecoderModel(
+            encoder=encoder,
+            decoder=decoder
+        )
 
     @torch.no_grad()
     def asr_predict(
@@ -94,7 +106,9 @@ class BengaliSpellingCorrection(BaseModel):
         transcription = self.asr_processor.batch_decode(y, skip_special_tokens=True)
 
         if self.post_process_flag:
-            transcription = [normalize(postprocess(_)) for _ in transcription]
+            transcription = [postprocess(_) for _ in transcription]
+        if self.normalize_flag:
+            transcription = [normalize(_) for _ in transcription]
         return transcription
 
     @torch.no_grad()
@@ -134,7 +148,8 @@ class BengaliSpellingCorrection(BaseModel):
 
         src_sentences = self.asr_predict(samples)
         target_sentences = samples["sentences"]
-        target_sentences = [normalize(_) for _ in target_sentences]
+        if self.normalize_flag:
+            target_sentences = [normalize(_) for _ in target_sentences]
         inputs = self.tokenizer(src_sentences, return_tensors="pt", padding="longest").to(self.device)
         targets = self.tokenizer(target_sentences, return_tensors="pt", padding="longest").to(self.device)
         labels = targets.input_ids.masked_fill(
@@ -183,12 +198,14 @@ class BengaliSpellingCorrection(BaseModel):
         asr_model_name = cfg.get("asr_model_name")
         asr_processor_name = cfg.get("asr_processor_name")
         post_process_flag = cfg.get("post_process_flag", True)
+        normalize_flag = cfg.get("normalize_flag", False)
         bert_model_name = cfg.get("bert_model_name")
         model = cls(
             asr_model_name=asr_model_name,
             asr_processor_name=asr_processor_name,
             bert_model_name=bert_model_name,
-            post_process_flag=post_process_flag
+            post_process_flag=post_process_flag,
+            normalize_flag=normalize_flag,
         )
         model.load_checkpoint_from_config(cfg)
         return model
