@@ -90,7 +90,7 @@ class BengaliSpellingCorrection(BaseModel):
             ).logits
             y = torch.argmax(logits, dim=-1)
         y = y.detach().cpu().numpy()
-        transcription = self.asr_processor.batch_decode(y, skip_special_token=True)
+        transcription = self.asr_processor.batch_decode(y, skip_special_tokens=True)
 
         if self.post_process_flag:
             transcription = [postprocess(_) for _ in transcription]
