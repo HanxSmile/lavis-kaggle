@@ -10,6 +10,7 @@ from bnunicodenormalizer import Normalizer
 import contextlib
 import pyctcdecode
 from vigc.models.blip2_models.blip2 import disabled_train
+from normalizer import normalize
 
 bnorm = Normalizer()
 
@@ -93,7 +94,7 @@ class BengaliSpellingCorrection(BaseModel):
         transcription = self.asr_processor.batch_decode(y, skip_special_tokens=True)
 
         if self.post_process_flag:
-            transcription = [postprocess(_) for _ in transcription]
+            transcription = [normalize(postprocess(_)) for _ in transcription]
         return transcription
 
     @torch.no_grad()
@@ -133,7 +134,7 @@ class BengaliSpellingCorrection(BaseModel):
 
         src_sentences = self.asr_predict(samples)
         target_sentences = samples["sentences"]
-
+        target_sentences = [normalize(_) for _ in target_sentences]
         inputs = self.tokenizer(src_sentences, return_tensors="pt", padding="longest").to(self.device)
         targets = self.tokenizer(target_sentences, return_tensors="pt", padding="longest").to(self.device)
         labels = targets.input_ids.masked_fill(
