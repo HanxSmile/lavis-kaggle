@@ -5,7 +5,7 @@ import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 from transformers import Wav2Vec2ForCTC, Wav2Vec2ProcessorWithLM, Wav2Vec2Processor
-from transformers import EncoderDecoderModel, BertTokenizer, BertGenerationEncoder, BertGenerationDecoder
+from transformers import EncoderDecoderModel, BertTokenizer
 from bnunicodenormalizer import Normalizer
 import contextlib
 import pyctcdecode
@@ -68,24 +68,14 @@ class BengaliSpellingCorrection(BaseModel):
             decoder=decoder
         )
 
+        self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(bert_model_name, bert_model_name)
         self.tokenizer = BertTokenizer.from_pretrained(bert_model_name)
-        encoder = BertGenerationEncoder.from_pretrained(
-            bert_model_name,
-            bos_token_id=self.tokenizer.cls_token_id,
-            eos_token_id=self.tokenizer.sep_token_id
-        )
-        decoder = BertGenerationDecoder.from_pretrained(
-            bert_model_name,
-            add_cross_attention=True,
-            is_decoder=True,
-            bos_token_id=self.tokenizer.cls_token_id,
-            eos_token_id=self.tokenizer.sep_token_id
-        )
+        self.tokenizer.bos_token = self.tokenizer.cls_token
+        self.tokenizer.eos_token = self.tokenizer.sep_token
 
-        self.model = EncoderDecoderModel(
-            encoder=encoder,
-            decoder=decoder
-        )
+        self.model.config.decoder_start_token_id = self.tokenizer.bos_token_id
+        self.model.config.eos_token_id = self.tokenizer.eos_token_id
+        self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
     @torch.no_grad()
     def asr_predict(
@@ -159,9 +149,9 @@ class BengaliSpellingCorrection(BaseModel):
             outputs = self.model(
                 input_ids=inputs.input_ids,
                 attention_mask=inputs.attention_mask,
-                decoder_input_ids=targets.input_ids,
-                decoder_attention_mask=targets.attention_mask,
-                labels=labels,
+                decoder_input_ids=targets.input_ids[:, :-1],
+                decoder_attention_mask=targets.attention_mask[:, :-1],
+                labels=labels[:, 1:],
                 return_dict=True,
             )
         loss = outputs.loss
