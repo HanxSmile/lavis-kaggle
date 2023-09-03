@@ -1,6 +1,7 @@
 model:
   arch: bengali_spelling_correction
   asr_model_name: /mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/baseline-0902/best_hf
+  model_type: default
 
 datasets:
   # train
