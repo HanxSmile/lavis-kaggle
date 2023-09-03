@@ -83,7 +83,7 @@ class BengaliSpellingCorrection(BaseModel):
         input_values = samples["input_values"]
         attention_mask = samples["attention_mask"]
         with self.maybe_autocast():
-            logits = self.model(
+            logits = self.asr_model(
                 input_values=input_values,
                 attention_mask=attention_mask,
                 return_dict=True
