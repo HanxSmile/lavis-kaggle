@@ -149,8 +149,8 @@ class BengaliSpellingCorrection(BaseModel):
             outputs = self.model(
                 input_ids=inputs.input_ids,
                 attention_mask=inputs.attention_mask,
-                decoder_input_ids=targets.input_ids[:, :-1],
-                decoder_attention_mask=targets.attention_mask[:, :-1],
+                decoder_input_ids=targets.input_ids[:, :-1].contiguous(),
+                decoder_attention_mask=targets.attention_mask[:, :-1].contiguous(),
                 labels=labels[:, 1:],
                 return_dict=True,
             )
