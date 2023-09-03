@@ -65,7 +65,7 @@ class BengaliSpellingCorrection(BaseModel):
             decoder=decoder
         )
 
-        self.model = EncoderDecoderModel.from_pretrained(bert_model_name, bert_model_name)
+        self.model = EncoderDecoderModel.from_encoder_decoder_pretrained(bert_model_name, bert_model_name)
         self.tokenizer = BertTokenizer.from_pretrained(bert_model_name)
         self.tokenizer.bos_token = self.tokenizer.cls_token
         self.tokenizer.eos_token = self.tokenizer.sep_token
