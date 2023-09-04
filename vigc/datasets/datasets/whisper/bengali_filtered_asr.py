@@ -59,7 +59,8 @@ class Wav2VecFilteredConcatAugDataset(Wav2VecFilteredDataset):
 
         array_lst = [array]
         sentence_lst = [ann.sentence]
-        for i in range(self.seg_nums - 1):
+        seg_nums = random.choice(range(2, self.seg_nums + 1))
+        for i in range(seg_nums - 1):
             other_array, other_sentence = self._sample_ann_array()
             array_lst.append(other_array)
             sentence_lst.append(other_sentence)
@@ -86,4 +87,5 @@ class Wav2VecFilteredConcatAugDataset(Wav2VecFilteredDataset):
     def is_valid(self, input_values):
         input_length = len(input_values)
         input_secs = input_length / TARGET_SR
-        return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
+        # return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
+        return 2 * MAX_SECS > input_secs > 2 * MIN_SECS
