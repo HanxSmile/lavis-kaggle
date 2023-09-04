@@ -1,0 +1,9 @@
+model:
+  asr_model_name: /mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/baseline-0902/best_hf
+  asr_processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+  model_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/banglat5_banglaparaphrase"
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_t5_transformer
+  model_type: default
