@@ -53,4 +53,5 @@ class Wav2VecConcatAugASR(Wav2VecBengaliASR):
             return True
         input_length = len(input_values)
         input_secs = input_length / TARGET_SR
-        return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
+        # return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
+        return 2 * MAX_SECS > input_secs > 2 * MIN_SECS
