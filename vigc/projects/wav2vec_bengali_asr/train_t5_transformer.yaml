@@ -45,7 +45,7 @@ run:
   seed: 42
   output_dir: "./output/wav2vec_bengali_asr"
 
-  amp: True
+  amp: False
   resume_ckpt_path: null
 
   evaluate: False
