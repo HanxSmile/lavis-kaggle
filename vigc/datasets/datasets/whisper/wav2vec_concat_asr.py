@@ -24,8 +24,7 @@ class Wav2VecConcatAugASR(Wav2VecBengaliASR):
 
         array_lst = [array]
         sentence_lst = [ann.sentence]
-        seg_nums = random.choice(range(2, self.seg_nums + 1))
-        for i in range(seg_nums - 1):
+        for i in range(self.seg_nums - 1):
             other_array, other_sentence = self._sample_ann_array()
             array_lst.append(other_array)
             sentence_lst.append(other_sentence)
@@ -54,5 +53,4 @@ class Wav2VecConcatAugASR(Wav2VecBengaliASR):
             return True
         input_length = len(input_values)
         input_secs = input_length / TARGET_SR
-        # return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
-        return 2 * MAX_SECS > input_secs > 2 * MIN_SECS
+        return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
