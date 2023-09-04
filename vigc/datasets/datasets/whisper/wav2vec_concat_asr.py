@@ -24,7 +24,8 @@ class Wav2VecConcatAugASR(Wav2VecBengaliASR):
 
         array_lst = [array]
         sentence_lst = [ann.sentence]
-        for i in range(self.seg_nums - 1):
+        seg_nums = random.choice(range(2, self.seg_nums + 1))
+        for i in range(seg_nums - 1):
             other_array, other_sentence = self._sample_ann_array()
             array_lst.append(other_array)
             sentence_lst.append(other_sentence)
