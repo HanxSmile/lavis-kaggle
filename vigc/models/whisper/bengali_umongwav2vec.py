@@ -42,7 +42,6 @@ class BengaliUmongWav2Vec(BaseModel):
         super().__init__()
         self.post_process_flag = post_process_flag
         self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
-        self.model.gradient_checkpointing_enable()
         self.model.config.ctc_zero_infinity = True
         self.model.config.ctc_loss_reduction = loss_reduction
         if freeze_encoder:
