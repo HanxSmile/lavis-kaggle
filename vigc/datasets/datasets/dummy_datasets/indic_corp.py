@@ -22,6 +22,7 @@ class IndicCorp(Dataset):
         with open(anno_path) as f:
             raw_sentences = f.readlines()
         raw_sentences = [_.strip() for _ in raw_sentences if _.strip()]
+        raw_sentences = raw_sentences[::10]
         self.inner_dataset = raw_sentences
 
     def __len__(self):
