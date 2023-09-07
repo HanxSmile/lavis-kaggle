@@ -14,6 +14,8 @@ from vigc.tasks.vqg_test import InstructBlipVQGTask
 from vigc.tasks.bengali_asr import WhisperBengaliASRTask
 from vigc.tasks.bengali_asr_infer import BengaliASRInferTask
 
+from vigc.tasks.indic_corp_infer import BengaliIndicCorpInferTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
@@ -33,4 +35,5 @@ __all__ = [
     "InstructBlipVQGTask",
     "WhisperBengaliASRTask",
     "BengaliASRInferTask",
+    "BengaliIndicCorpInferTask",
 ]

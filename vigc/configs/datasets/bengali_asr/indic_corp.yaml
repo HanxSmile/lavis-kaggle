@@ -1,0 +1,4 @@
+datasets:
+  indic_corp:
+    data_type: text
+    annotation: /mnt/petrelfs/hanxiao/working/whisper/bn.txt
