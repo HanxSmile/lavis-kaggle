@@ -211,6 +211,67 @@ class LinearWarmupCosineLongLongTailLRScheduler:
             )
 
 
+@registry.register_lr_scheduler("linear_warmup_cosine_3_long_tail_lr")
+class LinearWarmupCosine3LongTailLRScheduler:
+    def __init__(
+            self,
+            optimizer,
+            max_epoch,
+            min_lr,
+            init_lr,
+            iters_per_epoch,
+            warmup_steps=0,
+            warmup_start_lr=-1,
+            **kwargs
+    ):
+        self.optimizer = optimizer
+
+        self.max_epoch = max_epoch
+        self.min_lr = min_lr
+
+        self.init_lr = init_lr
+        self.warmup_steps = warmup_steps
+        self.iters_per_epoch = iters_per_epoch
+        self.warmup_start_lr = warmup_start_lr if warmup_start_lr >= 0 else init_lr
+        self.max_iters = max_epoch * iters_per_epoch
+
+    def step(self, cur_epoch, cur_step):
+        # assuming the warmup iters less than one epoch
+        total_steps = cur_epoch * self.iters_per_epoch + cur_step
+        if total_steps < self.warmup_steps:
+            warmup_lr_schedule(
+                step=cur_step,
+                optimizer=self.optimizer,
+                max_step=self.warmup_steps,
+                init_lr=self.warmup_start_lr,
+                max_lr=self.init_lr,
+            )
+        elif total_steps <= self.max_iters // 4:
+            cosine_lr_schedule(
+                epoch=total_steps,
+                optimizer=self.optimizer,
+                max_epoch=self.max_iters // 4,
+                init_lr=self.init_lr,
+                min_lr=self.min_lr,
+            )
+        elif total_steps <= self.max_iters // 2:
+            cosine_lr_schedule(
+                epoch=self.max_iters // 4,
+                optimizer=self.optimizer,
+                max_epoch=self.max_iters // 4,
+                init_lr=self.init_lr,
+                min_lr=self.min_lr,
+            )
+        else:  # total_steps > self.max_iters // 2
+            cosine_lr_schedule(
+                epoch=total_steps - self.max_iters // 2,
+                optimizer=self.optimizer,
+                max_epoch=self.max_iters // 2,
+                init_lr=self.min_lr,
+                min_lr=0,
+            )
+
+
 def cosine_lr_schedule(optimizer, epoch, max_epoch, init_lr, min_lr):
     """Decay the learning rate"""
     lr = (init_lr - min_lr) * 0.5 * (
