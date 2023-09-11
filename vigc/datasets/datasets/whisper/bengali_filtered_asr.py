@@ -87,3 +87,30 @@ class Wav2VecFilteredConcatAugDataset(Wav2VecFilteredDataset):
         input_length = len(input_values)
         input_secs = input_length / TARGET_SR
         return self.seg_nums * MAX_SECS > input_secs > self.seg_nums * MIN_SECS
+
+
+class Wav2VecFilteredConcatSegAugDataset(Wav2VecFilteredConcatAugDataset):
+    def __init__(self, anno_path, data_root, ratio, processor, transform=None, concat_seg_nums=2, split_seg_nums=3):
+        self.concat_seg_nums = concat_seg_nums
+        self.split_seg_nums = split_seg_nums
+        super().__init__(anno_path, data_root, ratio, processor, transform, concat_seg_nums)
+
+    def transform_array(self, audio):
+        array_lst = audio["array"]
+        array_lst[0] = np.trim_zeros(array_lst[0], "f")
+        array_lst[-1] = np.trim_zeros(array_lst[-1], "b")
+
+        sampling_rate = audio["sampling_rate"]
+
+        for i, array in enumerate(array_lst):
+            array_lst[i] = self._transform(array, sample_rate=sampling_rate)
+
+        return {"array": np.concatenate(array_lst, axis=0), "path": audio["path"], "sampling_rate": sampling_rate}
+
+    def _transform(self, array, sample_rate):
+        array_lst = np.array_split(array, self.split_seg_nums)
+        if self.transform is not None:
+            for i, array_ in enumerate(array_lst):
+                array_lst[i] = self.transform(array_, sample_rate=sample_rate)
+            array = np.concatenate(array_lst, axis=0)
+        return array

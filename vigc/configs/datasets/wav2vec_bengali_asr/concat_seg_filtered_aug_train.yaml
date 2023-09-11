@@ -1,0 +1,12 @@
+datasets:
+  wav2vec_filtered_concat_seg_aug_asr:
+    model_name: /mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali
+#    model_name: arijitx/wav2vec2-xls-r-300m-bengali
+    data_type: audios
+    musan_dir: /mnt/petrelfs/share_data/hanxiao/musan_bg_noise
+    concat_seg_nums: 2
+    split_seg_nums: 3
+    ratio: 0.7
+    build_info:
+      annotation: /mnt/petrelfs/hanxiao/working/whisper/baseline0901.csv
+      data_root: /mnt/petrelfs/share_data/hanxiao/bengaliai-speech
