@@ -1,6 +1,7 @@
 from .bengali_wav2vec_asr import Wav2VecBengaliOpenSLR, MAX_SECS, MIN_SECS, TARGET_SR
 import numpy as np
 import random
+import os.path as osp
 
 
 class OpenSLRSegAugDataset(Wav2VecBengaliOpenSLR):
@@ -28,14 +29,15 @@ class OpenSLRConcatAugDataset(Wav2VecBengaliOpenSLR):
     def _sample_ann_array(self):
         other_index = random.choice(range(len(self)))
         other_ann = self.inner_dataset.iloc[other_index]
-        other_audio_path = other_ann.audio
+        other_ann_id = other_ann.id
+        other_audio_path = osp.join(self.media_root, other_ann_id[:2], other_ann_id + ".flac")
         other_array, _ = self.read_and_resample_audio(other_audio_path)
         return other_array, other_ann.sentence
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset.iloc[index]
-
-        audio_path = ann.audio
+        ann_id = ann.id
+        audio_path = osp.join(self.media_root, ann_id[:2], ann_id + ".flac")
         array, sr = self.read_and_resample_audio(audio_path)
 
         array_lst = [array]
