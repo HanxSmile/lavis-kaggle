@@ -25,15 +25,16 @@ def postprocess(sentence):
     return sentence
 
 
-@registry.register_model("bengali_harveen_wav2vec")
-class BengaliHarveenWav2Vec(BaseModel):
+@registry.register_model("bengali_1b_wav2vec")
+class Bengali1BWav2Vec(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/bengali_harveen_wav2vec.yaml",
+        "default": "configs/models/bengali_1b_wav2vec.yaml",
     }
 
     def __init__(
             self,
-            model_name="Harveenchadha/vakyansh-wav2vec2-bengali-bnm-200",
+            model_name="facebook/wav2vec2-xls-r-1b",
+            tokenizer_name="Umong/wav2vec2-large-mms-1b-bengali",
             processor_name="arijitx/wav2vec2-xls-r-300m-bengali",
             loss_reduction="mean",
             freeze_encoder=False,
@@ -41,13 +42,25 @@ class BengaliHarveenWav2Vec(BaseModel):
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
-        self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
-        self.model.config.ctc_zero_infinity = True
-        self.model.config.ctc_loss_reduction = loss_reduction
+        processor = Wav2Vec2Processor.from_pretrained(tokenizer_name)
+        self.model = Wav2Vec2ForCTC.from_pretrained(
+            model_name,
+            attention_dropout=0.0,
+            hidden_dropout=0.0,
+            feat_proj_dropout=0.0,
+            mask_time_prob=0.05,
+            layerdrop=0.0,
+            ctc_loss_reduction=loss_reduction,
+            ctc_zero_infinity=True,
+            pad_token_id=processor.tokenizer.pad_token_id,
+            vocab_size=len(processor.tokenizer),
+        )
         if freeze_encoder:
             self.model.freeze_feature_encoder()
         processor = Wav2Vec2Processor.from_pretrained(model_name)
-        vocab_dict = processor.tokenizer.get_vocab()
+        vocab_dict = processor.tokenizer.get_vocab()["ben"]
+        vocab_dict['<s>'] = 64
+        vocab_dict['</s>'] = 65
         sorted_vocab_dict = {k: v for k, v in sorted(vocab_dict.items(), key=lambda item: item[1])}
 
         self.decoder = pyctcdecode.build_ctcdecoder(
