@@ -134,11 +134,12 @@ class Bengali1BWav2Vec(BaseModel):
     @classmethod
     def from_config(cls, cfg):
         model_name = cfg.get("model_name")
+        tokenizer_name = cfg.get("tokenizer_name")
         processor_name = cfg.get("processor_name")
         post_process_flag = cfg.get("post_process_flag", True)
         freeze_encoder = cfg.get("freeze_encoder", False)
         loss_reduction = cfg.get("loss_reduction", "mean")
-        model = cls(model_name=model_name, processor_name=processor_name, freeze_encoder=freeze_encoder,
-                    post_process_flag=post_process_flag, loss_reduction=loss_reduction)
+        model = cls(model_name=model_name, tokenizer_name=tokenizer_name, processor_name=processor_name,
+                    freeze_encoder=freeze_encoder, post_process_flag=post_process_flag, loss_reduction=loss_reduction)
         model.load_checkpoint_from_config(cfg)
         return model
