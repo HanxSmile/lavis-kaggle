@@ -57,7 +57,6 @@ class Bengali1BWav2Vec(BaseModel):
         )
         if freeze_encoder:
             self.model.freeze_feature_encoder()
-        processor = Wav2Vec2Processor.from_pretrained(model_name)
         vocab_dict = processor.tokenizer.get_vocab()["ben"]
         vocab_dict['<s>'] = 64
         vocab_dict['</s>'] = 65
