@@ -1,0 +1,9 @@
+datasets:
+  wav2vec_openslr_seg_aug_asr:
+    model_name: /mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali
+#    model_name: arijitx/wav2vec2-xls-r-300m-bengali
+    seg_nums: 3
+    data_type: audios
+    musan_dir: /mnt/petrelfs/share_data/hanxiao/musan_bg_noise
+    data_root: /mnt/petrelfs/share_data/hanxiao/bergali_asr_datasets/openslr/raw_data/asr_bengali/data
+    ann_file: /mnt/petrelfs/share_data/hanxiao/bergali_asr_datasets/openslr/utt_spk_text.tsv

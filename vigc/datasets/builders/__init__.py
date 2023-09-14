@@ -68,6 +68,12 @@ from vigc.datasets.builders.dummy_builders.indic_corp_builder import (
     BengaliIndicCorpEvalBuilder,
 )
 
+from vigc.datasets.builders.whisper.wav2vec_openslr import (
+    Wav2VecOpenSLRSegAugASRBuilder,
+    Wav2VecOpenSLRConcatAugASRBuilder,
+    Wav2VecOpenSLRConcatSegAugASRBuilder
+)
+
 __all__ = [
     # "AOKVQA_Train_Builder",
     "VQAv2EvalBuilder",
@@ -113,6 +119,10 @@ __all__ = [
     "Wav2VecConcatAugASRBuilder",
 
     "BengaliIndicCorpEvalBuilder",
+
+    "Wav2VecOpenSLRSegAugASRBuilder",
+    "Wav2VecOpenSLRConcatAugASRBuilder",
+    "Wav2VecOpenSLRConcatSegAugASRBuilder"
 ]
 
 
