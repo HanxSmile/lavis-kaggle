@@ -19,6 +19,27 @@ from audiomentations import (
 )
 
 
+def get_transform(musan_dir):
+    trans = Compose(
+        [
+            TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
+            Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
+            PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
+            OneOf(
+                [
+                    # AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
+                    AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=3.0, max_snr_in_db=30.0,
+                                       noise_transform=PolarityInversion(), p=1.0),
+                    AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
+                ] if musan_dir is not None else [
+                    AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
+                p=0.5,
+            ),
+        ]
+    )
+    return trans
+
+
 @registry.register_builder("wav2vec_seg_aug_asr")
 class Wav2VecSegAugASRBuilder(BaseDatasetBuilder):
     train_dataset_cls = Wav2VecSegAugASR
@@ -32,23 +53,7 @@ class Wav2VecSegAugASRBuilder(BaseDatasetBuilder):
         datasets = dict()
         data_root = build_info.data_root
         musan_dir = self.config.get("musan_dir")
-        transform = Compose(
-            [
-                TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
-                Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
-                PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                OneOf(
-                    [
-                        # AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
-                        AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=3.0, max_snr_in_db=30.0,
-                                           noise_transform=PolarityInversion(), p=1.0),
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
-                    ] if musan_dir is not None else [
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.2,
-                ),
-            ]
-        )
+        transform = get_transform(musan_dir)
 
         cfg = self.config
         processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
@@ -80,22 +85,7 @@ class Wav2VecConcatAugASRBuilder(BaseDatasetBuilder):
         datasets = dict()
         data_root = build_info.data_root
         musan_dir = self.config.get("musan_dir")
-        transform = Compose(
-            [
-                TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
-                Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
-                PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                OneOf(
-                    [
-                        AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=3.0, max_snr_in_db=30.0,
-                                           noise_transform=PolarityInversion(), p=1.0),
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
-                    ] if musan_dir is not None else [
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.2,
-                ),
-            ]
-        )
+        transform = get_transform(musan_dir)
 
         cfg = self.config
         processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
@@ -128,23 +118,7 @@ class Wav2VecFilteredSegAugASRBuilder(BaseDatasetBuilder):
         data_root = build_info.data_root
         anno_path = build_info.annotation
         musan_dir = self.config.get("musan_dir")
-        transform = Compose(
-            [
-                TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
-                Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
-                PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                OneOf(
-                    [
-                        # AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
-                        AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=3.0, max_snr_in_db=30.0,
-                                           noise_transform=PolarityInversion(), p=1.0),
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
-                    ] if musan_dir is not None else [
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.5,
-                ),
-            ]
-        )
+        transform = get_transform(musan_dir)
 
         cfg = self.config
         processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
@@ -175,23 +149,7 @@ class Wav2VecFilteredConcatAugASRBuilder(BaseDatasetBuilder):
         data_root = build_info.data_root
         anno_path = build_info.annotation
         musan_dir = self.config.get("musan_dir")
-        transform = Compose(
-            [
-                # Resample(min_sample_rate=14_000, max_sample_rate=16_000, p=0.2),
-                TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
-                Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
-                PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                OneOf(
-                    [
-                        AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=3.0, max_snr_in_db=30.0,
-                                           noise_transform=PolarityInversion(), p=1.0),
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
-                    ] if musan_dir is not None else [
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.5,
-                ),
-            ]
-        )
+        transform = get_transform(musan_dir)
 
         cfg = self.config
         processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
@@ -221,23 +179,7 @@ class Wav2VecFilteredConcatSegAugASRBuilder(BaseDatasetBuilder):
         data_root = build_info.data_root
         anno_path = build_info.annotation
         musan_dir = self.config.get("musan_dir")
-        transform = Compose(
-            [
-                # Resample(min_sample_rate=14_000, max_sample_rate=16_000, p=0.2),
-                TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
-                Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
-                PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                OneOf(
-                    [
-                        AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=3.0, max_snr_in_db=30.0,
-                                           noise_transform=PolarityInversion(), p=1.0),
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
-                    ] if musan_dir is not None else [
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.5,
-                ),
-            ]
-        )
+        transform = get_transform(musan_dir)
 
         cfg = self.config
         processor = Wav2Vec2Processor.from_pretrained(cfg.model_name)
