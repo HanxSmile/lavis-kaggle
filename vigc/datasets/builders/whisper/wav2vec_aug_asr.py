@@ -17,6 +17,9 @@ from audiomentations import (
     PolarityInversion,
     TimeStretch,
 )
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 def get_transform(musan_dir):
