@@ -33,12 +33,18 @@ from vigc.tasks import *
 
 PROCESSOR_NAME = {
     "bengali_wav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
-    "bengali_indicwav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+    "bengali_indicwav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
+    "bengali_indicwav2vec_shrink": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
+    "bengali_indicwav2vec_pro": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
+    "bengali_umong_wav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
 }
 
 MODEL_NAME = {
     "bengali_wav2vec": "/mnt/petrelfs/hanxiao/work/bengali_utils/cv_bn_bestModel_1",
-    "bengali_indicwav2vec": "/mnt/lustre/hanxiao/work/bengali_utils/indic_wav2vec"
+    "bengali_indicwav2vec": "/mnt/lustre/hanxiao/work/bengali_utils/indic_wav2vec",
+    "bengali_indicwav2vec_shrink": "/mnt/lustre/hanxiao/work/bengali_utils/shrink_indicwav2vec_v1_bengali",
+    "bengali_indicwav2vec_pro": "/mnt/lustre/hanxiao/work/bengali_utils/pro_indicwav2vec_v1_bengali",
+    "bengali_umong_wav2vec": "/mnt/lustre/hanxiao/work/bengali_utils/wav2vec2-large-mms-1b-bengali",
 }
 
 
@@ -60,6 +66,17 @@ def main():
         model = BengaliWav2Vec(
             model_name=MODEL_NAME[cfg.model_type],
             processor_name=PROCESSOR_NAME[cfg.model_type]
+        )
+    elif cfg.model_type == "bengali_umong_wav2vec":
+        model = BengaliUmongWav2Vec(
+            model_name=MODEL_NAME[cfg.model_type],
+            processor_name=PROCESSOR_NAME[cfg.model_type]
+        )
+    elif cfg.model_type == "bengali_1b":
+        model = Bengali1BWav2Vec(
+            model_name="/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-1b",
+            tokenizer_name="/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-large-mms-1b-bengali",
+            processor_name="/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
         )
     else:
         model = BengaliIndicWav2Vec(
