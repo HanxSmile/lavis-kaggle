@@ -22,7 +22,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-def get_transform_(musan_dir):
+def get_transform(musan_dir):
     trans = Compose(
         [
             TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
@@ -43,7 +43,7 @@ def get_transform_(musan_dir):
     return trans
 
 
-def get_transform(musan_dir):
+def get_transform_(musan_dir):
     trans = Compose(
         [
             TimeStretch(min_rate=0.9, max_rate=1.1, p=0.5, leave_length_unchanged=False),
