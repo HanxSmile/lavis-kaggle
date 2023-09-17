@@ -22,7 +22,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-def get_transform(musan_dir):
+def get_transform_(musan_dir):
     trans = Compose(
         [
             TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
@@ -36,6 +36,25 @@ def get_transform(musan_dir):
                     AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
                 ] if musan_dir is not None else [
                     AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
+                p=0.5,
+            ),
+        ]
+    )
+    return trans
+
+
+def get_transform(musan_dir):
+    trans = Compose(
+        [
+            TimeStretch(min_rate=0.9, max_rate=1.1, p=0.5, leave_length_unchanged=False),
+            Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.5),
+            PitchShift(min_semitones=-4, max_semitones=4, p=0.5),
+            OneOf(
+                [
+                    AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=3.0, max_snr_in_db=30.0,
+                                       noise_transform=PolarityInversion(), p=1.0),
+                    AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
+                ],
                 p=0.5,
             ),
         ]
