@@ -1,6 +1,5 @@
 model:
-  model_name: /mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-1b
-  tokenizer_name: /mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-large-mms-1b-bengali
+  model_name: /mnt/petrelfs/hanxiao/work/lavis-kaggle/vigc/output/facebook_1b/facebook-1b-finetune-stage3/best_hf
   load_finetuned: False
   finetuned: ""
   post_process_flag: True
