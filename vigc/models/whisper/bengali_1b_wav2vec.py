@@ -34,7 +34,6 @@ class Bengali1BWav2Vec(BaseModel):
     def __init__(
             self,
             model_name="facebook/wav2vec2-xls-r-1b",
-            tokenizer_name="Umong/wav2vec2-large-mms-1b-bengali",
             processor_name="arijitx/wav2vec2-xls-r-300m-bengali",
             loss_reduction="mean",
             freeze_encoder=False,
@@ -42,23 +41,12 @@ class Bengali1BWav2Vec(BaseModel):
     ):
         super().__init__()
         self.post_process_flag = post_process_flag
-        processor = Wav2Vec2Processor.from_pretrained(tokenizer_name)
-        self.model = Wav2Vec2ForCTC.from_pretrained(
-            model_name,
-            activation_dropout=0.05,
-            final_dropout=0.05,
-            attention_dropout=0.0,
-            hidden_dropout=0.0,
-            feat_proj_dropout=0.0,
-            mask_time_prob=0.05,
-            layerdrop=0.0,
-            ctc_loss_reduction=loss_reduction,
-            ctc_zero_infinity=True,
-            pad_token_id=processor.tokenizer.pad_token_id,
-            vocab_size=len(processor.tokenizer),
-        )
+        self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
+        self.model.config.ctc_zero_infinity = True
+        self.model.config.ctc_loss_reduction = loss_reduction
         if freeze_encoder:
             self.model.freeze_feature_encoder()
+        processor = Wav2Vec2Processor.from_pretrained(model_name)
         vocab_dict = processor.tokenizer.get_vocab()["ben"]
         vocab_dict['<s>'] = 64
         vocab_dict['</s>'] = 65
@@ -135,12 +123,11 @@ class Bengali1BWav2Vec(BaseModel):
     @classmethod
     def from_config(cls, cfg):
         model_name = cfg.get("model_name")
-        tokenizer_name = cfg.get("tokenizer_name")
         processor_name = cfg.get("processor_name")
         post_process_flag = cfg.get("post_process_flag", True)
         freeze_encoder = cfg.get("freeze_encoder", False)
         loss_reduction = cfg.get("loss_reduction", "mean")
-        model = cls(model_name=model_name, tokenizer_name=tokenizer_name, processor_name=processor_name,
+        model = cls(model_name=model_name, processor_name=processor_name,
                     freeze_encoder=freeze_encoder, post_process_flag=post_process_flag, loss_reduction=loss_reduction)
         model.load_checkpoint_from_config(cfg)
         return model
