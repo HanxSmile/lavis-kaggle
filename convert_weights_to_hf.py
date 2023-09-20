@@ -74,8 +74,7 @@ def main():
         )
     elif cfg.model_type == "bengali_1b":
         model = Bengali1BWav2Vec(
-            model_name="/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-1b",
-            tokenizer_name="/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-large-mms-1b-bengali",
+            model_name="/mnt/petrelfs/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/facebook-1b-finetuned-stage-2/best_hf",
             processor_name="/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali",
         )
     else:
