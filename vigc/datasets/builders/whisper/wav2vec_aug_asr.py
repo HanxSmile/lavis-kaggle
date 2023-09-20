@@ -36,7 +36,7 @@ def get_transform(musan_dir):
                     AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
                 ] if musan_dir is not None else [
                     AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                p=0.5,
+                p=0.8,
             ),
         ]
     )
