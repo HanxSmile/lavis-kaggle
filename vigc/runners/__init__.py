@@ -7,5 +7,6 @@
 
 from vigc.runners.runner_base import RunnerBase
 from vigc.runners.runner_iter import RunnerIter
+from vigc.runners.runner_ema_iter import RunnerEmaIter
 
-__all__ = ["RunnerBase", "RunnerIter"]
+__all__ = ["RunnerBase", "RunnerIter", "RunnerEmaIter"]

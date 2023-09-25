@@ -29,8 +29,8 @@ def get_transform(musan_dir):
             TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
             Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
             PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-            ApplyImpulseResponse(ir_path="/mnt/petrelfs/share_data/hanxiao/bengali-bg-noise/DNS_impluse_response",
-                                 p=0.25),
+            # ApplyImpulseResponse(ir_path="/mnt/petrelfs/share_data/hanxiao/bengali-bg-noise/DNS_impluse_response",
+            #                      p=0.25),
             OneOf(
                 [
                     # AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
