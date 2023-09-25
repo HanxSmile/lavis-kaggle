@@ -37,6 +37,7 @@ class RunnerEmaIter(RunnerIter):
 
         self._ema_model = EMA(
             model,
+            ema_model=task.build_model(cfg),
             beta=cfg.run_cfg.get("ema_decay", 0.995),
             update_every=cfg.run_cfg.get("ema_update_every", 10)).to(self.device)
 
