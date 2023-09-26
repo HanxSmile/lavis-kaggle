@@ -16,6 +16,7 @@ from vigc.tasks.bengali_asr_infer import BengaliASRInferTask
 
 from vigc.tasks.indic_corp_infer import BengaliIndicCorpInferTask
 from vigc.tasks.ema_bengali_asr import EmaBengaliASRTask
+from vigc.tasks.awp_bengali_asr import AwpBengaliASRTask
 
 
 def setup_task(cfg):
@@ -37,5 +38,6 @@ __all__ = [
     "WhisperBengaliASRTask",
     "BengaliASRInferTask",
     "BengaliIndicCorpInferTask",
-    "EmaBengaliASRTask"
+    "EmaBengaliASRTask",
+    "AwpBengaliASRTask"
 ]
