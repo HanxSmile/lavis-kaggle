@@ -26,6 +26,7 @@ from vigc.models.whisper.bengali_umongwav2vec import BengaliUmongWav2Vec
 from vigc.models.wav2vec_bert.bengali_spelling_correction import BengaliSpellingCorrection
 from vigc.models.wav2vec_bert.bengali_t5_for_generation import BengaliT5Transformer
 from vigc.models.whisper.bengali_1b_wav2vec import Bengali1BWav2Vec
+from vigc.models.hubert.bengali_hubert import BengaliHubert
 
 __all__ = [
     "load_model",
@@ -41,6 +42,7 @@ __all__ = [
     "BengaliSpellingCorrection",
     "BengaliT5Transformer",
     "Bengali1BWav2Vec",
+    "BengaliHubert",
 ]
 
 
