@@ -44,13 +44,6 @@ class BengaliHubert(BaseModel):
         processor = Wav2Vec2Processor.from_pretrained(model_name)
         self.model = HubertForCTC.from_pretrained(
             model_name,
-            activation_dropout=0.05,
-            final_dropout=0.05,
-            attention_dropout=0.0,
-            hidden_dropout=0.0,
-            feat_proj_dropout=0.0,
-            mask_time_prob=0.05,
-            layerdrop=0.0,
             ctc_loss_reduction=loss_reduction,
             ctc_zero_infinity=True,
             pad_token_id=processor.tokenizer.pad_token_id,
