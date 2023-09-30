@@ -81,6 +81,14 @@ class BengaliWhisper(BaseModel):
             logging.info(f"Loaded finetuned model '{finetune_path}'.")
 
     @torch.no_grad()
+    def generate_(
+            self,
+            samples,
+            **kwargs
+    ):
+        pass
+
+    @torch.no_grad()
     def generate(
             self,
             samples,
@@ -93,7 +101,7 @@ class BengaliWhisper(BaseModel):
         pipe = pipeline(
             "automatic-speech-recognition",
             model=self.model,
-            chunk_length_s=30,
+            chunk_length_s=10,
             device=self.device,
             tokenizer=self.tokenizer,
             feature_extractor=self.feature_extractor
