@@ -1,5 +1,5 @@
 model:
-  model_name: /mnt/petrelfs/hanxiao/work/whisper-medium
+  model_name: /mnt/petrelfs/hanxiao/work/hf_whisper_pretrain/whisper-medium
   load_finetuned: False
   finetuned: ""
   post_process_flag: True

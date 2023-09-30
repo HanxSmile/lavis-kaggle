@@ -4,9 +4,7 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 model:
-  model_name: /mnt/petrelfs/hanxiao/work/whisper-medium
-  load_finetuned: False
-  finetuned: ""
+  model_name: /mnt/petrelfs/hanxiao/work/hf_whisper_pretrain/whisper-medium
   post_process_flag: True
   arch: bengali_whisper
   model_type: medium
@@ -35,9 +33,9 @@ run:
 
   weight_decay: 0.05
 
-  batch_size_train: 4
-  batch_size_eval: 4
-  accum_grad_iters: 4
+  batch_size_train: 8
+  batch_size_eval: 8
+  accum_grad_iters: 2
 
   num_workers: 4
   warmup_steps: 1000

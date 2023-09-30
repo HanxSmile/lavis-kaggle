@@ -6,6 +6,8 @@ from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProce
 from bnunicodenormalizer import Normalizer
 import contextlib
 from transformers import pipeline
+import json
+import os
 
 bnorm = Normalizer()
 
@@ -45,12 +47,22 @@ class BengaliWhisper(BaseModel):
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         if freeze_encoder:
             self.model.freeze_encoder()
-        self.model.config.forced_decoder_ids = None
+        # self.model.config.forced_decoder_ids = None
         self.model.config.suppress_tokens = []
+        valid_token_ids_path = os.path.join(model_name, "valid_token_ids.json")
+        if os.path.isfile(valid_token_ids_path):
+            vocab_size = self.model.config.vocab_size
+            all_input_ids = set(range(vocab_size))
+            with open(valid_token_ids_path, "r") as f:
+                valid_token_ids = set(json.load(f))
+            self.model.config.supress_tokens = list(all_input_ids - valid_token_ids)
 
         self.tokenizer = WhisperTokenizer.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
         self.processor = WhisperProcessor.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
-        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name)
+        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name, language=self.LANGUAGE,
+                                                                         task=self.TASK)
+        forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
+        self.model.config.forced_decoder_ids = forced_decoder_ids
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -75,13 +87,13 @@ class BengaliWhisper(BaseModel):
             **kwargs
     ):
         inputs = samples["raw_audios"]
-        forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
-        ori_forced_decoder_ids = self.model.config.forced_decoder_ids
-        self.model.config.forced_decoder_ids = forced_decoder_ids
+        # forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
+        # ori_forced_decoder_ids = self.model.config.forced_decoder_ids
+        # self.model.config.forced_decoder_ids = forced_decoder_ids
         pipe = pipeline(
             "automatic-speech-recognition",
             model=self.model,
-            chunk_length_s=8,
+            chunk_length_s=30,
             device=self.device,
             tokenizer=self.tokenizer,
             feature_extractor=self.feature_extractor
@@ -91,7 +103,7 @@ class BengaliWhisper(BaseModel):
         transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
             transcription = [postprocess(_) for _ in transcription]
-        self.model.config.forced_decoder_ids = ori_forced_decoder_ids
+        # self.model.config.forced_decoder_ids = ori_forced_decoder_ids
         return transcription
 
     def forward(self, samples, **kwargs):
@@ -121,6 +133,10 @@ class BengaliWhisper(BaseModel):
         model_name = cfg.get("model_name")
         post_process_flag = cfg.get("post_process_flag", True)
         freeze_encoder = cfg.get("freeze_encoder", False)
-        model = cls(model_name=model_name, freeze_encoder=freeze_encoder, post_process_flag=post_process_flag)
+        model = cls(
+            model_name=model_name,
+            freeze_encoder=freeze_encoder,
+            post_process_flag=post_process_flag,
+        )
         model.load_checkpoint_from_config(cfg)
         return model
