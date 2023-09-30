@@ -26,7 +26,7 @@ warnings.filterwarnings("ignore")
 def get_transform(musan_dir):
     trans = Compose(
         [
-            Resample(min_sample_rate=14_000, max_sample_rate=18_000),
+            # Resample(min_sample_rate=14_000, max_sample_rate=18_000),
             TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
             Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
             PitchShift(min_semitones=-4, max_semitones=4, p=0.2),

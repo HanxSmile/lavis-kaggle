@@ -234,6 +234,7 @@ class LinearWarmupCosine3LongTailLRScheduler:
         self.iters_per_epoch = iters_per_epoch
         self.warmup_start_lr = warmup_start_lr if warmup_start_lr >= 0 else init_lr
         self.max_iters = max_epoch * iters_per_epoch
+        self.base_iters = 30_000
 
     def step(self, cur_epoch, cur_step):
         # assuming the warmup iters less than one epoch
@@ -246,27 +247,27 @@ class LinearWarmupCosine3LongTailLRScheduler:
                 init_lr=self.warmup_start_lr,
                 max_lr=self.init_lr,
             )
-        elif total_steps <= self.max_iters // 4:
+        elif total_steps <= self.base_iters:
             cosine_lr_schedule(
                 epoch=total_steps,
                 optimizer=self.optimizer,
-                max_epoch=self.max_iters // 4,
+                max_epoch=self.base_iters,
                 init_lr=self.init_lr,
                 min_lr=self.min_lr,
             )
-        elif total_steps <= self.max_iters // 2:
+        elif total_steps <= self.base_iters * 2:
             cosine_lr_schedule(
-                epoch=self.max_iters // 4,
+                epoch=self.base_iters,
                 optimizer=self.optimizer,
-                max_epoch=self.max_iters // 4,
+                max_epoch=self.base_iters,
                 init_lr=self.init_lr,
                 min_lr=self.min_lr,
             )
-        else:  # total_steps > self.max_iters // 2
+        else:  # total_steps > self.base_iters * 2
             cosine_lr_schedule(
-                epoch=total_steps - self.max_iters // 2,
+                epoch=total_steps - self.base_iters * 2,
                 optimizer=self.optimizer,
-                max_epoch=self.max_iters // 2,
+                max_epoch=self.max_iters - self.base_iters * 2,
                 init_lr=self.min_lr,
                 min_lr=0,
             )
