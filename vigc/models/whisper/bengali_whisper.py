@@ -83,7 +83,7 @@ class BengaliWhisper(BaseModel):
             logging.info(f"Loaded finetuned model '{finetune_path}'.")
 
     @torch.no_grad()
-    def generate(
+    def generate_(
             self,
             samples,
             **kwargs
@@ -98,9 +98,8 @@ class BengaliWhisper(BaseModel):
             transcription = [postprocess(_) for _ in transcription]
         return transcription
 
-
     @torch.no_grad()
-    def generate_(
+    def generate(
             self,
             samples,
             **kwargs
@@ -118,7 +117,12 @@ class BengaliWhisper(BaseModel):
             feature_extractor=self.feature_extractor
         )
         with self.maybe_autocast():
-            transcription = pipe(inputs.copy(), batch_size=8)
+            transcription = pipe(
+                inputs.copy(),
+                batch_size=8,
+                forced_decoder_ids=self.forced_decoder_ids,
+                suppress_tokens=self.suppress_tokens
+            )
         transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
             transcription = [postprocess(_) for _ in transcription]
