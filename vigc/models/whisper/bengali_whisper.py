@@ -50,19 +50,21 @@ class BengaliWhisper(BaseModel):
         # self.model.config.forced_decoder_ids = None
         self.model.config.suppress_tokens = []
         valid_token_ids_path = os.path.join(model_name, "valid_token_ids.json")
+        self.suppress_tokens = None
         if os.path.isfile(valid_token_ids_path):
             vocab_size = self.model.config.vocab_size
             all_input_ids = set(range(vocab_size))
             with open(valid_token_ids_path, "r") as f:
                 valid_token_ids = set(json.load(f))
-            self.model.config.supress_tokens = list(all_input_ids - valid_token_ids)
+            self.suppress_tokens = list(all_input_ids - valid_token_ids)
+            self.model.config.supress_tokens = self.suppress_tokens
 
         self.tokenizer = WhisperTokenizer.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
         self.processor = WhisperProcessor.from_pretrained(model_name, language=self.LANGUAGE, task=self.TASK)
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name, language=self.LANGUAGE,
                                                                          task=self.TASK)
-        forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
-        self.model.config.forced_decoder_ids = forced_decoder_ids
+        self.forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
+        self.model.config.forced_decoder_ids = self.forced_decoder_ids
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -81,15 +83,24 @@ class BengaliWhisper(BaseModel):
             logging.info(f"Loaded finetuned model '{finetune_path}'.")
 
     @torch.no_grad()
-    def generate_(
+    def generate(
             self,
             samples,
             **kwargs
     ):
-        pass
+        predicted_ids = self.model.generate(
+            samples["input_features"],
+            forced_decoder_ids=self.forced_decoder_ids,
+            suppress_tokens=self.suppress_tokens
+        )
+        transcription = self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
+        if self.post_process_flag:
+            transcription = [postprocess(_) for _ in transcription]
+        return transcription
+
 
     @torch.no_grad()
-    def generate(
+    def generate_(
             self,
             samples,
             **kwargs
