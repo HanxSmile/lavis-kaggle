@@ -8,6 +8,7 @@ import contextlib
 from transformers import pipeline
 import json
 import os
+from vigc.models.whisper.whisper_pipeline import WhisperPipeline
 
 bnorm = Normalizer()
 
@@ -108,20 +109,19 @@ class BengaliWhisper(BaseModel):
         # forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
         # ori_forced_decoder_ids = self.model.config.forced_decoder_ids
         # self.model.config.forced_decoder_ids = forced_decoder_ids
-        pipe = pipeline(
-            "automatic-speech-recognition",
+        pipe = WhisperPipeline(
             model=self.model,
             chunk_length_s=10,
             device=self.device,
             tokenizer=self.tokenizer,
-            feature_extractor=self.feature_extractor
+            feature_extractor=self.feature_extractor,
+            forced_decoder_ids=self.forced_decoder_ids,
+            suppress_tokens=self.suppress_tokens
         )
         with self.maybe_autocast():
             transcription = pipe(
                 inputs.copy(),
                 batch_size=8,
-                forced_decoder_ids=self.forced_decoder_ids,
-                suppress_tokens=self.suppress_tokens
             )
         transcription = [_["text"] for _ in transcription]
         if self.post_process_flag:
