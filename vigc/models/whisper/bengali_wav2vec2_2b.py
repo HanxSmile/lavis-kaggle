@@ -144,3 +144,6 @@ class Bengali2BWav2Vec(BaseModel):
                     freeze_encoder=freeze_encoder, post_process_flag=post_process_flag, loss_reduction=loss_reduction)
         model.load_checkpoint_from_config(cfg)
         return model
+
+    def save_checkpoint(self, path):
+        self.model.save_pretrained(path)

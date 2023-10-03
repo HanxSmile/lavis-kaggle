@@ -187,7 +187,11 @@ class RunnerIter(RunnerBase):
                 "checkpoint_{}.pth".format(cur_iters),
             )
         logging.info("Saving checkpoint at iters {} to {}.".format(cur_iters, save_to))
-        torch.save(save_obj, save_to)
+        if hasattr(unwrapped_model, "save_checkpoint"):
+            save_to = save_to.replace(".pth", "")
+            unwrapped_model.save_checkpoint(save_to)
+        else:
+            torch.save(save_obj, save_to)
 
     def _load_checkpoint(self, url_or_filename):
         """
