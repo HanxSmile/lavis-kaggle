@@ -1,0 +1,82 @@
+model:
+  model_name_list:
+    - "/mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/20230822163/best_hf"
+    - "/mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/20230817210/best_hf"
+    - "/mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/20230822175/best_hf"
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_moe_wav2vec
+  model_type: default
+  freeze_lm_head: False
+  processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+
+datasets:
+  # train
+  # wav2vec_bengali_asr:
+  #   sample_ratio: 1
+
+  wav2vec_seg_aug_asr:
+    seg_nums: 3
+    sample_ratio: 1
+    split_style: k-fold
+    fold_idx: 1
+    fold_nums: 5
+    seed: 42
+
+  # wav2vec_bengali_shrutilipi:
+  #   sample_ratio: 1
+
+  # wav2vec_bengali_openslr:
+  #   sample_ratio: 1
+
+  # wav2vec_bengali_cvbn:
+  #   sample_ratio: 1
+
+    # eval
+  wav2vec_bengali_asr_eval:
+    split_style: k-fold
+    fold_idx: 1
+    fold_nums: 5
+    seed: 42
+    sample_nums: 10000
+
+  ## test
+  # wav2vec_bengali_asr_test:
+  #   placeholder: null
+
+run:
+  runner: runner_iter
+  task: whisper_bengali_asr_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 3e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 8
+  batch_size_eval: 8
+  accum_grad_iters: 2
+
+  num_workers: 4
+  warmup_steps: 1000
+
+  iters_per_inner_epoch: 1000
+  max_iters: 30000
+
+  seed: 42
+  output_dir: "./output/wav2vec_bengali_asr"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True

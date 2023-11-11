@@ -1,0 +1,7 @@
+datasets:
+  wav2vec_bengali_shrutilipi:
+    model_name: /mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali
+#    model_name: arijitx/wav2vec2-xls-r-300m-bengali
+    data_type: audios
+    musan_dir: /mnt/petrelfs/share_data/hanxiao/musan_bg_noise
+    cache_file: /mnt/petrelfs/share_data/hanxiao/bergali_asr_datasets/shrutilipi

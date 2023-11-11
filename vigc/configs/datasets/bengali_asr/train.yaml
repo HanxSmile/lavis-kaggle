@@ -1,0 +1,6 @@
+datasets:
+  whisper_bengali_asr:
+    data_type: audios
+    musan_dir: /mnt/petrelfs/share_data/hanxiao/musan_bg_noise
+    build_info:
+      data_root: /mnt/petrelfs/share_data/hanxiao/bengaliai-speech

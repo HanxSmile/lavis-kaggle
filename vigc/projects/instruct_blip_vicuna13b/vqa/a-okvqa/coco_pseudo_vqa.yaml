@@ -1,0 +1,92 @@
+ # Copyright (c) 2022, salesforce.com, inc.
+ # All rights reserved.
+ # SPDX-License-Identifier: BSD-3-Clause
+ # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: blip2_vicuna_instruct
+  model_type: vicuna13b
+  load_pretrained: True
+
+  pretrained: "/mnt/petrelfs/hanxiao/input/instruct-blip/instruct_blip_vicuna13b_trimmed.pth"
+  llm_model: "/mnt/petrelfs/hanxiao/vicuna-13b"
+
+
+datasets:
+
+  ## A-OKVQA train
+  instruct_blip_aokvqa_vqa:
+    sample_ratio: 131
+    vis_processor:
+      train:
+        name: "blip2_image_train"
+        image_size: 224
+    text_processor:
+      train:
+        name: "blip_caption"
+        max_words: 100
+
+  ## COCO-PSEUDO  vqa
+  instruct_blip_coco_pseudo_vqa:
+    topk: 3
+    sample_ratio: 54
+    annotation: "/mnt/petrelfs/hanxiao/input/instruct-blip/generate/result/20230702144/result/question_answer.json"
+    vis_processor:
+      train:
+        name: "blip2_image_train"
+        image_size: 224
+    text_processor:
+      train:
+        name: "blip_caption"
+        max_words: 100
+
+  ## A-OKVQA eval
+  instruct_blip_aokvqa_eval:
+    vis_processor:
+      eval:
+        name: "blip_image_eval"
+        image_size: 224
+    text_processor:
+      eval:
+        name: "blip_caption"
+        max_words: 100
+
+run:
+  runner: runner_iter
+  task: instruct_blip_vqa
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-5
+  min_lr: 0
+  warmup_lr: 1e-8
+
+  weight_decay: 0.05
+
+  batch_size_train: 16
+  batch_size_eval: 16
+  num_workers: 4
+  warmup_steps: 64
+
+  iters_per_inner_epoch: 64
+  max_iters: 512
+  accum_grad_iters: 1
+
+  seed: 42
+  output_dir: "/mnt/petrelfs/hanxiao/input/instruct-blip/evaluate_vqa/result"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False 
+  train_splits: ["train"]
+  valid_splits: ["eval"]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
+  generate_cfg:
+    max_len: 10
+    min_len: 1
+    num_beams: 5

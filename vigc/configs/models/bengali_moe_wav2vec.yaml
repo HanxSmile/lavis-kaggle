@@ -1,0 +1,10 @@
+model:
+  model_name_list:
+    - "/mnt/petrelfs/hanxiao/work/bengali_utils/cv_bn_bestModel_1"
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_moe_wav2vec
+  model_type: default
+  freeze_lm_head: False
+  processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"

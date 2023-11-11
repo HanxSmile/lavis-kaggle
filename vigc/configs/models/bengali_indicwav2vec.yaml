@@ -1,0 +1,10 @@
+model:
+  model_name: /mnt/lustre/hanxiao/work/bengali_utils/indicwav2vec_v1_bengali
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_indicwav2vec
+  model_type: default
+  freeze_encoder: False
+  processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+#  processor_name: arijitx/wav2vec2-xls-r-300m-bengali

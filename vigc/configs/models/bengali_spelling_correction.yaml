@@ -1,0 +1,11 @@
+model:
+  asr_model_name: /mnt/lustre/hanxiao/work/lavis-kaggle/vigc/output/wav2vec_bengali_asr/baseline-0902/best_hf
+  asr_processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
+  bert_model_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/bangla-bert-base"
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_spelling_correction
+  model_type: default
+
+#  processor_name: arijitx/wav2vec2-xls-r-300m-bengali

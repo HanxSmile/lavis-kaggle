@@ -1,0 +1,6 @@
+datasets:
+  whisper_bengali_cvbn:
+    model_name: ""
+#    model_name: arijitx/wav2vec2-xls-r-300m-bengali
+    data_type: audios
+    musan_dir: /mnt/petrelfs/share_data/hanxiao/musan_bg_noise

@@ -1,0 +1,7 @@
+model:
+  model_name: /mnt/petrelfs/hanxiao/work/whisper-small
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_whisper
+  model_type: small

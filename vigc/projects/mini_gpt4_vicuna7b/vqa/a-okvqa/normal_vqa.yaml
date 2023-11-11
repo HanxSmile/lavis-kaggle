@@ -1,0 +1,80 @@
+ # Copyright (c) 2022, salesforce.com, inc.
+ # All rights reserved.
+ # SPDX-License-Identifier: BSD-3-Clause
+ # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: blip2_vicuna_instruct
+  model_type: vicuna7b
+  load_pretrained: True
+  load_finetuned: True
+  freeze_vit_ln: True
+
+  pretrained: "/mnt/petrelfs/hanxiao/input/instruct-blip/blip2_pretrained_flant5xxl.pth"
+  finetuned: "/mnt/petrelfs/hanxiao/input/instruct-blip/minigpt4_proj_7b.pth"
+  llm_model: "/mnt/petrelfs/hanxiao/vicuna-7b"
+
+
+datasets:
+
+  ## A-OKVQA train
+  instruct_blip_aokvqa_vqa:
+    sample_ratio: 131
+    vis_processor:
+      train:
+        name: "blip2_image_train"
+        image_size: 224
+    text_processor:
+      train:
+        name: "blip_caption"
+        max_words: 100
+
+  ## A-OKVQA eval
+  instruct_blip_aokvqa_eval:
+    vis_processor:
+      eval:
+        name: "blip_image_eval"
+        image_size: 224
+    text_processor:
+      eval:
+        name: "blip_caption"
+        max_words: 100
+
+run:
+  runner: runner_base
+  task: instruct_blip_vqa
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 3e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 16
+  batch_size_eval: 16
+  num_workers: 4
+  warmup_steps: 1000
+
+  max_epoch: 30
+  accum_grad_iters: 1
+
+  seed: 42
+  output_dir: "/mnt/petrelfs/hanxiao/input/vigc/evaluate_vqa/result"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False 
+  train_splits: ["train"]
+  valid_splits: ["eval"]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
+  generate_cfg:
+    max_len: 10
+    min_len: 1
+    num_beams: 5

@@ -1,0 +1,11 @@
+model:
+  model_name: /mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-2b
+  tokenizer_name: /mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-large-mms-1b-bengali
+  load_finetuned: False
+  finetuned: ""
+  post_process_flag: True
+  arch: bengali_2b_wav2vec
+  model_type: default
+  freeze_encoder: False
+  loss_reduction: "mean"
+  processor_name: "/mnt/petrelfs/hanxiao/work/bengali_utils/wav2vec2-xls-r-300m-bengali"
