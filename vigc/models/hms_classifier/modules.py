@@ -24,8 +24,8 @@ class GeM(nn.Module):
 
 class KLDivLossWithLogits(nn.KLDivLoss):
 
-    def __init__(self):
-        super().__init__(reduction="batchmean")
+    def __init__(self, reduction="batchmean"):
+        super().__init__(reduction=reduction)
 
     def forward(self, y, t):
         y = nn.functional.log_softmax(y, dim=1)
@@ -61,7 +61,9 @@ class KLDivLossWithLogitsForVal(nn.KLDivLoss):
 
 
 if __name__ == '__main__':
-    a = torch.randn(1, 3, 224, 224)
-    net = GeM()
-    y = net(a)
-    print(y.shape)
+    pred = torch.randn(2, 6)
+    pred = nn.functional.log_softmax(pred, dim=1)
+    target = F.softmax(torch.randn(2, 6), dim=1)
+    fn = nn.KLDivLoss(reduction="none")
+    print(fn(pred, target).shape)
+    # print(y.shape)

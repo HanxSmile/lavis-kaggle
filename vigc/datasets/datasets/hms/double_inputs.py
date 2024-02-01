@@ -72,18 +72,28 @@ class DoubleInputsDataset(Dataset):
         return {
             "eeg_image": eeg_spec_data.permute(2, 0, 1),  # [16, 128, 256]
             "spec_image": kaggle_spec_data.permute(2, 0, 1),  # [1, 400, 300]
-            "label": label  # [6]
+            "label": label,  # [6]
+            "eeg_id": eeg_id,
+            "spec_id": spec_id,
+            "uid": f"{index}"
         }
 
     def collater(self, batch):
         eeg_image_list, spec_image_list, label_list = [], [], []
+        eeg_id_list, spec_id_list, uid_list = [], [], []
         for sample in batch:
             eeg_image_list.append(sample["eeg_image"])
             spec_image_list.append(sample["spec_image"])
             label_list.append(sample["label"])
+            eeg_id_list.append(sample["eeg_id"])
+            spec_id_list.append(sample["spec_id"])
+            uid_list.append(sample["uid"])
 
         return {
             "eeg_image": torch.stack(eeg_image_list, dim=0),
             "spec_image": torch.stack(spec_image_list, dim=0),
-            "label": torch.stack(label_list, dim=0)
+            "label": torch.stack(label_list, dim=0),
+            "eeg_id": eeg_id_list,
+            "spec_id": spec_id_list,
+            "uid": uid_list
         }

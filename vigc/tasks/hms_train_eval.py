@@ -4,6 +4,8 @@ from vigc.tasks.base_task import BaseTask
 import os
 import json
 import numpy as np
+import torch.nn as nn
+import torch
 
 
 @registry.register_task("hms_train_eval")
@@ -31,7 +33,17 @@ class HMSClassifyTrainEvalTask(BaseTask):
         results = []
 
         response = model.generate(samples)
-        results.append(response["loss"].item())
+        eeg_id, spec_id, uid = response["eeg_id"], response["spec_id"], response["uid"]
+        probs, label = response["probs"], response["label"]
+        for eeg_id_, spec_id_, uid_, prob_, label_ in zip(eeg_id, spec_id, uid, probs, label):
+            this_res = {
+                "eeg_id": eeg_id_,
+                "spec_id": spec_id_,
+                "uid": uid_,
+                "prob": prob_.tolist(),
+                "label": label_.tolist()
+            }
+            results.append(this_res)
 
         return results
 
@@ -40,7 +52,7 @@ class HMSClassifyTrainEvalTask(BaseTask):
             result=val_result,
             result_dir=registry.get_path("result_dir"),
             filename="{}_epoch{}".format(split_name, epoch),
-            remove_duplicate="",
+            remove_duplicate="uid",
         )
 
         if self.report_metric:
@@ -57,7 +69,34 @@ class HMSClassifyTrainEvalTask(BaseTask):
 
         with open(eval_result_file) as f:
             results = json.load(f)
-        loss = np.mean(results)
+
+        prob_buffer = dict()
+        label_buffer = dict()
+        count_buffer = dict()
+        for result in results:
+            eeg_id = result["eeg_id"]
+            prob = np.array(result["prob"])
+            label = np.array(result["label"])
+
+            prob_buffer[eeg_id] = prob + prob_buffer.get(eeg_id, 0)
+            label_buffer[eeg_id] = label + label_buffer.get(eeg_id, 0)
+            count_buffer[eeg_id] = 1 + count_buffer.get(eeg_id, 0)
+
+        for eeg_id in prob_buffer:
+            prob_buffer[eeg_id] = torch.from_numpy(prob_buffer[eeg_id] / count_buffer[eeg_id])
+            label_buffer[eeg_id] = torch.from_numpy(label_buffer[eeg_id] / count_buffer[eeg_id])
+
+        all_probs = []
+        all_labels = []
+        for eeg_id in prob_buffer:
+            all_probs.append(prob_buffer[eeg_id])
+            all_labels.append(label_buffer[eeg_id])
+
+        all_probs = torch.log(torch.stack(all_probs, dim=0))
+        all_labels = torch.stack(all_labels, dim=0)
+
+        loss = nn.KLDivLoss(reduction="batchmean")(all_probs, all_labels)
+
         log_stats = {split_name: {"loss": loss}}
 
         with open(
