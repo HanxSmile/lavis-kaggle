@@ -28,3 +28,5 @@ webdataset
 wheel
 peft
 scikit-learn
+albumentations
+ema_pytorch
