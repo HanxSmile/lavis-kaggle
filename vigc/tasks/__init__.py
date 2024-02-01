@@ -7,16 +7,6 @@
 
 from vigc.common.registry import registry
 from vigc.tasks.base_task import BaseTask
-from vigc.tasks.caption_train_eval import InstructBlipCaptionTask
-from vigc.tasks.llava_150k_gen import InstructBlipLLavaVQGATask
-from vigc.tasks.vqa_train_eval import InstructBlipVQATask
-from vigc.tasks.vqg_test import InstructBlipVQGTask
-from vigc.tasks.bengali_asr import WhisperBengaliASRTask
-from vigc.tasks.bengali_asr_infer import BengaliASRInferTask
-
-from vigc.tasks.indic_corp_infer import BengaliIndicCorpInferTask
-from vigc.tasks.ema_bengali_asr import EmaBengaliASRTask
-from vigc.tasks.awp_bengali_asr import AwpBengaliASRTask
 
 from vigc.tasks.hms_train_eval import HMSClassifyTrainEvalTask
 
@@ -33,15 +23,5 @@ def setup_task(cfg):
 
 __all__ = [
     "BaseTask",
-    "InstructBlipCaptionTask",
-    "InstructBlipLLavaVQGATask",
-    "InstructBlipVQATask",
-    "InstructBlipVQGTask",
-    "WhisperBengaliASRTask",
-    "BengaliASRInferTask",
-    "BengaliIndicCorpInferTask",
-    "EmaBengaliASRTask",
-    "AwpBengaliASRTask",
-
     "HMSClassifyTrainEvalTask",
 ]

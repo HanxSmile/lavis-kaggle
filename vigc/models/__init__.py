@@ -18,16 +18,6 @@ from vigc.models.vit import VisionTransformerEncoder
 
 from vigc.processors.base_processor import BaseProcessor
 
-from vigc.models.whisper.bengali_whisper import BengaliWhisper
-from vigc.models.whisper.bengali_wav2vec import BengaliWav2Vec
-from vigc.models.whisper.bengali_indicwav2vec import BengaliIndicWav2Vec
-from vigc.models.whisper.bengali_moe_wav2vec import BengaliMoEWav2Vec
-from vigc.models.whisper.bengali_umongwav2vec import BengaliUmongWav2Vec
-from vigc.models.wav2vec_bert.bengali_spelling_correction import BengaliSpellingCorrection
-from vigc.models.wav2vec_bert.bengali_t5_for_generation import BengaliT5Transformer
-from vigc.models.whisper.bengali_1b_wav2vec import Bengali1BWav2Vec
-from vigc.models.hubert.bengali_hubert import BengaliHubert
-from vigc.models.whisper.bengali_wav2vec2_2b import Bengali2BWav2Vec
 
 from vigc.models.hms_classifier.hms_model import HMSClassifier
 
@@ -37,16 +27,6 @@ __all__ = [
     "Blip2Base",
     "Blip2VicunaInstruct",
     "VisionTransformerEncoder",
-    "BengaliWhisper",
-    "BengaliWav2Vec",
-    "BengaliIndicWav2Vec",
-    "BengaliMoEWav2Vec",
-    "BengaliUmongWav2Vec",
-    "BengaliSpellingCorrection",
-    "BengaliT5Transformer",
-    "Bengali1BWav2Vec",
-    "BengaliHubert",
-    "Bengali2BWav2Vec",
 
     "HMSClassifier",
 ]

@@ -9,70 +9,6 @@ from vigc.datasets.builders.base_dataset_builder import load_dataset_config
 
 from vigc.common.registry import registry
 
-from vigc.datasets.builders.instruct_blip.caption_builder import CCSBUBuilder
-from vigc.datasets.builders.instruct_blip.vqa_eval_builder import (
-    AOKVQAEvalBuilder,
-    VQAv2EvalBuilder,
-    OKVQAEvalBuilder,
-)
-
-from vigc.datasets.builders.instruct_blip.vqga_builder import (
-    LlavaCompVQGABuilder,
-    LlavaDescVQGABuilder,
-    LlavaConvVQGABuilder,
-    A_OKVQA_VQGABuilder,
-    OKVQA_VQGABuilder,
-    VQAv2_VQGABuilder,
-    COCO_Pseudo_VQGABuilder,
-    LlavaCompVQABuilder,
-    LlavaDescVQABuilder,
-    LlavaConvVQABuilder,
-    A_OKVQA_VQABuilder,
-    OKVQA_VQABuilder,
-    VQAv2_VQABuilder,
-    COCO_Pseudo_VQABuilder,
-    LlavaCompVQGBuilder,
-    LlavaDescVQGBuilder,
-    LlavaConvVQGBuilder,
-    A_OKVQA_VQGBuilder,
-    OKVQA_VQGBuilder,
-    COCO_Pseudo_VQGBuilder,
-)
-from vigc.datasets.builders.instruct_blip.vqga_eval_builder import (
-    AOKVQAEvalBuilder,
-    COCO_Jiahui_VQGBuilder,
-    COCOPseudoEvalBuilder,
-    OKVQAEvalBuilder,
-    VQAv2EvalBuilder,
-    LlavaVQGAEvalBuilder,
-)
-
-from vigc.datasets.builders.whisper.bengali_asr import (
-    BengaliASRBuilder,
-    BengaliASREvalBuilder,
-    BengaliASRTestBuilder
-)
-
-from vigc.datasets.builders.whisper.wav2vec_bengali_asr import (
-    Wav2VecBengaliASRBuilder,
-    Wav2VecBengaliASREvalBuilder,
-    Wav2VecBengaliASRTest
-)
-
-from vigc.datasets.builders.whisper.wav2vec_aug_asr import (
-    Wav2VecSegAugASRBuilder,
-    Wav2VecConcatAugASRBuilder
-)
-
-from vigc.datasets.builders.dummy_builders.indic_corp_builder import (
-    BengaliIndicCorpEvalBuilder,
-)
-
-from vigc.datasets.builders.whisper.wav2vec_openslr import (
-    Wav2VecOpenSLRSegAugASRBuilder,
-    Wav2VecOpenSLRConcatAugASRBuilder,
-    Wav2VecOpenSLRConcatSegAugASRBuilder
-)
 
 from vigc.datasets.builders.hms.double_inputs import (
     HMSDoubleInputsTrainBuilder,
@@ -80,55 +16,6 @@ from vigc.datasets.builders.hms.double_inputs import (
 )
 
 __all__ = [
-    # "AOKVQA_Train_Builder",
-    "VQAv2EvalBuilder",
-    "OKVQAEvalBuilder",
-    "AOKVQAEvalBuilder",
-    "LlavaCompVQGABuilder",
-    "LlavaDescVQGABuilder",
-    "LlavaConvVQGABuilder",
-    "A_OKVQA_VQGABuilder",
-    "OKVQA_VQGABuilder",
-    "VQAv2_VQGABuilder",
-    "COCO_Pseudo_VQGABuilder",
-    "LlavaCompVQABuilder",
-    "LlavaDescVQABuilder",
-    "LlavaConvVQABuilder",
-    "A_OKVQA_VQABuilder",
-    "OKVQA_VQABuilder",
-    "VQAv2_VQABuilder",
-    "COCO_Pseudo_VQABuilder",
-    "LlavaCompVQGBuilder",
-    "LlavaDescVQGBuilder",
-    "LlavaConvVQGBuilder",
-    "A_OKVQA_VQGBuilder",
-    "OKVQA_VQGBuilder",
-    "COCO_Pseudo_VQGBuilder",
-    "AOKVQAEvalBuilder",
-    "COCO_Jiahui_VQGBuilder",
-    "COCOPseudoEvalBuilder",
-    "OKVQAEvalBuilder",
-    "VQAv2EvalBuilder",
-    "LlavaVQGAEvalBuilder",
-    "CCSBUBuilder",
-
-    "BengaliASRBuilder",
-    "BengaliASREvalBuilder",
-    "BengaliASRTestBuilder",
-
-    "Wav2VecBengaliASRBuilder",
-    "Wav2VecBengaliASREvalBuilder",
-    "Wav2VecBengaliASRTest",
-
-    "Wav2VecSegAugASRBuilder",
-    "Wav2VecConcatAugASRBuilder",
-
-    "BengaliIndicCorpEvalBuilder",
-
-    "Wav2VecOpenSLRSegAugASRBuilder",
-    "Wav2VecOpenSLRConcatAugASRBuilder",
-    "Wav2VecOpenSLRConcatSegAugASRBuilder",
-
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
 ]
