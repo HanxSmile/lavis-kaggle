@@ -18,6 +18,8 @@ from vigc.tasks.indic_corp_infer import BengaliIndicCorpInferTask
 from vigc.tasks.ema_bengali_asr import EmaBengaliASRTask
 from vigc.tasks.awp_bengali_asr import AwpBengaliASRTask
 
+from vigc.tasks.hms_train_eval import HMSClassifyTrainEvalTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
@@ -39,5 +41,7 @@ __all__ = [
     "BengaliASRInferTask",
     "BengaliIndicCorpInferTask",
     "EmaBengaliASRTask",
-    "AwpBengaliASRTask"
+    "AwpBengaliASRTask",
+
+    "HMSClassifyTrainEvalTask",
 ]

@@ -74,6 +74,11 @@ from vigc.datasets.builders.whisper.wav2vec_openslr import (
     Wav2VecOpenSLRConcatSegAugASRBuilder
 )
 
+from vigc.datasets.builders.hms.double_inputs import (
+    HMSDoubleInputsTrainBuilder,
+    HMSDoubleInputsEvalBuilder,
+)
+
 __all__ = [
     # "AOKVQA_Train_Builder",
     "VQAv2EvalBuilder",
@@ -122,7 +127,10 @@ __all__ = [
 
     "Wav2VecOpenSLRSegAugASRBuilder",
     "Wav2VecOpenSLRConcatAugASRBuilder",
-    "Wav2VecOpenSLRConcatSegAugASRBuilder"
+    "Wav2VecOpenSLRConcatSegAugASRBuilder",
+
+    "HMSDoubleInputsTrainBuilder",
+    "HMSDoubleInputsEvalBuilder",
 ]
 
 

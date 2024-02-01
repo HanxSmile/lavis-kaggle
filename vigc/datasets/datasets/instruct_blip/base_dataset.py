@@ -80,6 +80,7 @@ class BaseDataset(Dataset):
             "data_type": "vqa",
         }
 
+
 class ConcatDataset(ConcatDataset):
     def __init__(self, datasets: Iterable[Dataset]) -> None:
         super().__init__(datasets)
