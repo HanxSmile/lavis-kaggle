@@ -31,15 +31,15 @@ run:
 
   weight_decay: 0.05
 
-  batch_size_train: 64
+  batch_size_train: 32
   batch_size_eval: 64
-  accum_grad_iters: 2
+  accum_grad_iters: 1
 
-  num_workers: 4
+  num_workers: 2
   warmup_steps: 1000
 
-  iters_per_inner_epoch: 2000
-  max_iters: 60000
+  iters_per_inner_epoch: 1000
+  max_iters: 30000
 
   seed: 42
   output_dir: "./output/hms"
