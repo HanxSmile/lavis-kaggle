@@ -37,9 +37,9 @@ class HMSClassifyTrainEvalTask(BaseTask):
         probs, label = response["probs"], response["label"]
         for eeg_id_, spec_id_, uid_, prob_, label_ in zip(eeg_id, spec_id, uid, probs, label):
             this_res = {
-                "eeg_id": eeg_id_,
-                "spec_id": spec_id_,
-                "uid": uid_,
+                "eeg_id": str(eeg_id_),
+                "spec_id": str(spec_id_),
+                "uid": str(uid_),
                 "prob": prob_.tolist(),
                 "label": label_.tolist()
             }
