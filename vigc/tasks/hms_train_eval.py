@@ -95,7 +95,7 @@ class HMSClassifyTrainEvalTask(BaseTask):
         all_probs = torch.log(torch.stack(all_probs, dim=0))
         all_labels = torch.stack(all_labels, dim=0)
 
-        loss = nn.KLDivLoss(reduction="batchmean")(all_probs, all_labels)
+        loss = nn.KLDivLoss(reduction="batchmean")(all_probs, all_labels).item()
 
         log_stats = {split_name: {"loss": loss}}
 
