@@ -21,6 +21,7 @@ class HMSClassifier(BaseModel):
             model_name="tf_efficientnet_b0",
             input_channels=32,
             freeze_encoder=False,
+            separate_head=False
     ):
         super().__init__()
         self.backbone = timm.create_model(model_name, pretrained=True, num_classes=1, in_chans=input_channels)
@@ -32,16 +33,20 @@ class HMSClassifier(BaseModel):
             self.backbone.train = disabled_train
             logging.warning("Freeze the backbone model")
 
-        self.head = nn.ModuleList(
-            [
-                nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
-                nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
-                nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
-                nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
-                nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
-                nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
-            ]
-        )
+        self.separate_head = separate_head
+        if separate_head:
+            self.head = nn.ModuleList(
+                [
+                    nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
+                    nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
+                    nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
+                    nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
+                    nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
+                    nn.Sequential(GeM(), nn.Linear(num_in_features, 1)),
+                ]
+            )
+        else:
+            self.head = nn.Sequential(GeM(), nn.Linear(num_in_features, 6))
         self.criterion = KLDivLossWithLogits()
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
@@ -83,12 +88,16 @@ class HMSClassifier(BaseModel):
     def forward(self, samples, **kwargs):
         eeg_image, spec_image, label = samples["eeg_image"], samples["spec_image"], samples["label"]
         model_inputs = torch.cat([eeg_image] + [spec_image] * 16, dim=1)
-        outputs = []
+
         with self.maybe_autocast():
             features = self.backbone.forward_features(model_inputs)
-            for head in self.head:
-                outputs.append(head(features))
-            logits = torch.cat(outputs, dim=-1)  # [b, 6]
+            if self.separate_head:
+                outputs = []
+                for head in self.head:
+                    outputs.append(head(features))
+                logits = torch.cat(outputs, dim=-1)  # [b, 6]
+            else:
+                logits = self.head(features)  # [b, 6]
             loss = self.criterion(logits, label)
         return {"loss": loss}
 
@@ -107,11 +116,13 @@ class HMSClassifier(BaseModel):
         model_name = cfg.get("model_name")
         input_channels = cfg.get("input_channels")
         freeze_encoder = cfg.get("freeze_encoder", 32)
+        separate_head = cfg.get("separate_head", False)
 
         model = cls(
             model_name=model_name,
             input_channels=input_channels,
-            freeze_encoder=freeze_encoder
+            freeze_encoder=freeze_encoder,
+            separate_head=separate_head
         )
         model.load_checkpoint_from_config(cfg)
         return model
