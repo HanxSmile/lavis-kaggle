@@ -19,7 +19,7 @@ class HMSClassifier(BaseModel):
     def __init__(
             self,
             model_name="tf_efficientnet_b0",
-            input_channels=32,
+            input_channels=8,
             freeze_encoder=False,
             separate_head=False
     ):
@@ -71,23 +71,30 @@ class HMSClassifier(BaseModel):
             samples,
             **kwargs
     ):
-        eeg_image, spec_image, label = samples["eeg_image"], samples["spec_image"], samples["label"]
+        # eeg_image, spec_image, label = samples["eeg_image"], samples["spec_image"], samples["label"]
+        # model_inputs = torch.cat([eeg_image] + [spec_image] * 16, dim=1)
+        model_inputs, label = samples["image"], samples["label"]
         eeg_id, spec_id, uid = samples["eeg_id"], samples["spec_id"], samples["uid"]
-        model_inputs = torch.cat([eeg_image] + [spec_image] * 16, dim=1)
-        outputs = []
+
         with self.maybe_autocast():
             features = self.backbone.forward_features(model_inputs)
-            for head in self.head:
-                outputs.append(head(features))
-            logits = torch.cat(outputs, dim=-1)  # [b, 6]
+            if self.separate_head:
+                outputs = []
+
+                for head in self.head:
+                    outputs.append(head(features))
+                logits = torch.cat(outputs, dim=-1)  # [b, 6]
+            else:
+                logits = self.head(features)
             probs = F.softmax(logits, dim=1)  # [b, 6]
             # loss = self.eval_criterion(logits, label).sum(dim=1)  # [b, 1]
 
         return {"logits": logits, "probs": probs, "label": label, "eeg_id": eeg_id, "spec_id": spec_id, "uid": uid}
 
     def forward(self, samples, **kwargs):
-        eeg_image, spec_image, label = samples["eeg_image"], samples["spec_image"], samples["label"]
-        model_inputs = torch.cat([eeg_image] + [spec_image] * 16, dim=1)
+        # eeg_image, spec_image, label = samples["eeg_image"], samples["spec_image"], samples["label"]
+        # model_inputs = torch.cat([eeg_image] + [spec_image] * 16, dim=1)
+        model_inputs, label = samples["image", samples["label"]]
 
         with self.maybe_autocast():
             features = self.backbone.forward_features(model_inputs)

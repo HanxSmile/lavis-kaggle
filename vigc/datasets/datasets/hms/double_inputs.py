@@ -60,8 +60,14 @@ class DoubleInputsDataset(Dataset):
         eeg_spec_data = torch.FloatTensor(eeg_spec_data)
         kaggle_spec_data = torch.FloatTensor(kaggle_spec_data)
 
-        eeg_spec_data = rearrange(eeg_spec_data, "h w m n -> h w (m n)")  # [128, 256, 4, 4] -> [128, 256, 16]
-        kaggle_spec_data = kaggle_spec_data[:, :, None]  # [400, 300, 1]
+        # eeg_spec_data = rearrange(eeg_spec_data, "h w m n -> h w (m n)")  # [128, 256, 4, 4] -> [128, 256, 16]
+        # kaggle_spec_data = kaggle_spec_data[:, :, None]  # [400, 300, 1]
+        eeg_spec_data = torch.mean(eeg_spec_data, dim=-1)  # [128, 256, 4, 4] -> [128, 256, 4]
+        kaggle_spec_data = rearrange(kaggle_spec_data, "(n h) w -> h w c")  # [400, 300] -> [100, 300, 4]
+        merge_inputs = torch.zeros(128, 300, 8)
+        merge_inputs[:, 22: -22, :4] = eeg_spec_data
+        merge_inputs[14: -14, :, 4:] = kaggle_spec_data  # [128, 256, 8]
+
         label = torch.FloatTensor(row[self.targets])  # [6]
         label = label / label.sum()
 
@@ -70,8 +76,9 @@ class DoubleInputsDataset(Dataset):
             kaggle_spec_data = torch.FloatTensor(self.processor(kaggle_spec_data.numpy()))
 
         return {
-            "eeg_image": eeg_spec_data.permute(2, 0, 1),  # [16, 128, 256]
-            "spec_image": kaggle_spec_data.permute(2, 0, 1),  # [1, 400, 300]
+            # "eeg_image": eeg_spec_data.permute(2, 0, 1),  # [16, 128, 256]
+            # "spec_image": kaggle_spec_data.permute(2, 0, 1),  # [1, 400, 300]
+            "image": merge_inputs.permute(2, 0, 1),
             "label": label,  # [6]
             "eeg_id": eeg_id,
             "spec_id": spec_id,
@@ -79,19 +86,23 @@ class DoubleInputsDataset(Dataset):
         }
 
     def collater(self, batch):
+        # eeg_image_list, spec_image_list, label_list = [], [], []
+        image_list, label_list = [], []
         eeg_image_list, spec_image_list, label_list = [], [], []
         eeg_id_list, spec_id_list, uid_list = [], [], []
         for sample in batch:
-            eeg_image_list.append(sample["eeg_image"])
-            spec_image_list.append(sample["spec_image"])
+            # eeg_image_list.append(sample["eeg_image"])
+            # spec_image_list.append(sample["spec_image"])
+            image_list.append(sample["image"])
             label_list.append(sample["label"])
             eeg_id_list.append(sample["eeg_id"])
             spec_id_list.append(sample["spec_id"])
             uid_list.append(sample["uid"])
 
         return {
-            "eeg_image": torch.stack(eeg_image_list, dim=0),
-            "spec_image": torch.stack(spec_image_list, dim=0),
+            # "eeg_image": torch.stack(eeg_image_list, dim=0),
+            # "spec_image": torch.stack(spec_image_list, dim=0),
+            "image": torch.stack(image_list, dim=0),
             "label": torch.stack(label_list, dim=0),
             "eeg_id": eeg_id_list,
             "spec_id": spec_id_list,

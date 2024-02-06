@@ -7,5 +7,5 @@ model:
 
   model_name: tf_efficientnet_b0
   freeze_encoder: False
-  input_channels: 32
+  input_channels: 8
   separate_head: False
