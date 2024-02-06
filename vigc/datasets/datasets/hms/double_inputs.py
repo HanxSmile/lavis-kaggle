@@ -72,8 +72,9 @@ class DoubleInputsDataset(Dataset):
         label = label / label.sum()
 
         if self.processor is not None:
-            eeg_spec_data = torch.FloatTensor(self.processor(eeg_spec_data.numpy()))
-            kaggle_spec_data = torch.FloatTensor(self.processor(kaggle_spec_data.numpy()))
+            # eeg_spec_data = torch.FloatTensor(self.processor(eeg_spec_data.numpy()))
+            # kaggle_spec_data = torch.FloatTensor(self.processor(kaggle_spec_data.numpy()))
+            merge_inputs = torch.FloatTensor(self.processor(merge_inputs.numpy()))
 
         return {
             # "eeg_image": eeg_spec_data.permute(2, 0, 1),  # [16, 128, 256]
