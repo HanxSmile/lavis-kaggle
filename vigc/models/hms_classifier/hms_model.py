@@ -94,7 +94,7 @@ class HMSClassifier(BaseModel):
     def forward(self, samples, **kwargs):
         # eeg_image, spec_image, label = samples["eeg_image"], samples["spec_image"], samples["label"]
         # model_inputs = torch.cat([eeg_image] + [spec_image] * 16, dim=1)
-        model_inputs, label = samples["image", samples["label"]]
+        model_inputs, label = samples["image"], samples["label"]
 
         with self.maybe_autocast():
             features = self.backbone.forward_features(model_inputs)
