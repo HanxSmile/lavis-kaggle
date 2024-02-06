@@ -63,7 +63,7 @@ class DoubleInputsDataset(Dataset):
         # eeg_spec_data = rearrange(eeg_spec_data, "h w m n -> h w (m n)")  # [128, 256, 4, 4] -> [128, 256, 16]
         # kaggle_spec_data = kaggle_spec_data[:, :, None]  # [400, 300, 1]
         eeg_spec_data = torch.mean(eeg_spec_data, dim=-1)  # [128, 256, 4, 4] -> [128, 256, 4]
-        kaggle_spec_data = rearrange(kaggle_spec_data, "(n h) w -> h w c")  # [400, 300] -> [100, 300, 4]
+        kaggle_spec_data = rearrange(kaggle_spec_data, "(n h) w -> h w n", n=4)  # [400, 300] -> [100, 300, 4]
         merge_inputs = torch.zeros(128, 300, 8)
         merge_inputs[:, 22: -22, :4] = eeg_spec_data
         merge_inputs[14: -14, :, 4:] = kaggle_spec_data  # [128, 256, 8]
