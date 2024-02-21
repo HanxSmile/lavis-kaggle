@@ -18,8 +18,11 @@ from vigc.models.vit import VisionTransformerEncoder
 
 from vigc.processors.base_processor import BaseProcessor
 
-
 from vigc.models.hms_classifier.hms_model import HMSClassifier
+from vigc.models.hms_final.image_hms_model import ImageHMSClassifier
+from vigc.models.hms_final.spec_image_hms_model import SpecImageHMSClassifier
+from vigc.models.hms_final.eeg_wave_hms_model import EEGWaveHMSClassifier
+from vigc.models.hms_final.eeg_wave_hms_model2 import WaveNetHMSClassifier
 
 __all__ = [
     "load_model",
@@ -29,6 +32,10 @@ __all__ = [
     "VisionTransformerEncoder",
 
     "HMSClassifier",
+    "ImageHMSClassifier",
+    "SpecImageHMSClassifier",
+    "EEGWaveHMSClassifier",
+    "WaveNetHMSClassifier"
 ]
 
 
