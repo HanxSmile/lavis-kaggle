@@ -4,8 +4,8 @@ from vigc.tasks.base_task import BaseTask
 import os
 import json
 import numpy as np
-import torch.nn as nn
-import torch
+import pandas as pd
+from .kaggle_kl_div import score
 
 
 @registry.register_task("hms_train_eval")
@@ -33,13 +33,10 @@ class HMSClassifyTrainEvalTask(BaseTask):
         results = []
 
         response = model.generate(samples)
-        eeg_id, spec_id, uid = response["eeg_id"], response["spec_id"], response["uid"]
-        probs, label = response["probs"], response["label"]
-        for eeg_id_, spec_id_, uid_, prob_, label_ in zip(eeg_id, spec_id, uid, probs, label):
+        probs, label, eeg_id = response["result"], response["label"], response["eeg_id"]
+        for eeg_id_, prob_, label_ in zip(eeg_id, probs, label):
             this_res = {
                 "eeg_id": str(eeg_id_),
-                "spec_id": str(spec_id_),
-                "uid": str(uid_),
                 "prob": prob_.tolist(),
                 "label": label_.tolist()
             }
@@ -52,7 +49,7 @@ class HMSClassifyTrainEvalTask(BaseTask):
             result=val_result,
             result_dir=registry.get_path("result_dir"),
             filename="{}_epoch{}".format(split_name, epoch),
-            remove_duplicate="uid",
+            remove_duplicate="eeg_id",
         )
 
         if self.report_metric:
@@ -70,39 +67,29 @@ class HMSClassifyTrainEvalTask(BaseTask):
         with open(eval_result_file) as f:
             results = json.load(f)
 
-        prob_buffer = dict()
-        label_buffer = dict()
-        count_buffer = dict()
+        pred_buffer = list()
+        label_buffer = list()
+
         for result in results:
-            eeg_id = result["eeg_id"]
-            prob = np.array(result["prob"])
-            label = np.array(result["label"])
+            pred = result["prob"]
+            label = result["label"]
+            pred_buffer.append(pred)
+            label_buffer.append(label)
 
-            prob_buffer[eeg_id] = prob + prob_buffer.get(eeg_id, 0)
-            label_buffer[eeg_id] = label + label_buffer.get(eeg_id, 0)
-            count_buffer[eeg_id] = 1 + count_buffer.get(eeg_id, 0)
+        all_oof = np.array(pred_buffer)
+        all_true = np.array(label_buffer)
+        oof = pd.DataFrame(all_oof.copy())
+        oof['id'] = np.arange(len(oof))
 
-        for eeg_id in prob_buffer:
-            prob_buffer[eeg_id] = torch.from_numpy(prob_buffer[eeg_id] / count_buffer[eeg_id])
-            label_buffer[eeg_id] = torch.from_numpy(label_buffer[eeg_id] / count_buffer[eeg_id])
-
-        all_probs = []
-        all_labels = []
-        for eeg_id in prob_buffer:
-            all_probs.append(prob_buffer[eeg_id])
-            all_labels.append(label_buffer[eeg_id])
-
-        all_probs = torch.log(torch.stack(all_probs, dim=0))
-        all_labels = torch.stack(all_labels, dim=0)
-
-        loss = nn.KLDivLoss(reduction="batchmean")(all_probs, all_labels).item()
-
-        log_stats = {split_name: {"loss": loss}}
+        true = pd.DataFrame(all_true.copy())
+        true['id'] = np.arange(len(true))
+        cv = float(score(solution=true, submission=oof, row_id_column_name='id'))
+        log_stats = {split_name: {"kl-div": cv}}
 
         with open(
                 os.path.join(registry.get_path("output_dir"), "evaluate.txt"), "a"
         ) as f:
             f.write(json.dumps(log_stats) + "\n")
 
-        res = {"agg_metrics": 10 - loss}
+        res = {"agg_metrics": 10 - cv}
         return res

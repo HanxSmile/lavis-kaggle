@@ -4,21 +4,25 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 model:
-  arch: hms_classifier
+  arch: albef_image_hms
   model_type: default
 
   model_name: tf_efficientnet_b0
+  use_kaggle_spectrograms: True
+  use_eeg_spectrograms: True
   freeze_encoder: False
-  input_channels: 8
-  separate_head: False
+  use_gem: False
+  dropout: 0.2
+  embedding_dim: 256
+  alpha: 0.6
 
 datasets:
   # train
-  hms_double_inputs_train:
+  image_hms_train:
     fold_idx: 0
 
   ## test
-  hms_double_inputs_eval:
+  image_hms_eval:
     fold_idx: 0
 
 run:
@@ -32,15 +36,15 @@ run:
 
   weight_decay: 0.05
 
-  batch_size_train: 64
+  batch_size_train: 32
   batch_size_eval: 64
   accum_grad_iters: 1
 
   num_workers: 4
-  warmup_steps: 1000
+  warmup_steps: 427
 
-  iters_per_inner_epoch: 500
-  max_iters: 30000
+  iters_per_inner_epoch: 427 # 13671 / 32
+  max_iters: 2136  # 427 * 5
 
   seed: 42
   output_dir: "./output/hms"

@@ -9,15 +9,20 @@ from vigc.datasets.builders.base_dataset_builder import load_dataset_config
 
 from vigc.common.registry import registry
 
-
 from vigc.datasets.builders.hms.double_inputs import (
     HMSDoubleInputsTrainBuilder,
     HMSDoubleInputsEvalBuilder,
+)
+from vigc.datasets.builders.hms_final.image_hms_builder import (
+    ImageHMSTrainBuilder,
+    ImageHMSEvalBuilder
 )
 
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
+    "ImageHMSTrainBuilder",
+    "ImageHMSEvalBuilder"
 ]
 
 

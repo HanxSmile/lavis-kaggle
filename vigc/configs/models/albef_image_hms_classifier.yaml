@@ -1,0 +1,16 @@
+model:
+  arch: albef_image_hms
+  model_type: default
+
+  load_finetuned: False
+  finetuned: ""
+
+  model_name: tf_efficientnet_b0
+  use_kaggle_spectrograms: True
+  use_eeg_spectrograms: True
+  freeze_encoder: False
+  use_gem: False
+  dropout: 0
+  embedding_dim: 256
+  num_classes: 6
+  alpha: 0.6

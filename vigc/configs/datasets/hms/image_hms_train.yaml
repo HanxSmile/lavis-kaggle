@@ -1,0 +1,10 @@
+datasets:
+  image_hms_train:
+    fold: 5
+    random_seed: 42
+    data_type: images
+    build_info:
+      data_root:
+        eeg: /home/work/hanxiao_train/HMS_processed
+        spec: spec_path
+      ann_path: /home/work/hanxiao_train/HMS/train.csv
