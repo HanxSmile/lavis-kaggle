@@ -22,7 +22,7 @@ class ImageHMSDataset(Dataset):
         self.specs = np.load(data_root.spec, allow_pickle=True).item()
         self.low_resource = low_resource
         if low_resource:
-            self.eeg_specs = {k: f"{osp.join(data_root.eeg.replace('eeg_specs.npy', 'EEG_Spectrograms'), f'{k}.npy')}"
+            self.eeg_specs = {str(k): f"{osp.join(data_root.eeg.replace('eeg_specs.npy', 'EEG_Spectrograms'), f'{k}.npy')}"
                               for k in self.specs}
         else:
             self.eeg_specs = np.load(data_root.eeg, allow_pickle=True).item()
