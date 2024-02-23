@@ -6,6 +6,7 @@ import contextlib
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from vigc.models.blip2_models.blip2 import disabled_train
 from .modules.image_hms_module import ImageHMSFeatureExtractor
 
 
@@ -42,7 +43,7 @@ class ALBEFImageHMSClassifier(BaseModel):
             dropout=dropout,
             embedding_dim=embedding_dim
         )
-        self.encoder_m = ImageHMSFeatureExtractor(
+        self.encoder_m = [ImageHMSFeatureExtractor(
             model_name=model_name,
             use_eeg_spectrograms=use_eeg_spectrograms,
             use_kaggle_spectrograms=use_kaggle_spectrograms,
@@ -50,7 +51,7 @@ class ALBEFImageHMSClassifier(BaseModel):
             use_gem=use_gem,
             dropout=dropout,
             embedding_dim=embedding_dim
-        )
+        )]
         self.class_emb = nn.Parameter(torch.randn(num_classes, embedding_dim))
         self.class_emb_m = nn.Parameter(torch.randn(num_classes, embedding_dim))
         self.logit_scale = nn.Parameter(torch.ones([])) * np.log(1 / 0.07)
@@ -62,16 +63,17 @@ class ALBEFImageHMSClassifier(BaseModel):
 
     @torch.no_grad()
     def _momentum_update(self):
-        for param, param_m in zip(self.encoder.parameters(), self.encoder_m.parameters()):
+        for param, param_m in zip(self.encoder.parameters(), self.encoder_m[0].parameters()):
             param_m.data = param_m.data * self.momentum + param.data * (1. - self.momentum)
 
         self.class_emb_m.data = self.class_emb_m.data * self.momentum + self.class_emb.data * (1. - self.momentum)
 
     @torch.no_grad()
     def copy_params(self):
-        for param, param_m in zip(self.encoder.parameters(), self.encoder_m.parameters()):
+        for param, param_m in zip(self.encoder.parameters(), self.encoder_m[0].parameters()):
             param_m.data.copy_(param.data)  # initialize
             param_m.requires_grad = False  # not update by gradient
+        self.encoder_m.train = disabled_train
 
         self.class_emb_m.data.copy_(self.class_emb.data)
         self.class_emb_m.requires_grad = False
@@ -110,6 +112,7 @@ class ALBEFImageHMSClassifier(BaseModel):
         return {"result": probs, "label": label, "eeg_id": eeg_id}
 
     def forward(self, samples, **kwargs):
+        self.encoder_m[0] = self.encoder_m[0].to(self.device)
         with self.maybe_autocast():
             x_emb = self.encoder(samples)
             x_feat = x_emb / x_emb.norm(dim=1, keepdim=True)
@@ -119,7 +122,7 @@ class ALBEFImageHMSClassifier(BaseModel):
 
             with torch.no_grad():
                 self._momentum_update()
-                x_emb_m = self.encoder_m(samples)
+                x_emb_m = self.encoder_m[0](samples)
                 x_feat_m = x_emb_m / x_emb_m.norm(dim=1, keepdim=True)
                 class_feat_m = self.class_emb_m / self.class_emb_m.norm(dim=1, keepdim=True)
                 sim_m = logit_scale * x_feat_m @ class_feat_m.t()
