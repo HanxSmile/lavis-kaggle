@@ -15,6 +15,7 @@ model:
   dropout: 0.2
   embedding_dim: 256
   alpha: 0.6
+  # alpha: 0  # no albef
 
 datasets:
   # train
@@ -30,7 +31,7 @@ run:
   task: hms_train_eval
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 3e-5
+  init_lr: 1e-3
   min_lr: 1e-5
   warmup_lr: 1e-6
 
