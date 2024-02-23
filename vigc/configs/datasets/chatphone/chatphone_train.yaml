@@ -2,4 +2,4 @@ datasets:
   chatphone_train:
     data_type: images
     build_info:
-      ann_path: /home/work/hanxiao_train/HMS/train.csv
+      ann_path: /home/work/hanxiao_train/input/chatphone/train_dataset.csv
