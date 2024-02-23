@@ -9,15 +9,20 @@ from vigc.datasets.builders.base_dataset_builder import load_dataset_config
 
 from vigc.common.registry import registry
 
-
 from vigc.datasets.builders.hms.double_inputs import (
     HMSDoubleInputsTrainBuilder,
     HMSDoubleInputsEvalBuilder,
+)
+from vigc.datasets.builders.chatphone.chatphone_classification_builder import (
+    ChatPhoneTrainBuilder,
+    ChatPhoneEvalBuilder
 )
 
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
+    "ChatPhoneTrainBuilder",
+    "ChatPhoneEvalBuilder"
 ]
 
 

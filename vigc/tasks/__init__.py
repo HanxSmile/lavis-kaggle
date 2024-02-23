@@ -9,6 +9,7 @@ from vigc.common.registry import registry
 from vigc.tasks.base_task import BaseTask
 
 from vigc.tasks.hms_train_eval import HMSClassifyTrainEvalTask
+from vigc.tasks.chatphone_train_eval import ChatPhoneTrainEvalTask
 
 
 def setup_task(cfg):
@@ -24,4 +25,5 @@ def setup_task(cfg):
 __all__ = [
     "BaseTask",
     "HMSClassifyTrainEvalTask",
+    "ChatPhoneTrainEvalTask",
 ]

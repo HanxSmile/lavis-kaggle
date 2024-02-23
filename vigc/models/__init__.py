@@ -24,6 +24,8 @@ from vigc.models.hms_final.spec_image_hms_model import SpecImageHMSClassifier
 from vigc.models.hms_final.eeg_wave_hms_model import EEGWaveHMSClassifier
 from vigc.models.hms_final.eeg_wave_hms_model2 import WaveNetHMSClassifier
 
+from vigc.models.chatphone.bert_classification import BertClassifier
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -35,7 +37,9 @@ __all__ = [
     "ImageHMSClassifier",
     "SpecImageHMSClassifier",
     "EEGWaveHMSClassifier",
-    "WaveNetHMSClassifier"
+    "WaveNetHMSClassifier",
+
+    "BertClassifier",
 ]
 
 
