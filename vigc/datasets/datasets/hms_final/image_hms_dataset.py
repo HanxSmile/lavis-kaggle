@@ -22,8 +22,9 @@ class ImageHMSDataset(Dataset):
         self.specs = np.load(data_root.spec, allow_pickle=True).item()
         self.low_resource = low_resource
         if low_resource:
-            self.eeg_specs = {str(k): f"{osp.join(data_root.eeg.replace('eeg_specs.npy', 'EEG_Spectrograms'), f'{k}.npy')}"
-                              for k in self.specs}
+            self.eeg_specs = {
+                int(k): f"{osp.join(data_root.eeg.replace('eeg_specs.npy', 'EEG_Spectrograms'), f'{k}.npy')}"
+                for k in train_csv.eeg_id.values}
         else:
             self.eeg_specs = np.load(data_root.eeg, allow_pickle=True).item()
 
@@ -90,7 +91,7 @@ class ImageHMSDataset(Dataset):
         else:
             img = self.eeg_specs[row.eeg_id]
         X[:, :, 4:] = img
-        y = row[self.targets].values
+        y = row[self.targets].values.astype("float")
         return X, y
 
     def __getitem__(self, index):

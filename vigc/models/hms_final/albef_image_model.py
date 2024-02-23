@@ -128,6 +128,7 @@ class ALBEFImageHMSClassifier(BaseModel):
                 sim_m = logit_scale * x_feat_m @ class_feat_m.t()
                 gt = samples["label"]
                 target = self.alpha * torch.softmax(sim_m, dim=1) + (1 - self.alpha) * gt
+                target = target.detach()
 
             log_prob_logits = F.log_softmax(sim, dim=1)
             loss = self.criterion(log_prob_logits, target)
