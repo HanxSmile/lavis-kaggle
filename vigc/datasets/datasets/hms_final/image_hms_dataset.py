@@ -3,11 +3,13 @@ import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
 import numpy as np
 import torch
+import os.path as osp
 
 
 class ImageHMSDataset(Dataset):
 
-    def __init__(self, data_root, ann_path, fold, fold_idx, random_seed, processor=None, split="train"):
+    def __init__(self, data_root, ann_path, fold, fold_idx, random_seed, processor=None, split="train",
+                 low_resource=True):
         assert split in ("train", "eval")
         assert fold_idx in list(range(fold))
         assert isinstance(random_seed, int)
@@ -16,8 +18,14 @@ class ImageHMSDataset(Dataset):
         train_csv = pd.read_csv(ann_path)
         self.targets = train_csv.columns[-6:]
         train_csv = self.preprocess_csv(train_csv)
-        self.eeg_specs = np.load(data_root.eeg, allow_pickle=True).item()
+
         self.specs = np.load(data_root.spec, allow_pickle=True).item()
+        self.low_resource = low_resource
+        if low_resource:
+            self.eeg_specs = {k: f"{osp.join(data_root.eeg.replace('eeg_specs.npy', 'EEG_Spectrograms'), f'{k}.npy')}"
+                              for k in self.specs}
+        else:
+            self.eeg_specs = np.load(data_root.eeg, allow_pickle=True).item()
 
         train_csv["fold"] = -1
         for fold_id, (_, val_idx) in enumerate(
@@ -77,7 +85,10 @@ class ImageHMSDataset(Dataset):
             # CROP TO 256 TIME STEPS
             X[14:-14, :, k] = img[:, 22:-22] / 2.0
 
-        img = self.eeg_specs[row.eeg_id]
+        if self.low_resource:
+            img = np.load(self.eeg_specs[row.eeg_id])
+        else:
+            img = self.eeg_specs[row.eeg_id]
         X[:, :, 4:] = img
         y = row[self.targets]
         return X, y

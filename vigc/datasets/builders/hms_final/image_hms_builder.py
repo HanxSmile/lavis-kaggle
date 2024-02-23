@@ -39,6 +39,7 @@ class ImageHMSTrainBuilder(BaseDatasetBuilder):
             fold=self.config.fold,
             fold_idx=self.config.fold_idx,
             random_seed=self.config.get("random_seed", 42),
+            low_resource=self.config.get("low_resource", True),
             split="train",
             processor=get_train_transform()
         )
@@ -63,6 +64,7 @@ class ImageHMSEvalBuilder(BaseDatasetBuilder):
             ann_path=build_info.ann_path,
             fold=self.config.fold,
             fold_idx=self.config.fold_idx,
+            low_resource=self.config.get("low_resource", True),
             random_seed=self.config.get("random_seed", 42),
             split="eval",
         )
