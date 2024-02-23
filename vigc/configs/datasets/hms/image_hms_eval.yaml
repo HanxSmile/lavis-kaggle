@@ -5,6 +5,6 @@ datasets:
     data_type: images
     build_info:
       data_root:
-        eeg: /home/featurize/work/hms_dataset/eeg_specs.npy
-        spec: /home/featurize/work/hms_dataset/specs.npy
-      ann_path: /home/featurize/work/hms_dataset/train.csv
+        eeg: /home/work/hanxiao_train/input/hms/eeg_specs.npy
+        spec: /home/work/hanxiao_train/input/hms/specs.npy
+      ann_path: /home/work/hanxiao_train/HMS/train.csv

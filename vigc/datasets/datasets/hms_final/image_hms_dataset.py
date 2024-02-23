@@ -21,7 +21,7 @@ class ImageHMSDataset(Dataset):
 
         train_csv["fold"] = -1
         for fold_id, (_, val_idx) in enumerate(
-                sgkf.split(train_csv, y=train_csv["expert_consensus"], groups=train_csv["patient_id"])):
+                sgkf.split(train_csv, y=train_csv["target"], groups=train_csv["patient_id"])):
             train_csv.loc[val_idx, "fold"] = fold_id
 
         self.mode = split
