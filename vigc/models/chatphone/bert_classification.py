@@ -5,7 +5,7 @@ from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 from vigc.models.blip2_models.blip2 import disabled_train
 import contextlib
-from transformers import AutoConfig, AutoModel
+from transformers import AutoConfig, AutoModel, AutoTokenizer
 import torch.nn.functional as F
 
 
@@ -46,6 +46,7 @@ class BertClassifier(BaseModel):
         self.config.attention_dropout = 0.
         self.config.attention_prob_dropout_prob = 0.
         self.model = AutoModel.from_pretrained(model_name, config=self.config)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         if freeze_encoder:
             for n, p in self.model.names_parameters():
@@ -91,7 +92,7 @@ class BertClassifier(BaseModel):
                 output_hidden_states=False
             )
             out = self.pooler(out, attention_mask)
-            logits = self.head(out)
+            logits = self.head(out).squeeze(-1)
             probs = F.sigmoid(logits)
         return {"result": probs, "label": samples["label"], "id": samples["id"], "row": samples["row"],
                 "text": samples["text"]}
@@ -115,7 +116,7 @@ class BertClassifier(BaseModel):
                 output_hidden_states=False
             )
             out = self.pooler(out, attention_mask)
-            logits = self.head(out)
+            logits = self.head(out).squeeze(-1)
             loss = self.criterion(logits, samples["label"])
         return {"loss": loss}
 

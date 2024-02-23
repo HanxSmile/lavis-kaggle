@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 import pandas as pd
+import torch
 
 
 class ChatPhoneClassificationDataset(Dataset):
@@ -39,7 +40,7 @@ class ChatPhoneClassificationDataset(Dataset):
 
         return {
             "text": text_list,
-            "label": label_list,
+            "label": torch.FloatTensor(label_list),
             "id": id_list,
             "row": row_list
         }
