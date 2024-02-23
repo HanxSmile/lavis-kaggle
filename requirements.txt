@@ -6,6 +6,7 @@ ftfy
 iopath
 ipython
 omegaconf
+opencv-python==4.8.0.74
 opencv-python-headless==4.5.5.64
 opendatasets
 packaging
