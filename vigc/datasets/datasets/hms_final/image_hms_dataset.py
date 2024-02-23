@@ -90,7 +90,7 @@ class ImageHMSDataset(Dataset):
         else:
             img = self.eeg_specs[row.eeg_id]
         X[:, :, 4:] = img
-        y = row[self.targets]
+        y = row[self.targets].values
         return X, y
 
     def __getitem__(self, index):
