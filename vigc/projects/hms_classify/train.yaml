@@ -7,11 +7,11 @@ model:
   arch: albef_image_hms
   model_type: default
 
-  model_name: tf_efficientnet_b0
+  model_name: tf_efficientnet_b2
   use_kaggle_spectrograms: True
   use_eeg_spectrograms: True
   freeze_encoder: False
-  use_gem: False
+  use_gem: True
   dropout: 0.2
   embedding_dim: 256
   alpha: 0.6
@@ -44,7 +44,8 @@ run:
   warmup_steps: 427
 
   iters_per_inner_epoch: 427 # 13671 / 32
-  max_iters: 2136  # 427 * 5
+  # max_iters: 2136  # 427 * 5
+  max_iters: 4272
 
   seed: 42
   output_dir: "./output/hms"
