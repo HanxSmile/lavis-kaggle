@@ -73,7 +73,7 @@ class ALBEFImageHMSClassifier(BaseModel):
         for param, param_m in zip(self.encoder.parameters(), self.encoder_m[0].parameters()):
             param_m.data.copy_(param.data)  # initialize
             param_m.requires_grad = False  # not update by gradient
-        self.encoder_m.train = disabled_train
+        self.encoder_m[0].train = disabled_train
 
         self.class_emb_m.data.copy_(self.class_emb.data)
         self.class_emb_m.requires_grad = False
