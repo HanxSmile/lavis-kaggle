@@ -1,0 +1,76 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: albef_image_hms
+  model_type: default
+
+  model_name: tf_efficientnet_b2
+  use_kaggle_spectrograms: True
+  use_eeg_spectrograms: True
+  freeze_encoder: False
+  use_gem: True
+  dropout: 0.2
+  embedding_dim: 256
+  alpha: 0.6
+  tile_input: True
+  # alpha: 0  # no albef
+
+datasets:
+  # train
+  image_hms_train:
+    fold_idx: 0
+    build_info:
+      data_root:
+        eeg: /home/work/hanxiao_train/input/hms/eeg_specs.npy
+        spec: /home/work/hanxiao_train/input/hms/specs.npy
+      ann_path: /home/work/hanxiao_train/HMS/train.csv
+
+  ## test
+  image_hms_eval:
+    fold_idx: 0
+    build_info:
+      data_root:
+        eeg: /home/work/hanxiao_train/input/hms/eeg_specs.npy
+        spec: /home/work/hanxiao_train/input/hms/specs.npy
+      ann_path: /home/work/hanxiao_train/HMS/train.csv
+
+run:
+  runner: runner_iter
+  task: hms_train_eval
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-3
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 32
+  batch_size_eval: 64
+  accum_grad_iters: 1
+
+  num_workers: 4
+  warmup_steps: 427
+
+  iters_per_inner_epoch: 427 # 13671 / 32
+  # max_iters: 2136  # 427 * 5
+  max_iters: 4272
+
+  seed: 42
+  output_dir: "./output/hms"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
