@@ -63,6 +63,7 @@ class ALBEFImageHMSClassifier(BaseModel):
         self.num_classes = num_classes
         self.copy_params()
         self.criterion = nn.KLDivLoss(reduction='batchmean')
+        self.inner_step = 0
 
     @torch.no_grad()
     def _momentum_update(self):
@@ -116,6 +117,8 @@ class ALBEFImageHMSClassifier(BaseModel):
 
     def forward(self, samples, **kwargs):
         self.encoder_m[0] = self.encoder_m[0].to(self.device)
+        self.inner_step += 1
+        alpha = 0.2 + (0.9 - 0.2) / 4272 * self.inner_step
         with self.maybe_autocast():
             x_emb = self.encoder(samples)
             x_feat = x_emb / x_emb.norm(dim=1, keepdim=True)
@@ -130,7 +133,8 @@ class ALBEFImageHMSClassifier(BaseModel):
                 class_feat_m = self.class_emb_m / self.class_emb_m.norm(dim=1, keepdim=True)
                 sim_m = logit_scale * x_feat_m @ class_feat_m.t()
                 gt = samples["label"]
-                target = self.alpha * torch.softmax(sim_m, dim=1) + (1 - self.alpha) * gt
+                # target = self.alpha * torch.softmax(sim_m, dim=1) + (1 - self.alpha) * gt
+                target = alpha * torch.softmax(sim_m, dim=1) + (1 - self.alpha) * gt
                 target = target.detach()
 
             log_prob_logits = F.log_softmax(sim, dim=1)
