@@ -22,20 +22,22 @@ datasets:
   # train
   image_hms_train:
     fold_idx: 0
+    low_resource: False
     build_info:
       data_root:
-        eeg: /home/work/hanxiao_train/input/hms/eeg_specs.npy
-        spec: /home/work/hanxiao_train/input/hms/specs.npy
-      ann_path: /home/work/hanxiao_train/HMS/train.csv
+        eeg: /home/featurize/work/hms_dataset/eeg_specs.npy
+        spec: /home/featurize/work/hms_dataset/hms/specs.npy
+      ann_path: /home/featurize/work/hms_dataset/train.csv
 
   ## test
   image_hms_eval:
     fold_idx: 0
+    low_resource: False
     build_info:
       data_root:
-        eeg: /home/work/hanxiao_train/input/hms/eeg_specs.npy
-        spec: /home/work/hanxiao_train/input/hms/specs.npy
-      ann_path: /home/work/hanxiao_train/HMS/train.csv
+        eeg: /home/featurize/work/hms_dataset/eeg_specs.npy
+        spec: /home/featurize/work/hms_dataset/hms/specs.npy
+      ann_path: /home/featurize/work/hms_dataset/train.csv
 
 run:
   runner: runner_iter
