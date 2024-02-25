@@ -14,3 +14,4 @@ model:
   embedding_dim: 256
   num_classes: 6
   alpha: 0.6
+  tile_input: True

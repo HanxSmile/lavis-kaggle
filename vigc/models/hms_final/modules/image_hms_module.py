@@ -20,11 +20,14 @@ class ImageHMSFeatureExtractor(nn.Module):
             use_gem=False,
             dropout=0.,
             embedding_dim=256,
+            tile_input=True,
     ):
         super().__init__()
         self.use_kaggle_spectrograms = use_kaggle_spectrograms
         self.use_eeg_spectrograms = use_eeg_spectrograms
-        self.backbone = timm.create_model(model_name, pretrained=True, num_classes=1, in_chans=3)
+        self.tile_input = tile_input
+        in_channels = 3 if tile_input else 4
+        self.backbone = timm.create_model(model_name, pretrained=True, num_classes=1, in_chans=in_channels)
         num_in_features = self.backbone.get_classifier().in_features
         if freeze_encoder:
             for n, p in self.backbone.named_parameters():
@@ -48,18 +51,24 @@ class ImageHMSFeatureExtractor(nn.Module):
             )
 
     def preprocess_inputs(self, x):
-        x1 = [x[:, :, :, i:i + 1] for i in range(4)]
-        x1 = torch.concat(x1, dim=1)
-        x2 = [x[:, :, :, i + 4:i + 5] for i in range(4)]
-        x2 = torch.concat(x2, dim=1)
+        # x.shape = [b, 128, 256, 8]
+        if self.tile_input:
+            x1 = [x[:, :, :, i:i + 1] for i in range(4)]
+            x1 = torch.cat(x1, dim=1)
+            x2 = [x[:, :, :, i + 4:i + 5] for i in range(4)]
+            x2 = torch.cat(x2, dim=1)
 
-        if self.use_kaggle_spectrograms & self.use_eeg_spectrograms:
-            x = torch.concat([x1, x2], dim=2)
-        elif self.use_eeg_spectrograms:
-            x = x2
+            if self.use_kaggle_spectrograms & self.use_eeg_spectrograms:
+                x = torch.cat([x1, x2], dim=2)
+            elif self.use_eeg_spectrograms:
+                x = x2
+            else:
+                x = x1
+            x = torch.cat([x, x, x], dim=3)
         else:
-            x = x1
-        x = torch.concat([x, x, x], dim=3)
+            x1 = x[..., :4]  # [b, 128, 256, 4]
+            x2 = x[..., 4:]
+            x = torch.cat([x1, x2], dim=1)  # [b, 256, 256, 4]
         x = x.permute(0, 3, 1, 2)
         return x
 

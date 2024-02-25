@@ -15,6 +15,7 @@ model:
   dropout: 0.2
   embedding_dim: 256
   alpha: 0.6
+  tile_input: True
   # alpha: 0  # no albef
 
 datasets:
