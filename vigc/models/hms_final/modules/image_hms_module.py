@@ -26,7 +26,12 @@ class ImageHMSFeatureExtractor(nn.Module):
         self.use_kaggle_spectrograms = use_kaggle_spectrograms
         self.use_eeg_spectrograms = use_eeg_spectrograms
         self.tile_input = tile_input
-        in_channels = 3 if tile_input else 4
+        if tile_input is True:
+            in_channels = 3
+        elif tile_input == "normal":
+            in_channels = 4
+        else:
+            in_channels = 8
         self.backbone = timm.create_model(model_name, pretrained=True, num_classes=1, in_chans=in_channels)
         num_in_features = self.backbone.get_classifier().in_features
         if freeze_encoder:
@@ -52,7 +57,7 @@ class ImageHMSFeatureExtractor(nn.Module):
 
     def preprocess_inputs(self, x):
         # x.shape = [b, 128, 256, 8]
-        if self.tile_input:
+        if self.tile_input is True:
             x1 = [x[:, :, :, i:i + 1] for i in range(4)]
             x1 = torch.cat(x1, dim=1)
             x2 = [x[:, :, :, i + 4:i + 5] for i in range(4)]
@@ -65,10 +70,17 @@ class ImageHMSFeatureExtractor(nn.Module):
             else:
                 x = x1
             x = torch.cat([x, x, x], dim=3)
-        else:
+        elif self.tile_input == "normal":
             x1 = x[..., :4]  # [b, 128, 256, 4]
             x2 = x[..., 4:]
             x = torch.cat([x1, x2], dim=1)  # [b, 256, 256, 4]
+        else:
+            x1 = x[..., :4]  # [b, 128, 256, 4]
+            x2 = x[..., 4:]
+            x1 = torch.cat([torch.zeros_like(x1), x1], dim=1)  # [b, 256, 256, 4]
+            x2 = torch.cat([x2, torch.zeros_like(x2)], dim=1)
+            x = torch.cat([x1, x2], dim=3)
+
         x = x.permute(0, 3, 1, 2)
         return x
 
