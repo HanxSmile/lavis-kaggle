@@ -1,5 +1,6 @@
 from vigc.common.registry import registry
 from vigc.common.config import Config
+from vigc.datasets.builders.chatphone.chatphone_processor.phone_number_detection import PhoneNumberDetection
 import argparse
 import torch
 import torch.nn.functional as F
@@ -7,6 +8,8 @@ import pandas as pd
 import os.path as osp
 from tqdm.auto import tqdm
 import json
+
+Preprocessor_obj = PhoneNumberDetection()
 
 DATA_ROOT = r"/home/work/hanxiao_train/input/chatphone/evaluation"
 extra_gt_data = [
@@ -55,6 +58,7 @@ class PhoneNumberDetection:
         self.threshold = threshold
 
     def process(self, text):
+        text = Preprocessor_obj.preprocess_text(text)
         with self.model.maybe_autocast():
             input_ids, attention_mask = self.model.preprocess_inputs({"text": [text]})
             out = self.model.model(
