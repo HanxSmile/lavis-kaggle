@@ -150,6 +150,7 @@ def run(IDX, not_detected):
     print(total_nums, gt_nums, hit_nums, detected_nums)
     if total_nums == 10000:
         print(gt_nums / total_nums * (1 - hit_nums / gt_nums))
+        print(hit_nums / detected_nums)
 
     res_df = pd.DataFrame({
         "Month": new_detected_msgs_date,
