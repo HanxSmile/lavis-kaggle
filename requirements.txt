@@ -30,3 +30,4 @@ peft
 scikit-learn
 albumentations
 ema_pytorch
+unidecode
