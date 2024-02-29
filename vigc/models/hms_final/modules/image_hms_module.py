@@ -21,11 +21,13 @@ class ImageHMSFeatureExtractor(nn.Module):
             dropout=0.,
             embedding_dim=256,
             tile_input=True,
+            preprocess=True
     ):
         super().__init__()
         self.use_kaggle_spectrograms = use_kaggle_spectrograms
         self.use_eeg_spectrograms = use_eeg_spectrograms
         self.tile_input = tile_input
+        self.preprocess = preprocess
         if tile_input is True:
             in_channels = 3
         elif tile_input == "normal":
@@ -85,7 +87,10 @@ class ImageHMSFeatureExtractor(nn.Module):
         return x
 
     def forward(self, samples, **kwargs):
-        model_inputs = self.preprocess_inputs(samples["image"])
+        if self.preprocess:
+            model_inputs = self.preprocess_inputs(samples["image"])
+        else:
+            model_inputs = samples["image"]
 
         features = self.backbone.forward_features(model_inputs)
         embedding = self.head(features)

@@ -15,28 +15,24 @@ model:
   dropout: 0.2
   embedding_dim: 256
   alpha: 0.6
-  tile_input: True
-  # alpha: 0  # no albef
+  tile_input: "abnormal"
+  preprocess: False
 
 datasets:
   # train
-  image_hms_train:
+  eeg_to_image_train:
     fold_idx: 0
     low_resource: False
     build_info:
-      data_root:
-        eeg: /home/featurize/work/hms_dataset/eeg_specs.npy
-        spec: /home/featurize/work/hms_dataset/hms/specs.npy
+      data_root: /home/featurize/work/hms_dataset/eeg_specs.npy
       ann_path: /home/featurize/work/hms_dataset/train.csv
 
   ## test
-  image_hms_eval:
+  eeg_to_image_eval:
     fold_idx: 0
     low_resource: False
     build_info:
-      data_root:
-        eeg: /home/featurize/work/hms_dataset/eeg_specs.npy
-        spec: /home/featurize/work/hms_dataset/hms/specs.npy
+      data_root: /home/featurize/work/hms_dataset/eeg_specs.npy
       ann_path: /home/featurize/work/hms_dataset/train.csv
 
 run:

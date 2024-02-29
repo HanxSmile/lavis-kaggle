@@ -18,11 +18,19 @@ from vigc.datasets.builders.hms_final.image_hms_builder import (
     ImageHMSEvalBuilder
 )
 
+from vigc.datasets.builders.hms_final.eeg_to_image_builder import (
+    EEG2ImageTrainBuilder,
+    EEG2ImageEvalBuilder
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
     "ImageHMSTrainBuilder",
-    "ImageHMSEvalBuilder"
+    "ImageHMSEvalBuilder",
+
+    "EEG2ImageTrainBuilder",
+    "EEG2ImageEvalBuilder"
 ]
 
 

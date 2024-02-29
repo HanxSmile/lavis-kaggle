@@ -31,6 +31,7 @@ class ALBEFImageHMSClassifier(BaseModel):
             dropout=0.,
             embedding_dim=256,
             num_classes=6,
+            preprocess=True,
             alpha,
 
     ):
@@ -43,7 +44,8 @@ class ALBEFImageHMSClassifier(BaseModel):
             use_gem=use_gem,
             dropout=dropout,
             embedding_dim=embedding_dim,
-            tile_input=tile_input
+            tile_input=tile_input,
+            preprocess=preprocess
         )
         self.encoder_m = [ImageHMSFeatureExtractor(
             model_name=model_name,
@@ -53,7 +55,8 @@ class ALBEFImageHMSClassifier(BaseModel):
             use_gem=use_gem,
             dropout=dropout,
             embedding_dim=embedding_dim,
-            tile_input=tile_input
+            tile_input=tile_input,
+            preprocess=preprocess
         )]
         self.class_emb = nn.Parameter(torch.randn(num_classes, embedding_dim))
         self.class_emb_m = nn.Parameter(torch.randn(num_classes, embedding_dim))
@@ -158,6 +161,7 @@ class ALBEFImageHMSClassifier(BaseModel):
         num_classes = cfg.get("num_classes", 6)
         alpha = cfg.get("alpha", 0.6)
         tile_input = cfg.get("tile_input", True)
+        preprocess = cfg.get("preprocess", True)
 
         model = cls(
             model_name=model_name,
@@ -169,6 +173,7 @@ class ALBEFImageHMSClassifier(BaseModel):
             num_classes=num_classes,
             alpha=alpha,
             tile_input=tile_input,
+            preprocess=preprocess
         )
         model.load_checkpoint_from_config(cfg)
         return model

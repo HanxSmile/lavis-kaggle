@@ -1,0 +1,8 @@
+datasets:
+  eeg_to_image_eval:
+    fold: 5
+    random_seed: 42
+    data_type: images
+    build_info:
+      data_root: /home/work/hanxiao_train/input/hms/eeg_specs.npy
+      ann_path: /home/work/hanxiao_train/HMS/train.csv
