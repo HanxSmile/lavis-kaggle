@@ -8,20 +8,27 @@ class ChatPhoneClassificationDataset(Dataset):
     def __init__(self, ann_path, processor=None):
 
         super().__init__()
+        all_dataset = []
         if isinstance(ann_path, str):
-            self.train_csv = pd.read_csv(ann_path)
+            csv = pd.read_csv(ann_path)
+            for i, row in csv.iterrows():
+                all_dataset.append({"text": row.text, "label": row.label})
         else:
-            all_data = [pd.read_csv(_) for _ in ann_path]
-            self.train_csv = pd.concat(all_data)
+
+            for ann_ in ann_path:
+                csv = pd.read_csv(ann_)
+                for i, row in csv.iterrows():
+                    all_dataset.append({"text": row.text, "label": row.label})
+        self.data = all_dataset
         self.processor = processor
 
     def __len__(self):
-        return len(self.train_csv)
+        return len(self.data)
 
     def __getitem__(self, index):
-        row = self.train_csv.iloc[index]
-        text = row.text
-        label = int(row.label)
+        row = self.data[index]
+        text = row["text"]
+        label = int(row["label"])
 
         if self.processor is not None:
             text = self.processor(text)
