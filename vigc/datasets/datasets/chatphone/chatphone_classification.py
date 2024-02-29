@@ -8,7 +8,11 @@ class ChatPhoneClassificationDataset(Dataset):
     def __init__(self, ann_path, processor=None):
 
         super().__init__()
-        self.train_csv = pd.read_csv(ann_path)
+        if isinstance(ann_path, str):
+            self.train_csv = pd.read_csv(ann_path)
+        else:
+            all_data = [pd.read_csv(_) for _ in ann_path]
+            self.train_csv = pd.concat(all_data)
         self.processor = processor
 
     def __len__(self):

@@ -39,8 +39,8 @@ run:
   num_workers: 4
   warmup_steps: 200
 
-  iters_per_inner_epoch: 200
-  max_iters: 1000
+  iters_per_inner_epoch: 500
+  max_iters: 2500
 
   seed: 42
   output_dir: "./output/chatphone"
