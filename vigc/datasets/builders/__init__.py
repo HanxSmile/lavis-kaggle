@@ -17,12 +17,18 @@ from vigc.datasets.builders.chatphone.chatphone_classification_builder import (
     ChatPhoneTrainBuilder,
     ChatPhoneEvalBuilder
 )
+from vigc.datasets.builders.drug_mm.multi_class_builder import (
+    DrugMMMultiClassTrainBuilder,
+    DrugMMMultiClassEvalBuilder,
+)
 
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
     "ChatPhoneTrainBuilder",
-    "ChatPhoneEvalBuilder"
+    "ChatPhoneEvalBuilder",
+    "DrugMMMultiClassTrainBuilder",
+    "DrugMMMultiClassEvalBuilder",
 ]
 
 

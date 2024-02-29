@@ -1,0 +1,12 @@
+model:
+  arch: clip_classification
+  model_type: default
+
+  load_finetuned: False
+  finetuned: ""
+
+  model_name: openai/clip-vit-base-patch32
+  num_classes: 3
+  dropout: 0.2
+  freeze_text_encoder: True
+  freeze_image_encoder: True

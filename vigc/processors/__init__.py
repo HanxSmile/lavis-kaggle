@@ -7,12 +7,17 @@
 
 from vigc.processors.base_processor import BaseProcessor
 
-
 from vigc.processors.blip_processors import (
     BlipImageTrainProcessor,
     Blip2ImageTrainProcessor,
     BlipImageEvalProcessor,
     BlipCaptionProcessor,
+)
+
+from vigc.processors.clip_processor import (
+    ClipImageTrainProcessor,
+    ClipImageEvalProcessor,
+    ClipCaptionProcessor
 )
 
 from vigc.common.registry import registry
@@ -24,6 +29,10 @@ __all__ = [
     "Blip2ImageTrainProcessor",
     "BlipImageEvalProcessor",
     "BlipCaptionProcessor",
+    # CLIP
+    "ClipImageTrainProcessor",
+    "ClipImageEvalProcessor",
+    "ClipCaptionProcessor"
 ]
 
 
