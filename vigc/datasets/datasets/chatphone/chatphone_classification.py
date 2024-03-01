@@ -10,15 +10,23 @@ class ChatPhoneClassificationDataset(Dataset):
         super().__init__()
         all_dataset = []
         if isinstance(ann_path, str):
-            csv = pd.read_csv(ann_path)
+            csv = pd.read_csv(ann_path, engine='python')
+            has_month = "Month" in csv.columns
             for i, row in csv.iterrows():
-                all_dataset.append({"text": row.text, "label": row.label})
+                item = {"text": row.text, "label": row.label}
+                if has_month:
+                    item["Month"] = row.Month
+                all_dataset.append(item)
         else:
 
             for ann_ in ann_path:
-                csv = pd.read_csv(ann_)
+                csv = pd.read_csv(ann_, engine='python')
+                has_month = "Month" in csv.columns
                 for i, row in csv.iterrows():
-                    all_dataset.append({"text": row.text, "label": row.label})
+                    item = {"text": row.text, "label": row.label}
+                    if has_month:
+                        item["Month"] = row.Month
+                    all_dataset.append(item)
         self.data = all_dataset
         self.processor = processor
 
@@ -29,6 +37,7 @@ class ChatPhoneClassificationDataset(Dataset):
         row = self.data[index]
         text = row["text"]
         label = int(row["label"])
+
 
         if self.processor is not None:
             text = self.processor(text)

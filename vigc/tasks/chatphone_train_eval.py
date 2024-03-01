@@ -39,7 +39,7 @@ class ChatPhoneTrainEvalTask(BaseTask):
                 "pred": float(pred_),
                 "label": int(label_),
                 "id": int(uid_),
-                "month": str(row_.Month),
+                "month": str(row_["Month"]),
                 "text": text_
             }
             results.append(this_res)
