@@ -31,14 +31,16 @@ ALL_FILES = [
     r"ID Scene Annotation - 9.18 ID Scene Coverage - 10k, Sep data.csv",
     r"ID Scene Annotation - 10.23 ID Scene Coverage - 10k, Oct data.csv",
     r"ID Scene Annotation - 11.20 ID Scene Coverage - 10k, Nov data.csv",
-    r"ID Scene Annotation - 12.18 ID Scene Coverage - 10k, Dec data.csv"
+    r"ID Scene Annotation - 12.18 ID Scene Coverage - 10k, Dec data.csv",
+    r"ID Scene Annotation - 1.22 ID Scene Coverage - 10k, Jan data.csv"
 ]
 
 RESULT_NAMES = [
     "Sep_res.csv",
     "Oct_res.csv",
     "Nov_res.csv",
-    "Dec_res.csv"
+    "Dec_res.csv",
+    "Jan_res.csv"
 ]
 
 DATE = [
@@ -46,6 +48,7 @@ DATE = [
     "Oct",
     "Nov",
     "Dec",
+    "Jan",
 ]
 
 ILLEGAL_COLUMN = "Redirect to private contact"
@@ -77,7 +80,7 @@ def parse_args():
 
     parser.add_argument("--cfg-path", required=True, help="path to configuration file.")
     parser.add_argument("--checkpoint", required=True, help="path to the checkpoint file")
-    parser.add_argument("--threshold", type=float, default=0.409423828125)
+    parser.add_argument("--threshold", type=float, default=0.9955)
     parser.add_argument(
         "--options",
         nargs="+",
@@ -218,7 +221,7 @@ if __name__ == '__main__':
 
     all_result = []
     not_detected_result = []
-    for id_ in range(4):
+    for id_ in range(5):
         this_result = run(id_, [])
         all_result.append(this_result)
         not_detected_result.append(run_not_detected(id_))
