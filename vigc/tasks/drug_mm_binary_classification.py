@@ -7,17 +7,13 @@ import numpy as np
 from sklearn import metrics
 
 
-# reference: https://www.kaggle.com/code/nkitgupta/evaluation-metrics-for-multi-class-classification
+@registry.register_task("drug_mm_binary_classification")
+class DrugMMBinaryTrainEvalTask(BaseTask):
 
-
-@registry.register_task("drug_mm_classification_train_eval")
-class DrugMMClassificationTrainEvalTask(BaseTask):
-
-    def __init__(self, evaluate, label_map, report_metric=True):
+    def __init__(self, evaluate, report_metric=True):
         super().__init__()
 
         self.evaluate = evaluate
-        self.label_map = label_map
         self.report_metric = report_metric
 
     @classmethod
@@ -26,27 +22,23 @@ class DrugMMClassificationTrainEvalTask(BaseTask):
         evaluate = run_cfg.evaluate
 
         report_metric = run_cfg.get("report_metric", True)
-        label_map = run_cfg.get("label_map")
 
         return cls(
             evaluate=evaluate,
             report_metric=report_metric,
-            label_map=label_map
         )
 
     def valid_step(self, model, samples):
         results = []
 
         response = model.generate(samples)
-        pred, label_index, id_ = response["result"], response["label_index"], response["id"]
-        for pred_, label_index_, uid_ in zip(pred, label_index, id_):
-            preds = [float(_) for _ in pred_]
-            pred_index = preds.index(max(preds))
+        pred, label, id_ = response["result"], response["label"], response["id"]
+
+        for pred_, label_, uid_, text_ in zip(pred, label, id_):
             this_res = {
-                "pred": preds,
-                "label_index": label_index_,
-                "pred_index": pred_index,
-                "id": int(uid_),
+                "pred": float(pred_),
+                "label": int(label_),
+                "id": str(uid_),
             }
             results.append(this_res)
 
@@ -75,33 +67,17 @@ class DrugMMClassificationTrainEvalTask(BaseTask):
         with open(eval_result_file) as f:
             results = json.load(f)
 
-        total_preds = []
-        total_labels = []
-        month_preds = {}
-        month_labels = {}
-
-        for result in results:
-            # result.keys: pred, label, pred_index, label_index
-            pred, pred_index, label_index = result["pred"], result["pred_index"], result["label_index"]
-            pred_class = self.label_map[pred_index]
-            pred_score = pred[pred_index]
+        total_preds = [_["pred"] for _ in results]
+        total_labels = [_["label"] for _ in results]
 
         total_preds = np.array(total_preds)
         total_labels = np.array(total_labels)
 
-        month_preds = {k: np.array(v) for k, v in month_preds.items()}
-        month_labels = {k: np.array(v) for k, v in month_labels.items()}
-
-        month_preds["Total"] = total_preds
-        month_labels["Total"] = total_labels
-
         metrics_result = {}
-        for k in month_preds:
-            preds = month_preds[k]
-            labels = month_labels[k]
-            fpr, tpr, thresholds = metrics.roc_curve(labels, preds)
-            auc = metrics.auc(fpr, tpr)
-            metrics_result[f"{k}_auc"] = auc
+
+        fpr, tpr, thresholds = metrics.roc_curve(total_labels, total_preds)
+        auc = metrics.auc(fpr, tpr)
+        metrics_result["auc"] = auc
 
         log_stats = {split_name: metrics_result}
 
@@ -110,5 +86,5 @@ class DrugMMClassificationTrainEvalTask(BaseTask):
         ) as f:
             f.write(json.dumps(log_stats) + "\n")
 
-        res = {"agg_metrics": metrics_result["Total_auc"]}
+        res = {"agg_metrics": metrics_result["auc"]}
         return res

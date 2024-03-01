@@ -1,7 +1,7 @@
 from torch.utils.data import Dataset
-import pandas as pd
 import torch
 import logging
+import json
 
 try:
     from datatoolchain import storage
@@ -13,35 +13,46 @@ from PIL import Image
 from io import BytesIO
 
 
-class MultiClassDrugDataset(Dataset):
+class BinaryClassDrugDataset(Dataset):
 
-    def __init__(self, ann_path, num_classes, image_processor, text_processor):
+    def __init__(self, ann_path, image_processor, text_processor):
 
         super().__init__()
-        self.train_csv = pd.read_csv(ann_path)
+        self.train_data = self.load_annotations(ann_path)
         self.image_processor = image_processor
         self.text_processor = text_processor
         self._sto = storage.DatasetStorage.create_cache_storage()
-        self.num_classes = num_classes
+
+    def load_annotations(self, ann_path):
+        if isinstance(ann_path, str):
+            ann_path = [ann_path]
+
+        all_data = []
+        for file in ann_path:
+            with open(file) as f:
+                data = json.load(f)
+            all_data.extend(data)
+        return all_data
 
     def read_image(self, image_file):
+        if "," in image_file:
+            image_file = image_file.split(",")[0]  # 只取第一张图片
         obj = self._sto.get_content(image_file + '_tn')
         img = Image.open(BytesIO(obj))
         return img
 
     def __len__(self):
-        return len(self.train_csv)
+        return len(self.train_data)
 
     def __getitem__(self, index):
-        row = self.train_csv.iloc[index]
+        row = self.train_data[index]
         try:
-            image = self.read_image(row.image)
+            image = self.read_image(row["image"])
         except Exception:
             return self[(index + 1) % len(self)]
-        text = row.text
-        label_index = int(row.label)
-        label = torch.zeros([self.num_classes])
-        label[label_index] = 1.0
+        text = row["text"]
+        label = int(row["label"])
+        item_id = str(row["item_id"])
 
         image = self.image_processor(image)
         text = self.text_processor(text)
@@ -49,25 +60,22 @@ class MultiClassDrugDataset(Dataset):
         return {
             "text": text,
             "image": image,
-            "label": label.float(),
-            "label_index": label_index,
-            "id": index,
+            "label": label,
+            "id": item_id,
         }
 
     def collater(self, batch):
         # eeg_image_list, spec_image_list, label_list = [], [], []
-        text_list, label_list, id_list, image_list, label_index_lst = [], [], [], [], []
+        text_list, label_list, id_list, image_list = [], [], [], [], []
         for sample in batch:
             text_list.append(sample["text"])
             label_list.append(sample["label"])
             id_list.append(sample["id"])
             image_list.append(sample["image"])
-            label_index_lst.append(sample["label_index"])
 
         return {
             "text": text_list,
-            "label": torch.stack(label_list, dim=0),  # [b, c]
+            "label": torch.FloatTensor(label_list),  # [b]
             "id": id_list,
             "image": torch.cat(image_list, dim=0),  # [b, c, h, w]
-            "label_index": label_index_lst
         }

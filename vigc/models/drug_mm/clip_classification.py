@@ -40,7 +40,7 @@ class ClipClassifier(BaseModel):
     def __init__(
             self,
             model_name="openai/clip-vit-base-patch32",
-            num_classes=3,
+            num_classes=1,
             dropout=0.2,
             freeze_text_encoder=True,
             freeze_image_encoder=True,
@@ -108,8 +108,9 @@ class ClipClassifier(BaseModel):
             image_feature = self.pooler(image_features)
             total_feature = torch.cat([text_feature, image_feature], dim=1)
             logits = self.head(total_feature)
-            probs = F.sigmoid(logits)
-        return {"result": probs, "label": samples["label"], "id": samples["id"]}
+            probs = F.sigmoid(logits).squeeze(-1)
+        return {"result": probs, "label": samples["label"], "id": samples["id"],
+                "label_index": samples.get("label_index", None)}
 
     def preprocess_inputs(self, x):
         text_inputs = self.tokenizer(
@@ -130,7 +131,7 @@ class ClipClassifier(BaseModel):
             text_feature = self.pooler(text_features, attention_mask)
             image_feature = self.pooler(image_features)
             total_feature = torch.cat([text_feature, image_feature], dim=1)
-            logits = self.head(total_feature)
+            logits = self.head(total_feature).squeeze(-1)
             loss = self.criterion(logits, samples["label"])
         return {"loss": loss}
 

@@ -11,6 +11,7 @@ from vigc.tasks.base_task import BaseTask
 from vigc.tasks.hms_train_eval import HMSClassifyTrainEvalTask
 from vigc.tasks.chatphone_train_eval import ChatPhoneTrainEvalTask
 from vigc.tasks.drug_mm_classification import DrugMMClassificationTrainEvalTask
+from vigc.tasks.drug_mm_binary_classification import DrugMMBinaryTrainEvalTask
 
 
 def setup_task(cfg):
@@ -28,4 +29,5 @@ __all__ = [
     "HMSClassifyTrainEvalTask",
     "ChatPhoneTrainEvalTask",
     "DrugMMClassificationTrainEvalTask",
+    "DrugMMBinaryTrainEvalTask",
 ]

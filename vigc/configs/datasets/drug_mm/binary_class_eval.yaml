@@ -1,0 +1,7 @@
+datasets:
+  drug_mm_binary_class_eval:
+    data_type: images
+    num_classes: 1
+    build_info:
+      ann_path:
+        - /home/work/hanxiao_train/input/drug/id_prohibited_classification_2024-03-01/id_prohibited_classification_2024-03-01-part0.json
