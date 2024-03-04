@@ -34,7 +34,7 @@ class DrugMMBinaryTrainEvalTask(BaseTask):
         response = model.generate(samples)
         pred, label, id_ = response["result"], response["label"], response["id"]
 
-        for pred_, label_, uid_, text_ in zip(pred, label, id_):
+        for pred_, label_, uid_ in zip(pred, label, id_):
             this_res = {
                 "pred": float(pred_),
                 "label": int(label_),
