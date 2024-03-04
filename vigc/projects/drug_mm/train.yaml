@@ -54,10 +54,10 @@ run:
   accum_grad_iters: 1
 
   num_workers: 4
-  warmup_steps: 200
+  warmup_steps: 625
 
   iters_per_inner_epoch: 625
-  max_iters: 2500
+  max_iters: 62500
 
   seed: 42
   output_dir: "./output/drug_mm_binary"
