@@ -70,10 +70,10 @@ class ClipClassifier(BaseModel):
         self.head = nn.Sequential(
             nn.Linear(self.textual_model.config.hidden_size + self.visual_model.config.hidden_size,
                       self.visual_model.config.hidden_size),
-            nn.BatchNorm1d(num_features=self.textual_model.config.hidden_size),
+            nn.BatchNorm1d(num_features=self.visual_model.config.hidden_size),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(self.textual_model.config.hidden_size, num_classes)
+            nn.Linear(self.visual_model.config.hidden_size, num_classes)
         )
         self.criterion = nn.BCEWithLogitsLoss()
 
@@ -117,7 +117,8 @@ class ClipClassifier(BaseModel):
             x["text"],
             padding='longest',
             truncation=True,
-            max_length=512,
+            max_length=77,
+            # padding=True,
             return_tensors="pt",
         ).to(self.device)
         return text_inputs.input_ids, text_inputs.attention_mask

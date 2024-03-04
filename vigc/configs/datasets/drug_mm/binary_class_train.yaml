@@ -20,4 +20,3 @@ datasets:
         - /home/work/hanxiao_train/input/drug/id_prohibited_classification_2024-03-01/id_prohibited_classification_2024-03-01-part14.json
         - /home/work/hanxiao_train/input/drug/id_prohibited_classification_2024-03-01/id_prohibited_classification_2024-03-01-part15.json
         - /home/work/hanxiao_train/input/drug/id_prohibited_classification_2024-03-01/id_prohibited_classification_2024-03-01-part16.json
-        - /home/work/hanxiao_train/input/drug/id_prohibited_classification_2024-03-01/id_prohibited_classification_2024-03-01-part0.json

@@ -37,7 +37,7 @@ class BinaryClassDrugDataset(Dataset):
     def read_image(self, image_file):
         if "," in image_file:
             image_file = image_file.split(",")[0]  # 只取第一张图片
-        obj = self._sto.get_content(image_file + '_tn')
+        obj = self._sto.get_content(image_file.strip("/") + '_tn')
         img = Image.open(BytesIO(obj))
         return img
 
@@ -54,7 +54,10 @@ class BinaryClassDrugDataset(Dataset):
         label = int(row["label"])
         item_id = str(row["item_id"])
 
-        image = self.image_processor(image)
+        try:
+            image = self.image_processor(image)
+        except Exception:
+            return self[(index + 1) % len(self)]
         text = self.text_processor(text)
 
         return {
@@ -66,7 +69,7 @@ class BinaryClassDrugDataset(Dataset):
 
     def collater(self, batch):
         # eeg_image_list, spec_image_list, label_list = [], [], []
-        text_list, label_list, id_list, image_list = [], [], [], [], []
+        text_list, label_list, id_list, image_list = [], [], [], []
         for sample in batch:
             text_list.append(sample["text"])
             label_list.append(sample["label"])
