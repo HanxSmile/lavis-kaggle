@@ -10,3 +10,4 @@ model:
   dropout: 0.2
   freeze_text_encoder: True
   freeze_image_encoder: True
+  mean_pooling: True

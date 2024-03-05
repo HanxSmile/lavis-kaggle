@@ -12,6 +12,7 @@ model:
   dropout: 0.2
   freeze_text_encoder: False
   freeze_image_encoder: False
+  mean_pooling: True
 
 datasets:
   # train

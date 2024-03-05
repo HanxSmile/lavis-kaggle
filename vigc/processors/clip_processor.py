@@ -102,6 +102,7 @@ class ClipImageTrainProcessor(BaseProcessor):
 
     def __call__(self, item):
         new_image = Image.fromarray(self.transform(image=np.array(item))["image"])
+        # new_image = item
         return self.processor(images=new_image, return_tensors="pt").pixel_values
 
     @classmethod
@@ -129,6 +130,7 @@ class ClipImageEvalProcessor(BaseProcessor):
 
     def __call__(self, item):
         new_image = Image.fromarray(self.transform(image=np.array(item))["image"])
+        # new_image = item
         return self.processor(images=new_image, return_tensors="pt").pixel_values
 
     @classmethod

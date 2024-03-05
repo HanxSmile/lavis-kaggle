@@ -3,8 +3,6 @@ from vigc.common.registry import registry
 from vigc.tasks.base_task import BaseTask
 import os
 import json
-import numpy as np
-from sklearn import metrics
 
 
 # reference: https://www.kaggle.com/code/nkitgupta/evaluation-metrics-for-multi-class-classification
@@ -38,15 +36,18 @@ class DrugMMClassificationTrainEvalTask(BaseTask):
         results = []
 
         response = model.generate(samples)
-        pred, label_index, id_ = response["result"], response["label_index"], response["id"]
-        for pred_, label_index_, uid_ in zip(pred, label_index, id_):
+        pred, label, id_ = response["result"], response["label"], response["id"]
+
+        for pred_, label_, uid_ in zip(pred, label, id_):
             preds = [float(_) for _ in pred_]
+            label_ = [int(_) for _ in label_]
             pred_index = preds.index(max(preds))
+            label_index_ = label_.index(max(label_))
             this_res = {
                 "pred": preds,
                 "label_index": label_index_,
                 "pred_index": pred_index,
-                "id": int(uid_),
+                "id": str(uid_),
             }
             results.append(this_res)
 
@@ -71,37 +72,45 @@ class DrugMMClassificationTrainEvalTask(BaseTask):
 
     @main_process
     def _report_metrics(self, eval_result_file, split_name):
+        """
+            this_res = {
+                "pred": preds,
+                "label_index": label_index_,
+                "pred_index": pred_index,
+                "id": str(uid_),
+            }
+        """
 
         with open(eval_result_file) as f:
             results = json.load(f)
 
-        total_preds = []
-        total_labels = []
-        month_preds = {}
-        month_labels = {}
+        total_precisions = {}
+        total_recalls = {}
 
         for result in results:
-            # result.keys: pred, label, pred_index, label_index
-            pred, pred_index, label_index = result["pred"], result["pred_index"], result["label_index"]
-            pred_class = self.label_map[pred_index]
-            pred_score = pred[pred_index]
+            pred, label_index, pred_index = result["pred"], result["label_index"], result["pred_index"]
+            gt_label_name = self.label_map[label_index]
+            pred_label_name = self.label_map[pred_index]
+            hit = int(gt_label_name == pred_label_name)
+            if pred_label_name not in total_precisions:
+                total_precisions[pred_label_name] = {"np": 1, "tp": hit}
+            else:
+                total_precisions[pred_label_name]["np"] += 1
+                total_precisions[pred_label_name]["tp"] += hit
+            if gt_label_name not in total_recalls:
+                total_recalls[gt_label_name] = {"p": 1, "hit": hit}
+            else:
+                total_recalls[gt_label_name]["p"] += 1
+                total_recalls[gt_label_name]["hit"] += hit
 
-        total_preds = np.array(total_preds)
-        total_labels = np.array(total_labels)
+        total_recall = {f"{k}_recall": v["hit"] / v["p"] for k, v in total_recalls.items()}
+        total_recall["total_recall"] = sum(total_recall.values()) / len(total_recall)
+        total_precision = {f"{k}_precision": v["tp"] / v["np"] for k, v in total_precisions.items()}
+        total_precision["total_precision"] = sum(total_precision.values()) / len(total_precision)
 
-        month_preds = {k: np.array(v) for k, v in month_preds.items()}
-        month_labels = {k: np.array(v) for k, v in month_labels.items()}
-
-        month_preds["Total"] = total_preds
-        month_labels["Total"] = total_labels
-
-        metrics_result = {}
-        for k in month_preds:
-            preds = month_preds[k]
-            labels = month_labels[k]
-            fpr, tpr, thresholds = metrics.roc_curve(labels, preds)
-            auc = metrics.auc(fpr, tpr)
-            metrics_result[f"{k}_auc"] = auc
+        metrics_result = dict()
+        metrics_result.update(total_recall)
+        metrics_result.update(total_precision)
 
         log_stats = {split_name: metrics_result}
 
@@ -110,5 +119,5 @@ class DrugMMClassificationTrainEvalTask(BaseTask):
         ) as f:
             f.write(json.dumps(log_stats) + "\n")
 
-        res = {"agg_metrics": metrics_result["Total_auc"]}
+        res = {"agg_metrics": metrics_result["total_precision"]}
         return res
