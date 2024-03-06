@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 import torch
 import logging
 import json
+import random
 
 try:
     from datatoolchain import storage
@@ -15,14 +16,17 @@ from io import BytesIO
 
 class MultiClassDrugDataset(Dataset):
 
-    def __init__(self, ann_path, num_classes, image_processor, text_processor):
+    def __init__(self, ann_path, label_map, image_processor, text_processor, split="train"):
 
         super().__init__()
+        assert split in ("train", "eval")
+        self.split = split
         self.train_data = self.load_annotations(ann_path)
         self.image_processor = image_processor
         self.text_processor = text_processor
         self._sto = storage.DatasetStorage.create_cache_storage()
-        self.num_classes = num_classes
+        self.num_classes = len(label_map)
+        self.label_map = label_map
 
     def load_annotations(self, ann_path):
         if isinstance(ann_path, str):
@@ -37,7 +41,10 @@ class MultiClassDrugDataset(Dataset):
 
     def read_image(self, image_file):
         if "," in image_file:
-            image_file = image_file.split(",")[0]  # 只取第一张图片
+            if self.split == "train":
+                image_file = random.choice(image_file.split(","))  # 随机取一张图像
+            else:
+                image_file = image_file.split(",")[0]  # 取第一张图像
         obj = self._sto.get_content(image_file.strip("/") + '_tn')
         img = Image.open(BytesIO(obj))
         return img
@@ -48,11 +55,11 @@ class MultiClassDrugDataset(Dataset):
     def __getitem__(self, index):
         row = self.train_data[index]
         try:
-            image = self.read_image(row["image"])
+            image = self.read_image(row["images"])
         except Exception:
             return self[(index + 1) % len(self)]
-        text = row["text"]
-        label_index = int(row["label"])
+        text = row["name"]
+        label_index = int(self.label_map.get(row["label"]))
         item_id = str(row["item_id"])
 
         label = torch.zeros([self.num_classes])
