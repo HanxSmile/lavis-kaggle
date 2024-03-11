@@ -26,6 +26,11 @@ from vigc.datasets.builders.drug_mm.binary_class_builder import (
     DrugMMBinaryClassEvalBuilder,
 )
 
+from vigc.datasets.builders.drug_mm.balanced_multi_class_builder import (
+    DrugMMBalancedMultiClassTrainBuilder,
+    DrugMMBalancedMultiClassEvalBuilder
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -35,6 +40,8 @@ __all__ = [
     "DrugMMMultiClassEvalBuilder",
     "DrugMMBinaryClassTrainBuilder",
     "DrugMMBinaryClassEvalBuilder",
+    "DrugMMBalancedMultiClassTrainBuilder",
+    "DrugMMBalancedMultiClassEvalBuilder",
 ]
 
 
