@@ -68,8 +68,7 @@ class MultiClassDrugDataset(Dataset):
 
             return max_length // 2 * len(train_length)
         else:
-            train_length = {k: len(v) for k, v in self.train_data.items()}
-            return sum(list(train_length.values()))
+            return len(self.train_data)
 
     def __getitem__(self, index):
         if self.split == "train":
