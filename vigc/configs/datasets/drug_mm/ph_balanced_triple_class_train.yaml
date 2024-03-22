@@ -1,0 +1,11 @@
+datasets:
+  drug_mm_balanced_multi_class_train:
+    data_type: images
+    label_map:
+      sexual/addictive/medical_devices: 0
+      prescription_drugs: 1
+      negative: 2
+    build_info:
+      ann_path:
+        - /home/work/hanxiao_train/input/drug/PH/triple_class_fe_data.json
+        - /home/work/hanxiao_train/input/drug/PH/triple_class_data.json

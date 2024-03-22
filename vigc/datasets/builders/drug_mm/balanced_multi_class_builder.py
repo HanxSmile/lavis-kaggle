@@ -12,7 +12,8 @@ warnings.filterwarnings("ignore")
 class DrugMMBalancedMultiClassTrainBuilder(BaseDatasetBuilder):
     train_dataset_cls = MultiClassDrugDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/drug_mm/balanced_multi_class_train.yaml"
+        "default": "configs/datasets/drug_mm/balanced_multi_class_train.yaml",
+        "ph_triple_class": "configs/datasets/drug_mm/ph_balanced_triple_class_train.yaml"
     }
 
     def build_datasets(self):
@@ -35,7 +36,8 @@ class DrugMMBalancedMultiClassTrainBuilder(BaseDatasetBuilder):
 class DrugMMBalancedMultiClassEvalBuilder(BaseDatasetBuilder):
     eval_dataset_cls = MultiClassDrugDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/drug_mm/balanced_multi_class_eval.yaml"
+        "default": "configs/datasets/drug_mm/balanced_multi_class_eval.yaml",
+        "ph_triple_class": "configs/datasets/drug_mm/ph_balanced_triple_class_eval.yaml"
     }
 
     def build_datasets(self):

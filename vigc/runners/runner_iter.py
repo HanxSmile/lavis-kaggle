@@ -237,12 +237,12 @@ class RunnerIter(RunnerBase):
         """
         if self._dataloaders is None:
             # reoganize datasets by split and concatenate/chain if necessary
-
-            self.datasets = reorg_datasets_by_split(self.datasets)
-            # to keep the same structure as return value of concat_datasets
-            self.datasets = {
-                k: v[0] if len(v) == 1 else v for k, v in self.datasets.items()
-            }
+            if not ("train" in self.datasets or "eval" in self.datasets):
+                self.datasets = reorg_datasets_by_split(self.datasets)
+                # to keep the same structure as return value of concat_datasets
+                self.datasets = {
+                    k: v[0] if len(v) == 1 else v for k, v in self.datasets.items()
+                }
 
             # print dataset statistics after concatenation/chaining
             for split_name in self.datasets:
