@@ -1,3 +1,5 @@
+import random
+
 from torch.utils.data import Dataset
 import torch
 import logging
@@ -15,9 +17,11 @@ from io import BytesIO
 
 class BinaryClassDrugDataset(Dataset):
 
-    def __init__(self, ann_path, image_processor, text_processor):
+    def __init__(self, ann_path, image_processor, text_processor, split="train"):
 
         super().__init__()
+        assert split in ("train", "eval")
+        self.split = split
         self.train_data = self.load_annotations(ann_path)
         self.image_processor = image_processor
         self.text_processor = text_processor
@@ -36,7 +40,10 @@ class BinaryClassDrugDataset(Dataset):
 
     def read_image(self, image_file):
         if "," in image_file:
-            image_file = image_file.split(",")[0]  # 只取第一张图片
+            if self.split == "train":
+                image_file = random.choice(image_file.split(","))
+            else:
+                image_file = image_file.split(",")[0]  # 只取第一张图片
         obj = self._sto.get_content(image_file.strip("/") + '_tn')
         img = Image.open(BytesIO(obj))
         return img

@@ -25,6 +25,7 @@ class DrugMMBinaryClassTrainBuilder(BaseDatasetBuilder):
             ann_path=build_info.ann_path,
             image_processor=self.vis_processors["train"],
             text_processor=self.text_processors["train"],
+            split="train"
         )
         _ = datasets["train"][0]
         return datasets
@@ -47,6 +48,7 @@ class DrugMMBinaryClassEvalBuilder(BaseDatasetBuilder):
             ann_path=build_info.ann_path,
             image_processor=self.vis_processors["eval"],
             text_processor=self.text_processors["eval"],
+            split="eval"
         )
         _ = datasets["eval"][0]
         return datasets
