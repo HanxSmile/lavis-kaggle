@@ -13,6 +13,8 @@ from vigc.tasks.chatphone_train_eval import ChatPhoneTrainEvalTask
 from vigc.tasks.drug_mm_classification import DrugMMClassificationTrainEvalTask
 from vigc.tasks.drug_mm_binary_classification import DrugMMBinaryTrainEvalTask
 
+from vigc.tasks.whisper_asr_train_eval import WhisperASRTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
@@ -30,4 +32,5 @@ __all__ = [
     "ChatPhoneTrainEvalTask",
     "DrugMMClassificationTrainEvalTask",
     "DrugMMBinaryTrainEvalTask",
+    "WhisperASRTask",
 ]

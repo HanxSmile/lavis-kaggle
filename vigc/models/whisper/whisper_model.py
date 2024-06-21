@@ -3,48 +3,28 @@ import torch
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor, WhisperForConditionalGeneration
-from bnunicodenormalizer import Normalizer
 import contextlib
-import json
-import os
 from vigc.models.whisper.whisper_pipeline import WhisperPipeline
 
-bnorm = Normalizer()
 
-
-def postprocess(sentence):
-    period_set = [".", "?", "!", "।"]
-    _words = [bnorm(word)['normalized'] for word in sentence.split()]
-    sentence = " ".join([word for word in _words if word is not None])
-    try:
-        if sentence[-1] not in period_set:
-            sentence += "।"
-    except:
-        # print(sentence)
-        sentence = "।"
-    return sentence
-
-
-@registry.register_model("bengali_whisper")
-class BengaliWhisper(BaseModel):
+@registry.register_model("whisper")
+class Whisper(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/bengali_whisper_medium.yaml",
-        "medium": "configs/models/bengali_whisper_medium.yaml",
-        "small": "configs/models/bengali_whisper_small.yaml",
+        "default": "configs/models/whisper/medium.yaml",
+        "medium": "configs/models/whisper/medium.yaml",
+        "small": "configs/models/whisper/small.yaml",
     }
 
     def __init__(
             self,
             model_name="openai/whisper-medium",
             freeze_encoder=False,
-            post_process_flag=True,
             language=None,
             task="transcribe"
     ):
         super().__init__()
         self.language = language
         self.task = task
-        self.post_process_flag = post_process_flag
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         if freeze_encoder:
             self.model.freeze_encoder()
@@ -88,8 +68,6 @@ class BengaliWhisper(BaseModel):
             samples["input_features"],
         )
         transcription = self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
-        if self.post_process_flag:
-            transcription = [postprocess(_) for _ in transcription]
         return transcription
 
     @torch.no_grad()
@@ -104,7 +82,7 @@ class BengaliWhisper(BaseModel):
         # self.model.config.forced_decoder_ids = forced_decoder_ids
         pipe = WhisperPipeline(
             model=self.model,
-            chunk_length_s=10,
+            chunk_length_s=30,
             device=self.device,
             tokenizer=self.tokenizer,
             feature_extractor=self.feature_extractor,
@@ -115,9 +93,6 @@ class BengaliWhisper(BaseModel):
                 batch_size=8,
             )
         transcription = [_["text"] for _ in transcription]
-        if self.post_process_flag:
-            transcription = [postprocess(_) for _ in transcription]
-        # self.model.config.forced_decoder_ids = ori_forced_decoder_ids
         return transcription
 
     def forward(self, samples, **kwargs):
@@ -145,12 +120,12 @@ class BengaliWhisper(BaseModel):
     @classmethod
     def from_config(cls, cfg):
         model_name = cfg.get("model_name")
-        post_process_flag = cfg.get("post_process_flag", True)
         freeze_encoder = cfg.get("freeze_encoder", False)
+        language = cfg.get("language")
         model = cls(
             model_name=model_name,
             freeze_encoder=freeze_encoder,
-            post_process_flag=post_process_flag,
+            language=language
         )
         model.load_checkpoint_from_config(cfg)
         return model

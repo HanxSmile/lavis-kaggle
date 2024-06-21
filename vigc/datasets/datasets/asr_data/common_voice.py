@@ -1,85 +1,58 @@
 from torch.utils.data import Dataset as torch_Dataset
-import pandas as pd
-import os
-import re
-import os.path as osp
 import datasets
-import librosa
 import torch
 from typing import Dict, List, Union
-# from bnunicodenormalizer import Normalizer
 from datasets import Audio
 import numpy as np
-
-# bnorm = Normalizer()
-pd.options.mode.chained_assignment = None
-
-chars_to_ignore_regex = '[\,\?\.\!\-\;\:\"\—\‘\'\‚\“\”\…]'
 
 MIN_SECS = 1
 MAX_SECS = 20
 TARGET_SR = 16_000
 
 
-# def remove_special_characters(sentence):
-#     sentence = re.sub(chars_to_ignore_regex, '', sentence) + " "
-#     return sentence
-#
-#
-# def normalize(sentence):
-#     _words = [bnorm(word)['normalized'] for word in sentence.split()]
-#     sentence = " ".join([word for word in _words if word is not None])
-#     return sentence
+class CommonVoiceTrain(torch_Dataset):
+    def __init__(self, data_root, processor, transform=None, max_label_length=448):
 
-
-class BengaliASR(torch_Dataset):
-    def __init__(self, feature_extractor, tokenizer, processor, data_root, split: str, max_label_length: int,
-                 transform=None):
-        split = split.lower()
-        assert split in ("train", "valid")
+        inner_dataset = datasets.load_from_disk(data_root)["train"]
+        inner_dataset = inner_dataset.filter(lambda x, y: x > y, input_columns=["up_votes", "down_votes"])
+        inner_dataset = inner_dataset.remove_columns(
+            ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment', 'variant'])
+        self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
         self.processor = processor
-        self.audio_processor = feature_extractor
-        self.text_processor = tokenizer
-        self.media_root = osp.join(data_root, "train_mp3s")
-        self.anno_path = osp.join(data_root, "train.csv")
-        annotations = pd.read_csv(self.anno_path)
-        data = annotations[annotations["split"] == split]
-        data["audio"] = self.media_root + os.sep + data["id"] + ".mp3"
-        self.inner_dataset = data
         self.transform = transform
         self.max_label_length = max_label_length
 
     def __len__(self):
         return len(self.inner_dataset)
 
+    def _parse_ann_info(self, index):
+        ann = self.inner_dataset[index]
+        return ann["audio"], ann["sentence"], str(index)
+
     def is_valid(self, input_values):
         input_length = len(input_values)
         input_secs = input_length / TARGET_SR
         return MAX_SECS > input_secs > MIN_SECS
 
+    def transform_array(self, audio):
+        audio["array"] = np.trim_zeros(audio["array"], "fb")
+        if self.transform is not None:
+            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
+        return audio
+
     def __getitem__(self, index):
-        ann = self.inner_dataset.iloc[index]
-        audio_path = ann.audio
-        array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
-        array = np.trim_zeros(array, "fb")
-        audio = {
-            "path": audio_path,
-            "array": array,
-            "sampling_rate": sr
-        }
+        audio, sentence, ann_id = self._parse_ann_info(index)
+        audio = self.transform_array(audio)
         if self.transform is not None:
             audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
 
         if not self.is_valid(audio["array"]):
             return self[(index + 1) % len(self)]  # filter too long or too short audio
 
-        input_features = self.audio_processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
-        # sentence = normalize(remove_special_characters(ann.sentence))
-        sentence = ann.sentence
-        labels = self.text_processor(sentence, truncation=True, max_length=self.max_label_length).input_ids
+        input_features = self.processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
+        labels = self.processor.tokenizer(sentence, truncation=True, max_length=self.max_label_length).input_ids
 
-        return {"input_features": input_features, "labels": labels, "sentence": sentence, "id": ann.id}
+        return {"input_features": input_features, "labels": labels, "sentence": sentence, "id": ann_id}
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
@@ -107,37 +80,47 @@ class BengaliASR(torch_Dataset):
         return result
 
 
-class BengaliASRTest(torch_Dataset):
-    def __init__(self, feature_extractor, tokenizer, processor, data_root, max_label_length: int):
+class CommonVoiceTest(torch_Dataset):
+    def __init__(self, data_root, processor, max_label_length=448):
+        inner_dataset = datasets.load_from_disk(data_root)["test"]
+        inner_dataset = inner_dataset.remove_columns(
+            ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment', 'variant'])
+        self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
         self.processor = processor
-        self.audio_processor = feature_extractor
-        self.text_processor = tokenizer
-        self.media_root = osp.join(data_root, "examples")
-        self.anno_path = osp.join(data_root, "annoated.csv")
-        self.inner_dataset = pd.read_csv(self.anno_path, sep="\t")
+        self.transform = None
         self.max_label_length = max_label_length
 
     def __len__(self):
         return len(self.inner_dataset)
 
-    def __getitem__(self, index):
-        ann = self.inner_dataset.iloc[index]
-        audio_path = osp.join(self.media_root, ann.file)
-        array, sr = librosa.load(audio_path, sr=None)
-        array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR
-        array = np.trim_zeros(array, "fb")
-        audio = {
-            "path": audio_path,
-            "array": array,
-            "sampling_rate": sr
-        }
-        input_features = self.audio_processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
-        # sentence = normalize(remove_special_characters(ann.sentence))
-        sentence = ann.sentence
-        labels = self.text_processor(sentence, truncation=True, max_length=self.max_label_length).input_ids
+    def _parse_ann_info(self, index):
+        ann = self.inner_dataset[index]
+        return ann["audio"], ann["sentence"], str(index)
 
-        return {"input_features": input_features, "labels": labels, "sentence": ann.sentence, "id": ann.file,
-                "audio": audio}
+    def is_valid(self, input_values):
+        input_length = len(input_values)
+        input_secs = input_length / TARGET_SR
+        return MAX_SECS > input_secs > MIN_SECS
+
+    def transform_array(self, audio):
+        audio["array"] = np.trim_zeros(audio["array"], "fb")
+        if self.transform is not None:
+            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
+        return audio
+
+    def __getitem__(self, index):
+        audio, sentence, ann_id = self._parse_ann_info(index)
+        audio = self.transform_array(audio)
+        if self.transform is not None:
+            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
+
+        if not self.is_valid(audio["array"]):
+            return self[(index + 1) % len(self)]  # filter too long or too short audio
+
+        input_features = self.processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
+        labels = self.processor.tokenizer(sentence, truncation=True, max_length=self.max_label_length).input_ids
+
+        return {"input_features": input_features, "labels": labels, "sentence": sentence, "id": ann_id, "audio": audio}
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
@@ -157,6 +140,7 @@ class BengaliASRTest(torch_Dataset):
         # cut bos token here as it's append later anyways
         if (labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
             labels = labels[:, 1:]
+
         result = {}
         result["input_features"] = batch["input_features"]
         result["labels"] = labels

@@ -1,0 +1,8 @@
+model:
+  model_name: /mnt/data/hanxiao/models/audio/hx-asr/models/whisper-small
+  load_finetuned: False
+  finetuned: ""
+  arch: whisper
+  model_type: small
+  language: fa
+  freeze_encoder: False

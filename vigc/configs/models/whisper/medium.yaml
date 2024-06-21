@@ -1,0 +1,8 @@
+model:
+  model_name: /mnt/data/hanxiao/models/audio/hx-asr/models/whisper-medium
+  load_finetuned: False
+  finetuned: ""
+  arch: whisper
+  model_type: medium
+  language: fa
+  freeze_encoder: False

@@ -27,6 +27,8 @@ from vigc.models.hms_final.eeg_wave_hms_model2 import WaveNetHMSClassifier
 from vigc.models.chatphone.bert_classification import BertClassifier
 from vigc.models.drug_mm.clip_classification import ClipClassifier
 
+from vigc.models.whisper.whisper_model import Whisper
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -42,6 +44,7 @@ __all__ = [
 
     "BertClassifier",
     "ClipClassifier",
+    "Whisper"
 ]
 
 

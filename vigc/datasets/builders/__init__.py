@@ -31,6 +31,11 @@ from vigc.datasets.builders.drug_mm.balanced_multi_class_builder import (
     DrugMMBalancedMultiClassEvalBuilder
 )
 
+from vigc.datasets.builders.asr_data.common_voice_builder import (
+    CommonVoiceTrainBuilder,
+    CommonVoiceEvalBuilder
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -42,6 +47,8 @@ __all__ = [
     "DrugMMBinaryClassEvalBuilder",
     "DrugMMBalancedMultiClassTrainBuilder",
     "DrugMMBalancedMultiClassEvalBuilder",
+    "CommonVoiceTrainBuilder",
+    "CommonVoiceEvalBuilder",
 ]
 
 
