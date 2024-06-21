@@ -188,8 +188,13 @@ class AttrDict(dict):
 
 
 def setup_logger():
+    if dist_utils.is_main_process():
+        logging_level = logging.INFO
+        print("Rank 0 setup")
+    else:
+        logging_level = logging.WARN
     logging.basicConfig(
-        level=logging.INFO if dist_utils.is_main_process() else logging.WARN,
+        level=logging_level,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler()],
     )
