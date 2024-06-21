@@ -63,9 +63,8 @@ class CommonVoiceEvalBuilder(BaseDatasetBuilder):
 
     def build_datasets(self):
         logging.info("Building Whisper CommonVoice ASR eval datasets ...")
-        build_info = self.config.build_info
         datasets = dict()
-        data_root = build_info.data_root
+        data_root = self.config.data_root
 
         cfg = self.config
         processor = WhisperProcessor.from_pretrained(cfg.model_name, language="bn", task="transcribe")
