@@ -586,13 +586,23 @@ class RunnerBase:
             if k in param_grad_dic.keys() and not param_grad_dic[k]:
                 # delete parameters that do not require gradient
                 del state_dict[k]
-        save_obj = {
-            "model": state_dict,
-            "optimizer": self.optimizer.state_dict(),
-            "config": self.config.to_dict(),
-            "scaler": self.scaler.state_dict() if self.scaler else None,
-            "epoch": cur_epoch,
-        }
+        save_opt_ckpt = self.config.run_cfg.get("save_opt_ckpt", True)
+        if save_opt_ckpt:
+            save_obj = {
+                "model": state_dict,
+                "optimizer": self.optimizer.state_dict(),
+                "config": self.config.to_dict(),
+                "scaler": self.scaler.state_dict() if self.scaler else None,
+                "epoch": cur_epoch,
+            }
+        else:
+            save_obj = {
+                "model": state_dict,
+                "optimizer": None,
+                "config": self.config.to_dict(),
+                "scaler": self.scaler.state_dict() if self.scaler else None,
+                "epoch": cur_epoch,
+            }
         if is_best:
             save_to = os.path.join(
                 self.output_dir,
