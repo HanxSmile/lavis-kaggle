@@ -2,11 +2,12 @@ from torch.utils.data import Dataset as torch_Dataset
 import datasets
 import torch
 from typing import Dict, List, Union
-from datasets import Audio
+from datasets import Audio, concatenate_datasets
 import numpy as np
+import os.path as osp
 
 MIN_SECS = 1
-MAX_SECS = 20
+MAX_SECS = 30
 TARGET_SR = 16_000
 
 
@@ -14,6 +15,9 @@ class CommonVoiceTrain(torch_Dataset):
     def __init__(self, data_root, processor, transform=None, max_label_length=448):
 
         inner_dataset = datasets.load_from_disk(data_root)["train"]
+        if osp.isdir(data_root + "-validated"):
+            inner_dataset2 = datasets.load_from_disk(data_root + "-validated")["validated"]
+            inner_dataset = concatenate_datasets([inner_dataset, inner_dataset2])
         inner_dataset = inner_dataset.filter(lambda x, y: x > y, input_columns=["up_votes", "down_votes"])
         inner_dataset = inner_dataset.remove_columns(
             ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment', 'variant'])
