@@ -600,7 +600,7 @@ class RunnerBase:
                 "model": state_dict,
                 "optimizer": None,
                 "config": self.config.to_dict(),
-                "scaler": self.scaler.state_dict() if self.scaler else None,
+                "scaler": None,
                 "epoch": cur_epoch,
             }
         if is_best:
