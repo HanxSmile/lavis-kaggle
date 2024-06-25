@@ -17,7 +17,7 @@ datasets:
     language: fa
 
   # eval
-  whisper_common_voice_eval:
+  whisper_myaudio_eval:
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-persian
     language: fa
 

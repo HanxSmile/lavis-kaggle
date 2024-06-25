@@ -36,6 +36,8 @@ from vigc.datasets.builders.asr_data.common_voice_builder import (
     CommonVoiceEvalBuilder
 )
 
+from vigc.datasets.builders.asr_data.my_audio_builder import MyAudioEvalBuilder
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -49,6 +51,8 @@ __all__ = [
     "DrugMMBalancedMultiClassEvalBuilder",
     "CommonVoiceTrainBuilder",
     "CommonVoiceEvalBuilder",
+
+    "MyAudioEvalBuilder",
 ]
 
 

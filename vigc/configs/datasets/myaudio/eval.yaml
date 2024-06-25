@@ -1,0 +1,5 @@
+datasets:
+  whisper_myaudio_eval:
+    data_type: audios
+    language: fa
+    data_root: /mnt/data/hanxiao/dataset/audio/myandio_tiny/myaudio_tiny
