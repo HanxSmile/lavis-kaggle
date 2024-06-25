@@ -15,8 +15,8 @@ class CommonVoiceTrain(torch_Dataset):
     def __init__(self, data_root, processor, transform=None, max_label_length=448):
 
         inner_dataset = datasets.load_from_disk(data_root)["train"]
-        if osp.isdir(data_root + "-validated"):
-            inner_dataset2 = datasets.load_from_disk(data_root + "-validated")["validated"]
+        if osp.isdir(data_root + "-validated2"):
+            inner_dataset2 = datasets.load_from_disk(data_root + "-validated2")["validated"]
             inner_dataset = concatenate_datasets([inner_dataset, inner_dataset2])
         inner_dataset = inner_dataset.filter(lambda x, y: x > y, input_columns=["up_votes", "down_votes"])
         inner_dataset = inner_dataset.remove_columns(
