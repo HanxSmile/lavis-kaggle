@@ -39,7 +39,8 @@ from vigc.datasets.builders.asr_data.common_voice_builder import (
 from vigc.datasets.builders.asr_data.my_audio_builder import MyAudioEvalBuilder
 from vigc.datasets.builders.asr_data.common_voice_complex_aug_builder import (
     CommonVoiceSplitTrainBuilder,
-    CommonVoiceConcatTrainBuilder
+    CommonVoiceConcatTrainBuilder,
+    CommonVoiceSplitAndConcatTrainBuilder
 )
 
 __all__ = [
@@ -58,7 +59,8 @@ __all__ = [
     "CommonVoiceEvalBuilder",
     "MyAudioEvalBuilder",
     "CommonVoiceSplitTrainBuilder",
-    "CommonVoiceConcatTrainBuilder"
+    "CommonVoiceConcatTrainBuilder",
+    "CommonVoiceSplitAndConcatTrainBuilder"
 ]
 
 

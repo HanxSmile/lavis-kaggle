@@ -21,11 +21,20 @@ datasets:
     sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-persian
     language: fa
+    concat_nums: 2
 
   whisper_common_voice_split_train:
     sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-persian
     language: fa
+    split_nums: 2
+
+  whisper_common_voice_split_and_concat_train:
+    sample_ratio: 1
+    model_name: /mnt/data/hanxiao/models/audio/whisper-large-persian
+    language: fa
+    split_nums: 2
+    concat_nums: 2
 
   # eval
   whisper_myaudio_eval:
