@@ -3,16 +3,7 @@ from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
 from vigc.datasets.datasets.asr_data.common_voice import CommonVoiceTrain, CommonVoiceTest
 from transformers import WhisperProcessor
-from audiomentations import (
-    AddBackgroundNoise,
-    AddGaussianNoise,
-    Compose,
-    Gain,
-    OneOf,
-    PitchShift,
-    PolarityInversion,
-    TimeStretch,
-)
+from .get_augmentation import get_augmentation
 
 
 @registry.register_builder("whisper_common_voice_train")
@@ -26,23 +17,8 @@ class CommonVoiceTrainBuilder(BaseDatasetBuilder):
         logging.info("Building Whisper Common Voice ASR train datasets ...")
         datasets = dict()
         musan_dir = self.config.get("musan_dir", None)
-        transform = Compose(
-            [
-                TimeStretch(min_rate=0.9, max_rate=1.1, p=0.2, leave_length_unchanged=False),
-                Gain(min_gain_in_db=-6, max_gain_in_db=6, p=0.1),
-                PitchShift(min_semitones=-4, max_semitones=4, p=0.2),
-                OneOf(
-                    [
-                        AddBackgroundNoise(sounds_path=musan_dir, min_snr_in_db=1.0, max_snr_in_db=5.0,
-                                           noise_transform=PolarityInversion(), p=1.0),
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0),
-                    ] if musan_dir is not None else [
-                        AddGaussianNoise(min_amplitude=0.005, max_amplitude=0.015, p=1.0), ],
-                    p=0.2,
-                ),
-            ]
-        )
 
+        transform = get_augmentation(musan_dir)
         cfg = self.config
         processor = WhisperProcessor.from_pretrained(cfg.model_name, language=cfg.language, task="transcribe")
         datasets["train"] = self.train_dataset_cls(

@@ -47,8 +47,6 @@ class CommonVoiceTrain(torch_Dataset):
     def __getitem__(self, index):
         audio, sentence, ann_id = self._parse_ann_info(index)
         audio = self.transform_array(audio)
-        if self.transform is not None:
-            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
 
         if not self.is_valid(audio["array"]):
             return self[(index + 1) % len(self)]  # filter too long or too short audio

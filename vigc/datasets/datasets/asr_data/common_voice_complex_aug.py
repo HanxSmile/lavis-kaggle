@@ -1,0 +1,57 @@
+from .common_voice import CommonVoiceTrain
+import numpy as np
+import random
+
+
+class CommonVoiceSplit(CommonVoiceTrain):
+
+    def __init__(self, data_root, processor, transform=None, max_label_length=448, split_nums: int = 2):
+        self.split_nums = split_nums
+        super().__init__(data_root, processor, transform, max_label_length)
+
+    def transform_array(self, audio):
+        audio["array"] = np.trim_zeros(audio["array"], "fb")
+        array = audio["array"]
+        array_lst = np.array_split(array, self.split_nums)
+        if self.transform is not None:
+            for i, array_ in enumerate(array_lst):
+                array_lst[i] = self.transform(array_, sample_rate=audio["sampling_rate"])
+            array = np.concatenate(array_lst, axis=0)
+            audio["array"] = array
+        return audio
+
+
+class CommonVoiceConcat(CommonVoiceTrain):
+    def __init__(self, data_root, processor, transform=None, max_label_length=448, concat_nums: int = 2):
+        self.concat_nums = concat_nums
+        super().__init__(data_root, processor, transform, max_label_length)
+
+    def _sample_ann_array(self):
+        other_index = random.choice(range(len(self)))
+        other_ann = self.inner_dataset[other_index]
+        return other_ann["audio"], other_ann["sentence"], str(other_index)
+
+    def _parse_ann_info(self, index):
+        ann = self.inner_dataset[index]
+        audio, sentence = ann["audio"], ann["sentence"]
+
+        audio_lst = [audio]
+        sentence_lst = [sentence]
+        for i in range(self.concat_nums - 1):
+            other_audio, other_sentence, _ = self._sample_ann_array()
+            audio_lst.append(other_audio)
+            sentence_lst.append(other_sentence)
+
+        return audio_lst, " ".join(sentence_lst), str(index)
+
+    def transform_array(self, audio):
+        array_lst = [_["array"] for _ in audio]
+        array_lst[0] = np.trim_zeros(array_lst[0], "f")
+        array_lst[-1] = np.trim_zeros(array_lst[-1], "b")
+
+        sampling_rate = audio[0]["sampling_rate"]
+        if self.transform is not None:
+            for i, array in enumerate(array_lst):
+                array_lst[i] = self.transform(array, sample_rate=audio[i]["sampling_rate"])
+
+        return {"array": np.concatenate(array_lst, axis=0), "path": audio[0]["path"], "sampling_rate": sampling_rate}
