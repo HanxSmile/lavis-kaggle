@@ -1,0 +1,9 @@
+model:
+  model_name: facebook/nllb-200-distilled-600M
+  load_finetuned: False
+  finetuned: ""
+  arch: nllb_translator
+
+  model_type: default
+  source_lang: null
+  target_lang: null

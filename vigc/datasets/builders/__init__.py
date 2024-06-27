@@ -43,6 +43,11 @@ from vigc.datasets.builders.asr_data.common_voice_complex_aug_builder import (
     CommonVoiceSplitAndConcatTrainBuilder
 )
 
+from vigc.datasets.builders.translation.text_pair_builder import (
+    TextPairTrainBuilder,
+    TextPairEvalBuilder,
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -60,7 +65,10 @@ __all__ = [
     "MyAudioEvalBuilder",
     "CommonVoiceSplitTrainBuilder",
     "CommonVoiceConcatTrainBuilder",
-    "CommonVoiceSplitAndConcatTrainBuilder"
+    "CommonVoiceSplitAndConcatTrainBuilder",
+
+    "TextPairTrainBuilder",
+    "TextPairEvalBuilder",
 ]
 
 

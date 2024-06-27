@@ -29,6 +29,8 @@ from vigc.models.drug_mm.clip_classification import ClipClassifier
 
 from vigc.models.whisper.whisper_model import Whisper
 
+from vigc.models.machine_translator.nllb_translator import NLLBTranslator
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -44,7 +46,10 @@ __all__ = [
 
     "BertClassifier",
     "ClipClassifier",
-    "Whisper"
+
+    "Whisper",
+
+    "NLLBTranslator",
 ]
 
 

@@ -14,6 +14,7 @@ from vigc.tasks.drug_mm_classification import DrugMMClassificationTrainEvalTask
 from vigc.tasks.drug_mm_binary_classification import DrugMMBinaryTrainEvalTask
 
 from vigc.tasks.whisper_asr_train_eval import WhisperASRTask
+from vigc.tasks.translation_train_eval import TranslationTask
 
 
 def setup_task(cfg):
