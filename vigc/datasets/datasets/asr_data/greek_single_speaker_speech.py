@@ -12,6 +12,7 @@ TARGET_SR = 16_000
 
 class GreekSingleSpeakerSpeechTrain(torch_Dataset):
     def __init__(self, data_root, processor, transform=None, max_label_length=448):
+        self.data_root = data_root
         ann_path = osp.join(data_root, "transcript.txt")
         with open(ann_path, "r") as f:
             inner_dataset = f.readlines()
