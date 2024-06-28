@@ -1,20 +1,20 @@
 import logging
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
-from vigc.datasets.datasets.asr_data.common_voice import CommonVoiceTrain, CommonVoiceTest
+from vigc.datasets.datasets.asr_data.fleurs import FleursTrain, FluersTest
 from transformers import WhisperProcessor
 from .get_augmentation import get_augmentation
 
 
-@registry.register_builder("whisper_common_voice_train")
-class CommonVoiceTrainBuilder(BaseDatasetBuilder):
-    train_dataset_cls = CommonVoiceTrain
+@registry.register_builder("whisper_fleurs_train")
+class FleursTrainBuilder(BaseDatasetBuilder):
+    train_dataset_cls = FleursTrain
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/common_voice/train.yaml"
+        "default": "configs/datasets/fleurs/train.yaml"
     }
 
     def build_datasets(self):
-        logging.info("Building Whisper Common Voice ASR train datasets ...")
+        logging.info("Building Whisper Fleurs ASR train datasets ...")
         datasets = dict()
         musan_dir = self.config.get("musan_dir", None)
 
@@ -31,15 +31,15 @@ class CommonVoiceTrainBuilder(BaseDatasetBuilder):
         return datasets
 
 
-@registry.register_builder("whisper_common_voice_eval")
-class CommonVoiceEvalBuilder(BaseDatasetBuilder):
-    eval_dataset_cls = CommonVoiceTest
+@registry.register_builder("whisper_fleurs_eval")
+class FleursEvalBuilder(BaseDatasetBuilder):
+    eval_dataset_cls = FluersTest
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/common_voice/eval.yaml"
+        "default": "configs/datasets/fleurs/eval.yaml"
     }
 
     def build_datasets(self):
-        logging.info("Building Whisper CommonVoice ASR eval datasets ...")
+        logging.info("Building Whisper Fleurs ASR eval datasets ...")
         datasets = dict()
         data_root = self.config.data_root
 

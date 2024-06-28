@@ -27,6 +27,7 @@ class CommonVoiceConcatTrainBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             transform=transform,
             concat_nums=cfg.get("concat_nums"),
+            split=cfg.get("split", "train"),
         )
         _ = datasets["train"][0]
         return datasets
@@ -52,6 +53,7 @@ class CommonVoiceSplitTrainBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             transform=transform,
             split_nums=cfg.get("split_nums"),
+            split=cfg.get("split", "train"),
         )
         _ = datasets["train"][0]
         return datasets
@@ -78,6 +80,7 @@ class CommonVoiceSplitAndConcatTrainBuilder(BaseDatasetBuilder):
             transform=transform,
             split_nums=cfg.get("split_nums"),
             concat_nums=cfg.get("concat_nums"),
+            split=cfg.get("split", "train"),
         )
         _ = datasets["train"][0]
         return datasets

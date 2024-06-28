@@ -6,3 +6,5 @@ datasets:
     data_root: /mnt/data/hanxiao/dataset/audio/common-voice-17_0-persian
     concat_nums: 2
     split_nums: 2
+    split:
+      - train

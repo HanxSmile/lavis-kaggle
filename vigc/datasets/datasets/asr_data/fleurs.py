@@ -10,15 +10,12 @@ MAX_SECS = 30
 TARGET_SR = 16_000
 
 
-class CommonVoiceTrain(torch_Dataset):
+class FleursTrain(torch_Dataset):
     def __init__(self, data_root, processor, transform=None, max_label_length=448, split="train"):
         if isinstance(split, str):
             split = [split]
         inner_dataset = datasets.load_from_disk(data_root)
         inner_dataset = concatenate_datasets([inner_dataset[_] for _ in split])
-        inner_dataset = inner_dataset.filter(lambda x, y: x > y, input_columns=["up_votes", "down_votes"])
-        inner_dataset = inner_dataset.remove_columns(
-            ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment', 'variant'])
         self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
         self.processor = processor
         self.transform = transform
@@ -29,7 +26,7 @@ class CommonVoiceTrain(torch_Dataset):
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        return ann["audio"], ann["sentence"], str(index)
+        return ann["audio"], ann["transcription"], str(index)
 
     def is_valid(self, input_values):
         input_length = len(input_values)
@@ -80,11 +77,9 @@ class CommonVoiceTrain(torch_Dataset):
         return result
 
 
-class CommonVoiceTest(torch_Dataset):
+class FluersTest(torch_Dataset):
     def __init__(self, data_root, processor, max_label_length=448, split="test"):
         inner_dataset = datasets.load_from_disk(data_root)[split]
-        inner_dataset = inner_dataset.remove_columns(
-            ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment', 'variant'])
         self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
         self.processor = processor
         self.transform = None
@@ -95,7 +90,7 @@ class CommonVoiceTest(torch_Dataset):
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        return ann["audio"], ann["sentence"], str(index)
+        return ann["audio"], ann["transcription"], str(index)
 
     def is_valid(self, input_values):
         input_length = len(input_values)

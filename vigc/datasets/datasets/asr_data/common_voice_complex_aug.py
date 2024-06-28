@@ -5,9 +5,9 @@ import random
 
 class CommonVoiceSplit(CommonVoiceTrain):
 
-    def __init__(self, data_root, processor, transform=None, max_label_length=448, split_nums: int = 2):
+    def __init__(self, data_root, processor, transform=None, max_label_length=448, split="train", split_nums: int = 2):
         self.split_nums = split_nums
-        super().__init__(data_root, processor, transform, max_label_length)
+        super().__init__(data_root, processor, transform, max_label_length, split=split)
 
     def transform_array(self, audio):
         audio["array"] = np.trim_zeros(audio["array"], "fb")
@@ -22,9 +22,9 @@ class CommonVoiceSplit(CommonVoiceTrain):
 
 
 class CommonVoiceConcat(CommonVoiceTrain):
-    def __init__(self, data_root, processor, transform=None, max_label_length=448, concat_nums: int = 2):
+    def __init__(self, data_root, processor, transform=None, max_label_length=448, split="train", concat_nums: int = 2):
         self.concat_nums = concat_nums
-        super().__init__(data_root, processor, transform, max_label_length)
+        super().__init__(data_root, processor, transform, max_label_length, split=split)
 
     def _sample_ann_array(self):
         other_index = random.choice(range(len(self)))
@@ -64,11 +64,12 @@ class CommonVoiceSplitAndConcat(CommonVoiceConcat):
             processor,
             transform=None,
             max_label_length=448,
+            split="train",
             split_nums: int = 2,
             concat_nums: int = 2):
         self.concat_nums = concat_nums
         self.split_nums = split_nums
-        super().__init__(data_root, processor, transform, max_label_length, concat_nums)
+        super().__init__(data_root, processor, transform, max_label_length, split, concat_nums)
 
     def transform_single_array(self, audio):
         # audio["array"] = np.trim_zeros(audio["array"], "fb")
