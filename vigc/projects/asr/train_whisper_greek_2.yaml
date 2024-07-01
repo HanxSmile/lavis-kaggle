@@ -13,13 +13,12 @@ model:
 datasets:
   # train
   whisper_common_voice_train:
-    sample_ratio: 19819
+    sample_ratio: 3620
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
     language: el
     data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/common_voice_17_0-el
     split:
       - train
-      - validated
 
   whisper_fleurs_train:
     sample_ratio: 3486
@@ -34,9 +33,10 @@ datasets:
 
 
   # eval
-  whisper_fleurs_eval:
+  whisper_common_voice_eval:
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
     language: el
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/common_voice_17_0-el
     split: test
 
 
@@ -58,8 +58,8 @@ run:
   num_workers: 4
   warmup_steps: 200
 
-  iters_per_inner_epoch: 500
-  max_iters: 10000
+  iters_per_inner_epoch: 200
+  max_iters: 5000
 
   seed: 42
   output_dir: "./output/whisper_asr_el"

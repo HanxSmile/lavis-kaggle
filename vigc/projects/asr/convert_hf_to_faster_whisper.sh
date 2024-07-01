@@ -1,0 +1,1 @@
+ct2-transformers-converter --model /mnt/data/hanxiao/MyCode/lavis-kaggle/vigc/output/whisper_asr_el/20240628194/whisper-large-greek-best  --output_dir /mnt/data/hanxiao/MyCode/lavis-kaggle/vigc/output/whisper_asr_el/20240628194/faster-whisper-large-greek-best  --quantization float16
