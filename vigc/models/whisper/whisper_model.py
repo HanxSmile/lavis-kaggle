@@ -5,6 +5,7 @@ from vigc.models.base_model import BaseModel
 from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor, WhisperForConditionalGeneration
 import contextlib
 from vigc.models.whisper.whisper_pipeline import WhisperPipeline
+from torch.nn import CrossEntropyLoss
 
 
 @registry.register_model("whisper")
@@ -74,6 +75,7 @@ class Whisper(BaseModel):
     def generate(
             self,
             samples,
+            return_loss=False,
             **kwargs
     ):
         inputs = samples["raw_audios"]
@@ -93,7 +95,25 @@ class Whisper(BaseModel):
                 batch_size=8,
             )
         transcription = [_["text"] for _ in transcription]
-        return transcription
+        if not return_loss:
+            return transcription
+
+        with torch.no_grad():
+            input_features = samples["input_features"]
+            labels = samples["labels"]
+            with self.maybe_autocast():
+                logits = self.model(
+                    input_features=input_features,
+                    labels=labels,
+                    return_dict=True,
+                ).logits
+                loss_fct = CrossEntropyLoss(reduction='none')
+                # move labels to correct device to enable PP
+                labels = labels
+                loss = loss_fct(logits.view(-1, self.model.config.vocab_size), labels.reshape(-1))
+            loss = loss.tolist()
+            assert len(loss) == len(transcription)
+        return transcription, loss
 
     def forward(self, samples, **kwargs):
         input_features = samples["input_features"]

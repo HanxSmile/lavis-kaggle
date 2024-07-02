@@ -4,36 +4,42 @@ from vigc.tasks.base_task import BaseTask
 import os
 import json
 import jiwer
+import numpy as np
 
 
 @registry.register_task("whisper_asr_task")
 class WhisperASRTask(BaseTask):
 
-    def __init__(self, evaluate, report_metric=True):
+    def __init__(self, evaluate, report_metric=True, metric_key="loss"):
         super().__init__()
         self.evaluate = evaluate
         self.report_metric = report_metric
+        self.metric_key = metric_key
 
     @classmethod
     def setup_task(cls, cfg):
         run_cfg = cfg.run_cfg
         report_metric = run_cfg.get("report_metric", True)
+        metric_key = run_cfg.get("metric_key", "loss")
         evaluate = run_cfg.evaluate
 
         return cls(
             evaluate=evaluate,
             report_metric=report_metric,
+            metric_key=metric_key,
         )
 
     def valid_step(self, model, samples):
         results = []
         gts = samples["sentences"]
         ids = samples["ids"]
-        preds = model.generate(
-            samples
+        preds, losses = model.generate(
+            samples,
+            return_loss=True
         )
-        for gt, pred, id_ in zip(gts, preds, ids):
+        for gt, pred, loss, id_ in zip(gts, preds, losses, ids):
             results.append({
+                "loss": float(loss),
                 "gt": gt,
                 "pred": pred,
                 "id": id_
@@ -65,13 +71,17 @@ class WhisperASRTask(BaseTask):
             results = json.load(f)
         gts = [_["gt"] for _ in results]
         preds = [_["pred"] for _ in results]
+        losses = [_["loss"] for _ in results]
+        loss = np.mean(losses)
         wer = 100 * jiwer.wer(gts, preds)
-        log_stats = {split_name: {"wer": wer}}
+        log_stats = {split_name: {"wer": wer, "loss": loss}}
 
         with open(
                 os.path.join(registry.get_path("output_dir"), "evaluate.txt"), "a"
         ) as f:
             f.write(json.dumps(log_stats) + "\n")
-
-        res = {"agg_metrics": 100 - wer, "wer": wer}
+        if self.metric_key == "wer":
+            res = {"agg_metrics": 100 - wer, "wer": wer}
+        else:
+            res = {"agg_metrics": 10 - loss, "loss": loss}
         return res
