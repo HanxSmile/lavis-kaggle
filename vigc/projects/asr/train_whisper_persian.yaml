@@ -4,7 +4,7 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 model:
-  model_name: /mnt/data/hanxiao/models/audio/whisper-large-persian
+  model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
   arch: whisper
   model_type: medium
   language: fa
@@ -13,12 +13,16 @@ model:
 datasets:
   # train
   whisper_common_voice_train:
-    model_name: /mnt/data/hanxiao/models/audio/whisper-large-persian
+    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
     language: fa
+    data_root: /mnt/data/hanxiao/dataset/audio/common-voice-17_0-persian
+    split:
+      - train
+      - validated
 
   # eval
   whisper_myaudio_eval:
-    model_name: /mnt/data/hanxiao/models/audio/whisper-large-persian
+    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
     language: fa
 
 
@@ -38,13 +42,13 @@ run:
   accum_grad_iters: 2
 
   num_workers: 4
-  warmup_steps: 1000
+  warmup_steps: 200
 
-  iters_per_inner_epoch: 1000
-  max_iters: 30000
+  iters_per_inner_epoch: 200
+  max_iters: 10000
 
   seed: 42
-  output_dir: "./output/whisper_asr_medium_fa"
+  output_dir: "./output/whisper_v3_fa"
   save_opt_ckpt: False
 
   amp: True
