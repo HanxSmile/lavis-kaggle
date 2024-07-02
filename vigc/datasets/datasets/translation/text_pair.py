@@ -14,7 +14,7 @@ class TextPairDataset(torch_Dataset):
         all_data = []
         if isinstance(data_root, str):
             if osp.isdir(data_root):
-                all_data_paths = [osp.join(data_root, _) for _ in os.listdir(data_root) if _.endswith(".json")]
+                all_data_paths = [osp.join(data_root, _) for _ in sorted(os.listdir(data_root)) if _.endswith(".json")]
             elif osp.isfile(data_root) and data_root.endswith(".json"):
                 all_data_paths = [data_root]
         else:

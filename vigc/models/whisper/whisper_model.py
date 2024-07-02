@@ -107,10 +107,13 @@ class Whisper(BaseModel):
                     labels=labels,
                     return_dict=True,
                 ).logits
+                seq_len = logits.shape[1]
                 loss_fct = CrossEntropyLoss(reduction='none')
-                # move labels to correct device to enable PP
-                labels = labels
                 loss = loss_fct(logits.view(-1, self.model.config.vocab_size), labels.reshape(-1))
+                loss = loss.view(-1, seq_len)
+                mask = (labels != -100)
+                loss = (loss * mask).sum(dim=1) / mask.sum(dim=1)
+
             loss = loss.tolist()
             assert len(loss) == len(transcription)
         return transcription, loss
