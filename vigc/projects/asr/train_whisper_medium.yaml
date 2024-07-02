@@ -27,7 +27,7 @@ run:
   task: whisper_asr_task
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 3e-5
+  init_lr: 1e-5
   min_lr: 1e-5
   warmup_lr: 1e-6
 
@@ -53,6 +53,7 @@ run:
   evaluate: False
   train_splits: [ "train" ]
   valid_splits: [ "eval" ]
+  metric_key: loss
 
   device: "cuda"
   world_size: 1
