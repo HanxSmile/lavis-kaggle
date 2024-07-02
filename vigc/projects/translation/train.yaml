@@ -22,7 +22,7 @@ datasets:
   text_pair_eval:
     source_key: "zh"
     target_key: "el"
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-json
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-json # TODO: generate eval dataset
 
 
 run:

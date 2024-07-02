@@ -46,8 +46,8 @@ def main():
     cfg = parse_args()
     # from vigc.models.whisper.bengali_wav2vec import BengaliWav2Vec
     model = Whisper(
-        model_name="/mnt/data/hanxiao/models/audio/whisper-large-persian",
-        language="fa"
+        model_name="/mnt/data/hanxiao/models/audio/whisper-large-v3",
+        language="el"
     )
     model.load_checkpoint(cfg.src_path)
     hf_model = model.model

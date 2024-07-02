@@ -61,7 +61,7 @@ run:
   iters_per_inner_epoch: 200
   max_iters: 5000
 
-  seed: 42
+  seed: 84
   output_dir: "./output/whisper_asr_el"
   save_opt_ckpt: False
 
