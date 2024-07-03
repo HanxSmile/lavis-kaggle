@@ -8,7 +8,8 @@ from sacremoses import MosesPunctNormalizer
 import os.path as osp
 import json
 from tqdm.auto import tqdm
-
+import gc
+import time
 
 
 class Translator:
@@ -18,9 +19,13 @@ class Translator:
         self.model = MarianMTModel.from_pretrained(model_path)
         self.device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu")
         self.model = self.model.to(self.device)
+        self.max_len = 512
 
     def translate(self, text):
-        model_inputs = self.tokenizer(text, return_tensors="pt", padding=True).to(self.device)
+        model_inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True,
+                                      max_length=self.max_len).to(self.device)
+        max_len = model_inputs.input_ids.shape[1]
+
         translated_outputs = self.model.generate(**model_inputs)
         return [self.tokenizer.decode(_, skip_special_tokens=True) for _ in translated_outputs]
 
@@ -59,25 +64,38 @@ def preproc(text):
 
 if __name__ == '__main__':
     data_root = "/mnt/data/hanxiao/dataset/nlp/opus-100-zh-en"
-    dst_root = "/mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-json"
+    dst_root = "/mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-test-json"
     dataset = datasets.load_from_disk(data_root)
     all_data = []
     corpus_id = 0
     train_dataset = dataset["train"]
     test_dataset = dataset["test"]
-    batch_size = 256
-    model = Translator("/mnt/data/hanxiao/models/nlp/mt_zh2en/en_multi_models/opus-mt-en-el", device_id=5)
-    pbar = tqdm(train_dataset.iter(batch_size=batch_size), total=len(train_dataset) // batch_size)
-    for batch in pbar:
+    batch_size = 32
+    model = Translator("/mnt/data/hanxiao/models/nlp/mt_zh2en/en_multi_models/opus-mt-en-el", device_id=0)
+    pbar = tqdm(test_dataset.iter(batch_size=batch_size), total=len(test_dataset) // batch_size)
+    for bi, batch in enumerate(pbar):
         batch = batch["translation"]
         en_text = [preproc(_["en"]) for _ in batch]
         zh_text = [preproc(_["zh"]) for _ in batch]
-        target_text = model.translate(en_text)
+        try:
+            target_text = model.translate(en_text)
+        except Exception as e:
+            print(e)
+            del model
+            torch.cuda.empty_cache()
+            gc.collect()
+            time.sleep(2)
+            model = Translator("/mnt/data/hanxiao/models/nlp/mt_zh2en/en_multi_models/opus-mt-en-el", device_id=0)
+            continue
         target_text = [preproc(_) for _ in target_text]
         data_item = [{"zh": zh_t, "el": el_t} for zh_t, el_t in zip(zh_text, target_text)]
         all_data.extend(data_item)
+        pbar.set_description(f"[{bi}] " + all_data[-1]["el"])
         if len(all_data) >= 1e5:
-            with open(osp.join(dst_root, f"corpus-{corpus_id}.json"), "wb") as f:
+            with open(osp.join(dst_root, f"corpus-{corpus_id}.json"), "w", encoding="utf-8") as f:
                 json.dump(all_data, f, ensure_ascii=False)
             corpus_id += 1
             all_data = []
+    if len(all_data):
+        with open(osp.join(dst_root, f"corpus-{corpus_id}.json"), "w", encoding="utf-8") as f:
+            json.dump(all_data, f, ensure_ascii=False)
