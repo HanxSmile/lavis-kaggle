@@ -69,7 +69,7 @@ class NLLBTranslator(BaseModel):
                 max_new_tokens=self.max_length,
                 num_beams=num_beams
             )
-        result = self.tokenizer.decode(result, skip_special_tokens=True)
+        result = self.tokenizer.batch_decode(result, skip_special_tokens=True)
         result = [_.strip() for _ in result]
         return result
 
