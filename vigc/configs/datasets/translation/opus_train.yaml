@@ -1,7 +1,8 @@
 datasets:
-  text_pair_train:
+  opus_train:
     data_type: text
     source_key: "source"
     target_key: "target"
     data_root: null
+    split: train
     switch_lang_flag: False

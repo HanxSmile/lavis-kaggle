@@ -1,18 +1,18 @@
 import logging
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
-from vigc.datasets.datasets.translation.text_pair import TextPairDataset
+from vigc.datasets.datasets.translation.opus import OpusDataset
 
 
-@registry.register_builder("text_pair_train")
-class TextPairTrainBuilder(BaseDatasetBuilder):
-    train_dataset_cls = TextPairDataset
+@registry.register_builder("opus_train")
+class OpusTrainBuilder(BaseDatasetBuilder):
+    train_dataset_cls = OpusDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/translation/text_pair_train.yaml"
+        "default": "configs/datasets/translation/opus_train.yaml"
     }
 
     def build_datasets(self):
-        logging.info("Building Text Pair Translation train datasets ...")
+        logging.info("Building Opus-100 Translation train datasets ...")
         datasets = dict()
 
         cfg = self.config
@@ -20,21 +20,22 @@ class TextPairTrainBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             source_key=cfg.get("source_key"),
             target_key=cfg.get("target_key"),
+            split="train",
             switch_lang_flag=cfg.get("switch_lang_flag", False),
         )
         _ = datasets["train"][0]
         return datasets
 
 
-@registry.register_builder("text_pair_eval")
-class TextPairEvalBuilder(BaseDatasetBuilder):
-    eval_dataset_cls = TextPairDataset
+@registry.register_builder("opus_eval")
+class OpusEvalBuilder(BaseDatasetBuilder):
+    eval_dataset_cls = OpusDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/translation/text_pair_eval.yaml"
+        "default": "configs/datasets/translation/opus_eval.yaml"
     }
 
     def build_datasets(self):
-        logging.info("Building Text Pair Translation eval datasets ...")
+        logging.info("Building Opus-100 Translation eval datasets ...")
         datasets = dict()
 
         cfg = self.config
@@ -42,6 +43,7 @@ class TextPairEvalBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             source_key=cfg.get("source_key"),
             target_key=cfg.get("target_key"),
+            split="test",
             switch_lang_flag=False
         )
         _ = datasets["eval"][0]

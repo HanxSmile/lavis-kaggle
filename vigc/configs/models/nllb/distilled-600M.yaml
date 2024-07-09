@@ -5,5 +5,13 @@ model:
   arch: nllb_translator
 
   model_type: default
-  source_lang: null
-  target_lang: null
+
+  lang_token_map:
+    zh: "zho_Hans",
+    ar: "arb_Arab",
+    th: "tha_Thai",
+    de: "deu_Latn",
+    pl: "pol_Latn",
+    fa: "pes_Arab",
+    en: "eng_Latn",
+    el: "ell_Grek"

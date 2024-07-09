@@ -15,16 +15,14 @@ class NLLBTranslator(BaseModel):
     def __init__(
             self,
             model_name="facebook/nllb-200-distilled-600M",
-            source_lang="en",
-            target_lang="zh",
             max_length=512,
+            lang_token_map=None,
     ):
         super().__init__()
         self.model = M2M100ForConditionalGeneration.from_pretrained(model_name)
         self.tokenizer = NllbTokenizer.from_pretrained(model_name)
-        self.source_lang = source_lang
-        self.target_lang = target_lang
         self.max_length = max_length
+        self.lang_token_map = lang_token_map or dict()
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -51,8 +49,12 @@ class NLLBTranslator(BaseModel):
     ):
         text = samples["input"]
 
-        self.tokenizer.src_lang = self.source_lang
-        self.tokenizer.tgt_lang = self.target_lang
+        source_lang, target_lang = self.lang_token_map.get(samples["input_key"],
+                                                           samples["input_key"]), self.lang_token_map.get(
+            samples["output_key"], samples["output_key"])
+
+        self.tokenizer.src_lang = source_lang
+        self.tokenizer.tgt_lang = target_lang
 
         inputs = self.tokenizer(
             text,
@@ -65,7 +67,7 @@ class NLLBTranslator(BaseModel):
         with self.maybe_autocast():
             result = self.model.generate(
                 **inputs,
-                forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(self.target_lang),
+                forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(target_lang),
                 max_new_tokens=self.max_length,
                 num_beams=num_beams
             )
@@ -74,8 +76,13 @@ class NLLBTranslator(BaseModel):
         return result
 
     def forward(self, samples, **kwargs):
+
         source_texts, target_texts = samples["input"], samples["output"]
-        self.tokenizer.src_lang = self.source_lang
+        source_lang, target_lang = self.lang_token_map.get(samples["input_key"],
+                                                           samples["input_key"]), self.lang_token_map.get(
+            samples["output_key"], samples["output_key"])
+
+        self.tokenizer.src_lang = source_lang
         inputs = self.tokenizer(
             source_texts,
             return_tensors="pt",
@@ -84,7 +91,7 @@ class NLLBTranslator(BaseModel):
             max_length=self.max_length
         ).to(self.device)
 
-        self.tokenizer.src_lang = self.target_lang
+        self.tokenizer.src_lang = target_lang
         labels = self.tokenizer(
             target_texts,
             return_tensors="pt",
@@ -113,13 +120,11 @@ class NLLBTranslator(BaseModel):
     @classmethod
     def from_config(cls, cfg):
         model_name = cfg.get("model_name")
-        source_lang = cfg.get("source_lang")
-        target_lang = cfg.get("target_lang")
+        lang_token_map = cfg.get("lang_token_map")
         model = cls(
             model_name=model_name,
-            source_lang=source_lang,
-            target_lang=target_lang,
             max_length=cfg.get("max_length", 512),
+            lang_token_map=lang_token_map,
         )
         model.load_checkpoint_from_config(cfg)
         return model

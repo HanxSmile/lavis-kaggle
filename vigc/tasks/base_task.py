@@ -52,8 +52,8 @@ class BaseTask:
 
         for name in datasets_config:
             dataset_config = datasets_config[name]
-
-            builder = registry.get_builder_class(name)(dataset_config)
+            ds_name = name.split("$")[0]
+            builder = registry.get_builder_class(ds_name)(dataset_config)
             dataset = builder.build_datasets()
 
             if "train" in dataset and "sample_ratio" in dataset_config:

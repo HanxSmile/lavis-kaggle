@@ -11,16 +11,37 @@ model:
 
 datasets:
   # train
+  #  text_pair_train:
+  #    source_key: "zh"
+  #    target_key: "el"
+  #    switch_lang_flag: True
+  #    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-json
+
   text_pair_train:
     source_key: "zh"
     target_key: "el"
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-json
+    switch_lang_flag: True
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100_el-en-json
+
+  opus_train:
+    source_key: "zh"
+    target_key: "en"
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en
+    split: train
+    switch_lang_flag: True
+
+  opus_train$copy1:
+    source_key: "el"
+    target_key: "en"
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100_el-en
+    split: train
+    switch_lang_flag: True
 
   # eval
   text_pair_eval:
     source_key: "zh"
     target_key: "el"
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-test-json
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100_el-en-test-json
 
 
 run:
