@@ -3,6 +3,7 @@ import os.path as osp
 import os
 import json
 import random
+from vigc.datasets.datasets.translation.utils import preproc
 
 
 class TextPairDataset(torch_Dataset):
@@ -44,6 +45,8 @@ class TextPairDataset(torch_Dataset):
     def __getitem__(self, index):
         ann = self.inner_dataset[index]
         source_text, target_text = ann["input"], ann["output"]
+        source_text = preproc(source_text)
+        target_text = preproc(target_text)
         source_key, target_key = ann["source_key"], ann["target_key"]
         return dict(input=source_text, output=target_text, input_key=source_key, output_key=target_key, id=str(index))
 

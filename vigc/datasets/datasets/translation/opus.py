@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset as torch_Dataset
 from datasets import load_from_disk
 import random
+from vigc.datasets.datasets.translation.utils import preproc
 
 
 class OpusDataset(torch_Dataset):
@@ -17,6 +18,8 @@ class OpusDataset(torch_Dataset):
     def __getitem__(self, index):
         ann = self.inner_dataset[index]["translation"]
         source_text, target_text = ann[self.source_key], ann[self.target_key]
+        source_text = preproc(source_text)
+        target_text = preproc(target_text)
         source_key, target_key = self.source_key, self.target_key
 
         return {
