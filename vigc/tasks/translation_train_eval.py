@@ -67,7 +67,7 @@ class TranslationTask(BaseTask):
 
         with open(eval_result_file) as f:
             results = json.load(f)
-        gts = [[_["gt"]] for _ in results]
+        gts = [[_["gt"] for _ in results]]
         preds = [_["pred"] for _ in results]
         bleu = sacrebleu.corpus_bleu(preds, gts).score
         bleu = float(bleu)
