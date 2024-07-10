@@ -7,11 +7,11 @@ model:
   model_type: default
 
   lang_token_map:
-    zh: "zho_Hans",
-    ar: "arb_Arab",
-    th: "tha_Thai",
-    de: "deu_Latn",
-    pl: "pol_Latn",
-    fa: "pes_Arab",
-    en: "eng_Latn",
+    zh: "zho_Hans"
+    ar: "arb_Arab"
+    th: "tha_Thai"
+    de: "deu_Latn"
+    pl: "pol_Latn"
+    fa: "pes_Arab"
+    en: "eng_Latn"
     el: "ell_Grek"
