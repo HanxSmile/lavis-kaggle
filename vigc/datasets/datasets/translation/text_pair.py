@@ -54,8 +54,8 @@ class TextPairDataset(torch_Dataset):
         inputs = [_["input"] for _ in batch]
         outputs = [_["output"] for _ in batch]
         ids = [_["id"] for _ in batch]
-        input_key = [_["input_key"] for _ in inputs][0]
-        output_key = [_["output_key"] for _ in outputs][0]
+        input_key = [_["input_key"] for _ in batch][0]
+        output_key = [_["output_key"] for _ in batch][0]
         if self.switch_lang_flag and random.randint(1, 2) == 1:
             inputs, outputs = outputs, inputs
             input_key, output_key = output_key, input_key
