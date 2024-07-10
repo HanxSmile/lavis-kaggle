@@ -95,7 +95,7 @@ class Config:
         dataset_config = OmegaConf.create()
 
         for dataset_name in datasets:
-            builder_cls = registry.get_builder_class(dataset_name)
+            builder_cls = registry.get_builder_class(dataset_name.split("$")[0])
 
             dataset_config_type = datasets[dataset_name].get("type", "default")
             dataset_config_path = builder_cls.default_config_path(
