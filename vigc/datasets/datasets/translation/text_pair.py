@@ -48,6 +48,10 @@ class TextPairDataset(torch_Dataset):
         source_text = preproc(source_text)
         target_text = preproc(target_text)
         source_key, target_key = ann["source_key"], ann["target_key"]
+        if source_key == "zh":
+            source_text = source_text.replace(" ", "")
+        if target_key == "zh":
+            target_text = target_text.replace(" ", "")
         return dict(input=source_text, output=target_text, input_key=source_key, output_key=target_key, id=str(index))
 
     def collater(self, batch):

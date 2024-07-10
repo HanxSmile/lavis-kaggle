@@ -22,6 +22,11 @@ class OpusDataset(torch_Dataset):
         target_text = preproc(target_text)
         source_key, target_key = self.source_key, self.target_key
 
+        if source_key == "zh":
+            source_text = source_text.replace(" ", "")
+        if target_key == "zh":
+            target_text = target_text.replace(" ", "")
+
         return {
             "input": source_text,
             "output": target_text,
