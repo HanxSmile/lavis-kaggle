@@ -14,13 +14,13 @@ datasets:
   text_pair_train:
     source_key: "zh"
     target_key: "el"
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-json
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100_el-en-json
 
   # eval
   text_pair_eval:
     source_key: "zh"
     target_key: "el"
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100-zh-en-test-json
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100_el-en-test-json
 
 
 run:
@@ -34,9 +34,9 @@ run:
 
   weight_decay: 0.05
 
-  batch_size_train: 32
-  batch_size_eval: 64
-  accum_grad_iters: 2
+  batch_size_train: 16
+  batch_size_eval: 32
+  accum_grad_iters: 4
 
   num_workers: 4
   warmup_steps: 1000
