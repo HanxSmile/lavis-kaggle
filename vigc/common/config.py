@@ -95,17 +95,21 @@ class Config:
         dataset_config = OmegaConf.create()
 
         for dataset_name in datasets:
-            builder_cls = registry.get_builder_class(dataset_name.split("$")[0])
+            ori_dataset_name = dataset_name.split("$")[0]
+            builder_cls = registry.get_builder_class(ori_dataset_name)
 
             dataset_config_type = datasets[dataset_name].get("type", "default")
             dataset_config_path = builder_cls.default_config_path(
                 type=dataset_config_type
             )
 
+            original_cfg = OmegaConf.load(dataset_config_path)
+            original_cfg.datasets[dataset_name] = original_cfg.datasets.pop(ori_dataset_name)
+
             # hiararchy override, customized config > default config
             dataset_config = OmegaConf.merge(
                 dataset_config,
-                OmegaConf.load(dataset_config_path),
+                original_cfg,
                 {"datasets": {dataset_name: config["datasets"][dataset_name]}},
             )
 
@@ -229,7 +233,7 @@ class ConfigValidator:
         """
         for k, v in config.items():
             assert (
-                k in self.arguments
+                    k in self.arguments
             ), f"""{k} is not a valid argument. Support arguments are {self.format_arguments()}."""
 
             if self.arguments[k].type is not None:
@@ -240,7 +244,7 @@ class ConfigValidator:
 
             if self.arguments[k].choices is not None:
                 assert (
-                    v in self.arguments[k].choices
+                        v in self.arguments[k].choices
                 ), f"""{k} must be one of {self.arguments[k].choices}."""
 
         return config
