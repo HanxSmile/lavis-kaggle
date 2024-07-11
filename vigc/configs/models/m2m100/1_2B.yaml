@@ -1,0 +1,17 @@
+model:
+  model_name: facebook/m2m100_1.2B
+  load_finetuned: False
+  finetuned: ""
+  arch: m2m100_translator
+
+  model_type: default
+
+  lang_token_map:
+    zh: zh
+    ar: ar
+    th: th
+    de: de
+    pl: pl
+    fa: fa
+    en: en
+    el: el

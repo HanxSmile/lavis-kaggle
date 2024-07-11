@@ -30,6 +30,7 @@ from vigc.models.drug_mm.clip_classification import ClipClassifier
 from vigc.models.whisper.whisper_model import Whisper
 
 from vigc.models.machine_translator.nllb_translator import NLLBTranslator
+from vigc.models.machine_translator.m2m100_translator import M2M100Translator
 
 __all__ = [
     "load_model",
@@ -50,6 +51,7 @@ __all__ = [
     "Whisper",
 
     "NLLBTranslator",
+    "M2M100Translator",
 ]
 
 
