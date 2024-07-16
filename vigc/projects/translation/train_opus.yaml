@@ -1,0 +1,67 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  model_name: facebook/m2m100_1.2B
+  arch: opus_translator
+
+  model_type: default
+  max_length: 512
+  source_lang: zh
+  target_lang: el
+  source_spm: /mnt/data/hanxiao/models/nlp/mt_zh2en/opus-mt-zh-en/source.spm
+  target_spm: /mnt/data/hanxiao/models/nlp/mt_zh2en/en_multi_models/opus-mt-en-el/target.spm
+
+
+datasets:
+  # train
+  text_pair_train:
+    source_key: "zh"
+    target_key: "el"
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100_el-en-json
+
+  # eval
+  text_pair_eval:
+    source_key: "zh"
+    target_key: "el"
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-100_el-en-test-json
+
+
+run:
+  runner: runner_iter
+  task: translation_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 5e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 32
+  batch_size_eval: 64
+  accum_grad_iters: 4
+
+  num_workers: 4
+  warmup_steps: 1000
+
+  iters_per_inner_epoch: 2000
+  max_iters: 60000
+
+  seed: 42
+  output_dir: "./output/opus_translation"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
