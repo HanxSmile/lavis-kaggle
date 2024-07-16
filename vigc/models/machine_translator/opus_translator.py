@@ -79,8 +79,14 @@ class OpusTranslator(BaseModel):
         with self.maybe_autocast():
             result = self.model.generate(
                 **inputs,
-                max_new_tokens=self.max_length,
-                num_beams=num_beams
+                bos_token_id=self.tokenizer.eos_token_id,
+                decoder_start_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                forced_eos_token_id=self.tokenizer.eos_token_id,
+                max_length=self.max_length,
+                num_beams=num_beams,
+                pad_token_id=self.tokenizer.pad_token_id,
+                renormalize_logits=True
             )
         result = self.tokenizer.batch_decode(result, skip_special_tokens=True)
         result = [_.strip() for _ in result]
