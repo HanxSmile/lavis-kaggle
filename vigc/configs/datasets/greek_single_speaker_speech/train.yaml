@@ -4,3 +4,4 @@ datasets:
     language: el
     musan_dir: null
     data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/GreekSingleSpeakerSpeechDataset
+    pre_normalize: False

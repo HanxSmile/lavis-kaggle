@@ -4,6 +4,7 @@ import torch
 from typing import Dict, List, Union
 from datasets import Audio, concatenate_datasets
 import numpy as np
+from vigc.datasets.datasets.asr_data.normalize import normalize
 
 MIN_SECS = 1
 MAX_SECS = 30
@@ -11,7 +12,7 @@ TARGET_SR = 16_000
 
 
 class CommonVoiceTrain(torch_Dataset):
-    def __init__(self, data_root, processor, transform=None, max_label_length=448, split="train"):
+    def __init__(self, data_root, processor, transform=None, pre_normalize=False, max_label_length=448, split="train"):
         if isinstance(split, str):
             split = [split]
         inner_dataset = datasets.load_from_disk(data_root)
@@ -23,13 +24,15 @@ class CommonVoiceTrain(torch_Dataset):
         self.processor = processor
         self.transform = transform
         self.max_label_length = max_label_length
+        self.pre_normalize = pre_normalize
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        return ann["audio"], ann["sentence"], str(index)
+        sentence = normalize(ann["sentence"]) if self.pre_normalize else ann["sentence"]
+        return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):
         input_length = len(input_values)
@@ -81,7 +84,7 @@ class CommonVoiceTrain(torch_Dataset):
 
 
 class CommonVoiceTest(torch_Dataset):
-    def __init__(self, data_root, processor, max_label_length=448, split="test"):
+    def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test"):
         inner_dataset = datasets.load_from_disk(data_root)[split]
         inner_dataset = inner_dataset.remove_columns(
             ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment', 'variant'])
@@ -89,13 +92,15 @@ class CommonVoiceTest(torch_Dataset):
         self.processor = processor
         self.transform = None
         self.max_label_length = max_label_length
+        self.pre_normalize = pre_normalize
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        return ann["audio"], ann["sentence"], str(index)
+        sentence = normalize(ann["sentence"]) if self.pre_normalize else ann["sentence"]
+        return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):
         input_length = len(input_values)

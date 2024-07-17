@@ -26,6 +26,7 @@ class FleursTrainBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             transform=transform,
             split=cfg.get("split", "train"),
+            pre_normalize=cfg.get("pre_normalize", False),
         )
         _ = datasets["train"][0]
         return datasets
@@ -49,6 +50,7 @@ class FleursEvalBuilder(BaseDatasetBuilder):
             processor=processor,
             data_root=data_root,
             split=cfg.get("split", "test"),
+            pre_normalize=cfg.get("pre_normalize", False),
         )
         _ = datasets["eval"][0]
         return datasets

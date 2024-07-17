@@ -2,4 +2,5 @@ datasets:
   whisper_myaudio_eval:
     data_type: audios
     language: fa
+    pre_normalize: False
     data_root: /mnt/data/hanxiao/dataset/audio/myandio_tiny/myaudio_tiny

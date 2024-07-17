@@ -4,5 +4,6 @@ datasets:
     language: fa
     musan_dir: null
     data_root: /mnt/data/hanxiao/dataset/audio/common-voice-17_0-persian
+    pre_normalize: False
     split:
       - train

@@ -5,6 +5,7 @@ import numpy as np
 import os.path as osp
 import librosa
 import pandas as pd
+from .normalize import normalize
 
 MIN_SECS = 1
 MAX_SECS = 30
@@ -12,12 +13,13 @@ TARGET_SR = 16_000
 
 
 class MyAudioTest(torch_Dataset):
-    def __init__(self, data_root, processor, max_label_length=448):
+    def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448):
         self.data_root = data_root
         self.inner_dataset = pd.read_excel(osp.join(data_root, "myaudio_tiny.xlsx"))
         self.processor = processor
         self.transform = None
         self.max_label_length = max_label_length
+        self.pre_normalize = pre_normalize
 
     def __len__(self):
         return len(self.inner_dataset)
@@ -26,6 +28,7 @@ class MyAudioTest(torch_Dataset):
         ann = self.inner_dataset.iloc[index]
         audio_path = osp.join(self.data_root, ann.audio)
         sentence = ann.text
+        sentence = normalize(sentence) if self.pre_normalize else sentence
 
         array, sr = librosa.load(audio_path, sr=None)
         array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR

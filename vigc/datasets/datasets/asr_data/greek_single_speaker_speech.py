@@ -4,6 +4,7 @@ from typing import Dict, List, Union
 import librosa
 import numpy as np
 import os.path as osp
+from .normalize import normalize
 
 MIN_SECS = 1
 MAX_SECS = 30
@@ -11,7 +12,7 @@ TARGET_SR = 16_000
 
 
 class GreekSingleSpeakerSpeechTrain(torch_Dataset):
-    def __init__(self, data_root, processor, transform=None, max_label_length=448):
+    def __init__(self, data_root, processor, transform=None, pre_normalize=False, max_label_length=448):
         self.data_root = data_root
         ann_path = osp.join(data_root, "transcript.txt")
         with open(ann_path, "r") as f:
@@ -22,6 +23,7 @@ class GreekSingleSpeakerSpeechTrain(torch_Dataset):
         self.processor = processor
         self.transform = transform
         self.max_label_length = max_label_length
+        self.pre_normalize = pre_normalize
 
     def __len__(self):
         return len(self.inner_dataset)
@@ -30,6 +32,7 @@ class GreekSingleSpeakerSpeechTrain(torch_Dataset):
         ann = self.inner_dataset[index]
         audio_path = osp.join(self.data_root, ann[0].strip())
         sentence = ann[1].strip()
+        sentence = normalize(sentence) if self.pre_normalize else sentence
 
         array, sr = librosa.load(audio_path, sr=None)
         array, sr = librosa.resample(array, orig_sr=sr, target_sr=TARGET_SR), TARGET_SR

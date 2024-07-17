@@ -1,13 +1,15 @@
 from .common_voice import CommonVoiceTrain
 import numpy as np
 import random
+from .normalize import normalize
 
 
 class CommonVoiceSplit(CommonVoiceTrain):
 
-    def __init__(self, data_root, processor, transform=None, max_label_length=448, split="train", split_nums: int = 2):
+    def __init__(self, data_root, processor, transform=None, pre_normalize=False, max_label_length=448, split="train",
+                 split_nums: int = 2):
         self.split_nums = split_nums
-        super().__init__(data_root, processor, transform, max_label_length, split=split)
+        super().__init__(data_root, processor, transform, pre_normalize, max_label_length, split=split)
 
     def transform_array(self, audio):
         audio["array"] = np.trim_zeros(audio["array"], "fb")
@@ -22,18 +24,21 @@ class CommonVoiceSplit(CommonVoiceTrain):
 
 
 class CommonVoiceConcat(CommonVoiceTrain):
-    def __init__(self, data_root, processor, transform=None, max_label_length=448, split="train", concat_nums: int = 2):
+    def __init__(self, data_root, processor, transform=None, pre_normalize=False, max_label_length=448, split="train",
+                 concat_nums: int = 2):
         self.concat_nums = concat_nums
-        super().__init__(data_root, processor, transform, max_label_length, split=split)
+        super().__init__(data_root, processor, transform, pre_normalize, max_label_length, split=split)
 
     def _sample_ann_array(self):
         other_index = random.choice(range(len(self)))
         other_ann = self.inner_dataset[other_index]
-        return other_ann["audio"], other_ann["sentence"], str(other_index)
+        sentence = normalize(other_ann["sentence"]) if self.pre_normalize else other_ann["sentence"]
+        return other_ann["audio"], sentence, str(other_index)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
         audio, sentence = ann["audio"], ann["sentence"]
+        sentence = normalize(ann["sentence"]) if self.pre_normalize else ann["sentence"]
 
         audio_lst = [audio]
         sentence_lst = [sentence]
@@ -63,13 +68,14 @@ class CommonVoiceSplitAndConcat(CommonVoiceConcat):
             data_root,
             processor,
             transform=None,
+            pre_normalize=False,
             max_label_length=448,
             split="train",
             split_nums: int = 2,
             concat_nums: int = 2):
         self.concat_nums = concat_nums
         self.split_nums = split_nums
-        super().__init__(data_root, processor, transform, max_label_length, split, concat_nums)
+        super().__init__(data_root, processor, transform, pre_normalize, max_label_length, split, concat_nums)
 
     def transform_single_array(self, audio):
         # audio["array"] = np.trim_zeros(audio["array"], "fb")

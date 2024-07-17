@@ -3,4 +3,5 @@ datasets:
     data_type: audios
     language: el
     data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-el
+    pre_normalize: False
     split: test
