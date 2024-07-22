@@ -26,6 +26,7 @@ class WhisperPipeline(AutomaticSpeechRecognitionPipeline):
         tokens = self.model.generate(
             encoder_outputs=encoder(inputs, attention_mask=attention_mask),
             attention_mask=attention_mask,
+            temperature=0,
         )
 
         out = {"tokens": tokens}

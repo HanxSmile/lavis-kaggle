@@ -23,6 +23,7 @@ class MyAudioEvalBuilder(BaseDatasetBuilder):
             processor=processor,
             data_root=data_root,
             pre_normalize=cfg.get("pre_normalize", False),
+            language=cfg.get("language", None),
         )
         _ = datasets["eval"][0]
         return datasets

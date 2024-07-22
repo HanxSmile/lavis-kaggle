@@ -12,7 +12,8 @@ TARGET_SR = 16_000
 
 
 class FleursTrain(torch_Dataset):
-    def __init__(self, data_root, processor, transform=None, pre_normalize=False, max_label_length=448, split="train"):
+    def __init__(self, data_root, processor, transform=None, pre_normalize=False, max_label_length=448, split="train",
+                 language=None):
         if isinstance(split, str):
             split = [split]
         inner_dataset = datasets.load_from_disk(data_root)
@@ -22,13 +23,14 @@ class FleursTrain(torch_Dataset):
         self.transform = transform
         self.max_label_length = max_label_length
         self.pre_normalize = pre_normalize
+        self.language = language
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        sentence = normalize(ann["transcription"]) if self.pre_normalize else ann["transcription"]
+        sentence = normalize(ann["transcription"], self.language) if self.pre_normalize else ann["transcription"]
         return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):
@@ -81,20 +83,21 @@ class FleursTrain(torch_Dataset):
 
 
 class FluersTest(torch_Dataset):
-    def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test"):
+    def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test", language=None):
         inner_dataset = datasets.load_from_disk(data_root)[split]
         self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
         self.processor = processor
         self.transform = None
         self.max_label_length = max_label_length
         self.pre_normalize = pre_normalize
+        self.language = language
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        sentence = normalize(ann["transcription"]) if self.pre_normalize else ann["transcription"]
+        sentence = normalize(ann["transcription"], self.language) if self.pre_normalize else ann["transcription"]
         return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):

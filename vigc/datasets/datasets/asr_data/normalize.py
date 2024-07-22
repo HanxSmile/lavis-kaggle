@@ -1,8 +1,13 @@
 import re
 import unicodedata
+from khoshnevis import Normalizer
+
+PersianNormalizer = Normalizer()
 
 
-def normalize(text):
+def normalize(text, language=None):
+    if language == "fa":
+        text = PersianNormalizer.normalize(text=text, zwnj="\u200c", clean_url=True, remove_emoji=True)
     text = text.lower()
     text = re.sub(r'[^\w\s]', '', text)
     text = "".join([unicodedata.normalize('NFC', _) for _ in text])
@@ -10,5 +15,7 @@ def normalize(text):
 
 
 if __name__ == '__main__':
-    text = "Bu süreç bir anlamda, bir el arabasını tepeye çıkarmak gibidir. Çekirdeği tekrar yarar ve sonra o enerjinin bir kısmını serbest bırakır."
-    print(normalize(text))
+    text = """
+    خود بیماری‌های عفونی
+    """
+    print(normalize(text, language="fa"))

@@ -26,6 +26,7 @@ class GreekSingleSpeakerSpeechTrainBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             transform=transform,
             pre_normalize=cfg.get("pre_normalize", False),
+            language=cfg.get("language", None),
         )
         _ = datasets["train"][0]
         return datasets

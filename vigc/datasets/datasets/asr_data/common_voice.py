@@ -12,7 +12,16 @@ TARGET_SR = 16_000
 
 
 class CommonVoiceTrain(torch_Dataset):
-    def __init__(self, data_root, processor, transform=None, pre_normalize=False, max_label_length=448, split="train"):
+    def __init__(
+            self,
+            data_root,
+            processor,
+            transform=None,
+            pre_normalize=False,
+            max_label_length=448,
+            split="train",
+            language=None
+    ):
         if isinstance(split, str):
             split = [split]
         inner_dataset = datasets.load_from_disk(data_root)
@@ -25,13 +34,14 @@ class CommonVoiceTrain(torch_Dataset):
         self.transform = transform
         self.max_label_length = max_label_length
         self.pre_normalize = pre_normalize
+        self.language = language
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        sentence = normalize(ann["sentence"]) if self.pre_normalize else ann["sentence"]
+        sentence = normalize(ann["sentence"], self.language) if self.pre_normalize else ann["sentence"]
         return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):
@@ -84,7 +94,7 @@ class CommonVoiceTrain(torch_Dataset):
 
 
 class CommonVoiceTest(torch_Dataset):
-    def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test"):
+    def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test", language=None):
         inner_dataset = datasets.load_from_disk(data_root)[split]
         inner_dataset = inner_dataset.remove_columns(
             ['up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment', 'variant'])
@@ -93,13 +103,14 @@ class CommonVoiceTest(torch_Dataset):
         self.transform = None
         self.max_label_length = max_label_length
         self.pre_normalize = pre_normalize
+        self.language = language
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        sentence = normalize(ann["sentence"]) if self.pre_normalize else ann["sentence"]
+        sentence = normalize(ann["sentence"], self.language) if self.pre_normalize else ann["sentence"]
         return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):
