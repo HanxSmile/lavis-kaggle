@@ -16,6 +16,8 @@ from vigc.tasks.drug_mm_binary_classification import DrugMMBinaryTrainEvalTask
 from vigc.tasks.whisper_asr_train_eval import WhisperASRTask
 from vigc.tasks.translation_train_eval import TranslationTask
 
+from vigc.tasks.vton_task import VtonTrain
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
@@ -34,4 +36,5 @@ __all__ = [
     "DrugMMClassificationTrainEvalTask",
     "DrugMMBinaryTrainEvalTask",
     "WhisperASRTask",
+    "VtonTrain",
 ]

@@ -1,0 +1,45 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: stable_diffusion
+  load_finetuned: False
+  load_pretrained: False
+  #  pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/InstructBLIP/instruct_blip_vicuna7b_trimmed.pth"
+  pretrained: ""
+  finetuned: ""
+
+  params:
+    # model load
+    model_name: runwayml/stable-diffusion-v1-5
+    vit_model_name: openai/clip-vit-large-patch14
+    vton_model_name: null
+    garm_model_name: null
+    freeze_vton_unet: True
+    freeze_garm_unet: False
+    tokenizer_name: null
+    enable_xformers_memory_efficient_attention: False
+    gradient_checkpointing: True
+    proportion_empty_prompts: 0
+
+
+
+preprocess:
+  vis_processor:
+    train:
+      name: "stable_diffusion_image_train"
+      image_size: 512
+      center_crop: True
+      random_flip: True
+    eval:
+      name: "stable_diffusion_image_train"
+      image_size: 512
+      center_crop: True
+      random_flip: False
+  text_processor:
+    train:
+      name: "blip_caption"
+    eval:
+      name: "blip_caption"

@@ -32,6 +32,7 @@ from vigc.models.whisper.whisper_model import Whisper
 from vigc.models.machine_translator.nllb_translator import NLLBTranslator
 from vigc.models.machine_translator.m2m100_translator import M2M100Translator
 from vigc.models.machine_translator.opus_translator import OpusTranslator
+from vigc.models.ootd.ootd_viton import OOTDVitonNet
 
 __all__ = [
     "load_model",
@@ -54,6 +55,8 @@ __all__ = [
     "NLLBTranslator",
     "M2M100Translator",
     "OpusTranslator",
+
+    "OOTDVitonNet",
 ]
 
 

@@ -1,0 +1,9 @@
+datasets:
+  viton_hd_train:
+    data_type: images
+    build_info:
+      data_root: viton_hd_data_root
+      size:
+        - 512
+        - 384
+      clip_vit_path: clip_vit_path

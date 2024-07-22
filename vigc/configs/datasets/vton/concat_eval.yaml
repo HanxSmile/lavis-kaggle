@@ -1,0 +1,17 @@
+datasets:
+  vton_concat_test:
+    data_type: images
+    build_info:
+      dataset_root_info:
+        dresscode: dresscode_data_root
+        vitonhd: vitonhd_data_root
+      orders:
+        - paired
+        - unpaired
+      datasets:
+        - dresscode
+        - vitonhd
+      size:
+        - 512
+        - 384
+      clip_vit_path: clip_vit_path

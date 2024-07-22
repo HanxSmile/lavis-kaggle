@@ -57,6 +57,10 @@ from vigc.datasets.builders.translation.opus_builder import (
     OpusEvalBuilder
 )
 
+from vigc.datasets.builders.vton_builders.vitonhd import VitonHDTrainBuilder, VitonHDTestBuilder
+from vigc.datasets.builders.vton_builders.dresscode import DressCodeTrainBuilder, DressCodeTestBuilder
+from vigc.datasets.builders.vton_builders.concat_eval_builder import VtonConcatTestBuilder
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -83,6 +87,12 @@ __all__ = [
     "TextPairEvalBuilder",
     "OpusTrainBuilder",
     "OpusEvalBuilder",
+
+    "VitonHDTrainBuilder",
+    "VitonHDTestBuilder",
+    "DressCodeTrainBuilder",
+    "DressCodeTestBuilder",
+    "VtonConcatTestBuilder",
 ]
 
 
