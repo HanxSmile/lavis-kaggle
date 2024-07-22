@@ -40,6 +40,7 @@ class WhisperASRTask(BaseTask):
         for gt, pred, loss, id_ in zip(gts, preds, losses, ids):
             results.append({
                 "loss": float(loss),
+                "wer": float(100 * jiwer.wer(gt, pred)),
                 "gt": gt,
                 "pred": pred,
                 "id": id_
