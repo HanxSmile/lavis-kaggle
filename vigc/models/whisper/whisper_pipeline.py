@@ -27,6 +27,7 @@ class WhisperPipeline(AutomaticSpeechRecognitionPipeline):
             encoder_outputs=encoder(inputs, attention_mask=attention_mask),
             attention_mask=attention_mask,
             temperature=0,
+            do_sample=False
         )
 
         out = {"tokens": tokens}
