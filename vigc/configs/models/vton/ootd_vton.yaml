@@ -13,8 +13,8 @@ model:
 
   params:
     # model load
-    model_name: runwayml/stable-diffusion-v1-5
-    vit_model_name: openai/clip-vit-large-patch14
+    model_name: /mnt/data/hanxiao/models/text2image/stable-diffusion-v1-5
+    vit_model_name: /mnt/data/hanxiao/models/autocv-cls/models/clip-vit-large-patch14
     vton_model_name: null
     garm_model_name: null
     freeze_vton_unet: True

@@ -7,4 +7,4 @@ datasets:
       size:
         - 512
         - 384
-      clip_vit_path: clip_vit_path
+      clip_vit_path: /mnt/data/hanxiao/models/autocv-cls/models/clip-vit-large-patch14
