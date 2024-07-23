@@ -84,7 +84,10 @@ class FleursTrain(torch_Dataset):
 
 class FluersTest(torch_Dataset):
     def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test", language=None):
-        inner_dataset = datasets.load_from_disk(data_root)[split]
+        if isinstance(split, str):
+            split = [split]
+        inner_dataset = datasets.load_from_disk(data_root)
+        inner_dataset = concatenate_datasets([inner_dataset[_] for _ in split])
         self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
         self.processor = processor
         self.transform = None
