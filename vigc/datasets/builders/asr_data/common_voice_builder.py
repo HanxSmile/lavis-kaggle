@@ -28,6 +28,7 @@ class CommonVoiceTrainBuilder(BaseDatasetBuilder):
             split=cfg.get("split", "train"),
             pre_normalize=cfg.get("pre_normalize", False),
             language=cfg.get("language", None),
+            eval_info=cfg.get("eval_info", None),
         )
         _ = datasets["train"][0]
         return datasets
