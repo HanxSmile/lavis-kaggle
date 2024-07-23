@@ -5,6 +5,7 @@ from typing import Dict, List, Union
 from datasets import Audio, concatenate_datasets
 import numpy as np
 from vigc.datasets.datasets.asr_data.normalize import normalize
+import json
 
 MIN_SECS = 1
 MAX_SECS = 30
@@ -20,7 +21,8 @@ class CommonVoiceTrain(torch_Dataset):
             pre_normalize=False,
             max_label_length=448,
             split="train",
-            language=None
+            language=None,
+            eval_info=None
     ):
         if isinstance(split, str):
             split = [split]
@@ -35,9 +37,26 @@ class CommonVoiceTrain(torch_Dataset):
         self.max_label_length = max_label_length
         self.pre_normalize = pre_normalize
         self.language = language
+        self.eval_info = None
+        if eval_info is not None:
+            with open(eval_info["data_path"], "r") as f:
+                eval_data = json.load(f)
+            eval_data = sorted(eval_data, key=lambda k: k[eval_info["sort_key"]])
+            if isinstance(eval_info["selected_nums"], int):
+                selected_nums = eval_info["selected_nums"]
+            elif isinstance(eval_info["selected_nums"], float):
+                selected_nums = int(eval_info["selected_nums"] * len(eval_data))
+            else:
+                selected_nums = len(eval_data)
+            eval_data = eval_data[:selected_nums]
+            eval_data = [int(_["id"]) for _ in eval_data]
+            self.eval_info = eval_data
 
     def __len__(self):
-        return len(self.inner_dataset)
+        if self.eval_info is not None:
+            return len(self.eval_info)
+        else:
+            return len(self.inner_dataset)
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
@@ -56,6 +75,8 @@ class CommonVoiceTrain(torch_Dataset):
         return audio
 
     def __getitem__(self, index):
+        if self.eval_info is not None:
+            index = self.eval_info[index]
         audio, sentence, ann_id = self._parse_ann_info(index)
         audio = self.transform_array(audio)
 
