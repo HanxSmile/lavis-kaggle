@@ -5,7 +5,7 @@
 
 
 model:
-  arch: stable_diffusion
+  arch: ootd_viton
   model_type: default
   params:
     # model load

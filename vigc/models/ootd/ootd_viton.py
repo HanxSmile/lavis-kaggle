@@ -35,7 +35,7 @@ class OOTDVitonNet(Blip2Base):
     """
 
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/ootd/ootd_vton.yaml",
+        "default": "configs/models/vton/ootd_vton.yaml",
     }
 
     def __init__(
