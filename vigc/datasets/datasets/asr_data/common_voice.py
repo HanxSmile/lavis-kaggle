@@ -41,15 +41,18 @@ class CommonVoiceTrain(torch_Dataset):
         if eval_info is not None:
             with open(eval_info["data_path"], "r") as f:
                 eval_data = json.load(f)
-            eval_data = sorted(eval_data, key=lambda k: k[eval_info["sort_key"]])
-            if isinstance(eval_info["selected_nums"], int):
-                selected_nums = eval_info["selected_nums"]
-            elif isinstance(eval_info["selected_nums"], float):
-                selected_nums = int(eval_info["selected_nums"] * len(eval_data))
+            if not isinstance(eval_data[0], dict):
+                eval_data = [int(_) for _ in eval_data]
             else:
-                selected_nums = len(eval_data)
-            eval_data = eval_data[:selected_nums]
-            eval_data = [int(_["id"]) for _ in eval_data]
+                eval_data = sorted(eval_data, key=lambda k: k[eval_info["sort_key"]])
+                if isinstance(eval_info["selected_nums"], int):
+                    selected_nums = eval_info["selected_nums"]
+                elif isinstance(eval_info["selected_nums"], float):
+                    selected_nums = int(eval_info["selected_nums"] * len(eval_data))
+                else:
+                    selected_nums = len(eval_data)
+                eval_data = eval_data[:selected_nums]
+                eval_data = [int(_["id"]) for _ in eval_data]
             self.eval_info = eval_data
 
     def __len__(self):
