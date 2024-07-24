@@ -4,7 +4,7 @@ datasets:
     build_info:
       dataset_root_info:
         dresscode: dresscode_data_root
-        vitonhd: vitonhd_data_root
+        vitonhd: /mnt/data/hanxiao/models/text2image/Viton-HD
       orders:
         - paired
         - unpaired

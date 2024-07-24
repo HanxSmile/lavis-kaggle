@@ -2,7 +2,7 @@ datasets:
   viton_hd_eval:
     data_type: images
     build_info:
-      data_root: viton_hd_data_root
+      data_root: /mnt/data/hanxiao/models/text2image/Viton-HD
       order: paired
       size:
         - 512

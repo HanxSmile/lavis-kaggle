@@ -2,7 +2,7 @@ datasets:
   viton_hd_train:
     data_type: images
     build_info:
-      data_root: viton_hd_data_root
+      data_root: /mnt/data/hanxiao/models/text2image/Viton-HD
       size:
         - 512
         - 384

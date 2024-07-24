@@ -1,0 +1,101 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+
+model:
+  arch: stable_diffusion
+  model_type: default
+  params:
+    # model load
+    model_name: /mnt/data/hanxiao/models/text2image/stable-diffusion-v1-5
+    vit_model_name: /mnt/data/hanxiao/models/autocv-cls/models/clip-vit-large-patch14
+    vton_model_name: null
+    garm_model_name: null
+    freeze_vton_unet: True
+    freeze_garm_unet: False
+    tokenizer_name: null
+    enable_xformers_memory_efficient_attention: False
+    gradient_checkpointing: True
+    proportion_empty_prompts: 0
+
+
+
+datasets:
+  # train
+  viton_hd_train:
+    data_type: images
+    build_info:
+      data_root: /mnt/data/hanxiao/models/text2image/Viton-HD
+      size:
+        - 512
+        - 384
+      clip_vit_path: /mnt/data/hanxiao/models/autocv-cls/models/clip-vit-large-patch14
+
+  # eval
+  vton_concat_test:
+    data_type: images
+    build_info:
+      dataset_root_info:
+        dresscode: dresscode_data_root
+        vitonhd: /mnt/data/hanxiao/models/text2image/Viton-HD
+      orders:
+        - paired
+        - unpaired
+      datasets:
+        - vitonhd
+      size:
+        - 512
+        - 384
+      clip_vit_path: /mnt/data/hanxiao/models/autocv-cls/models/clip-vit-large-patch14
+
+
+run:
+  runner: runner_iter
+  task: vton_train_eval
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-5
+
+  weight_decay: 0.05
+
+  batch_size_train: 16
+  batch_size_eval: 32
+  accum_grad_iters: 4
+
+  num_workers: 4
+  warmup_steps: 1000
+
+  iters_per_inner_epoch: 2000
+  max_iters: 60000
+
+  seed: 42
+  output_dir: "./output/ootd_vton"
+  save_dir: "generated_images"
+
+  generate_cfg:
+    do_classifier_free_guidance: True
+    num_images_per_prompt: 1
+    clip_skip: null
+    num_inference_steps: 50
+    guidance_scale: 7.5
+    use_png: False
+    num_workers: 4
+    batch_size: 32
+
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
