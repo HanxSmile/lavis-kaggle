@@ -18,7 +18,7 @@ class VtonConcatTestBuilder(BaseDatasetBuilder):
         datasets = dict()
 
         build_info = self.config.build_info
-        dataset_root_info = build_info.dataset_root_info,
+        dataset_root_info = build_info.dataset_root_info
         orders = build_info.orders
         dataset_names = build_info.datasets
         size = tuple(list(build_info.size))

@@ -19,7 +19,7 @@ class VitonHDTrainBuilder(BaseDatasetBuilder):
         self.build_processors()
 
         build_info = self.config.build_info
-        data_root = build_info.data_root,
+        data_root = build_info.data_root
         size = tuple(list(build_info.size))
         clip_vit_path = build_info.clip_vit_path
 
@@ -51,7 +51,7 @@ class VitonHDTestBuilder(BaseDatasetBuilder):
         self.build_processors()
 
         build_info = self.config.build_info
-        data_root = build_info.data_root,
+        data_root = build_info.data_root
         order = build_info.order
         size = tuple(list(build_info.size))
         datasets = dict()
