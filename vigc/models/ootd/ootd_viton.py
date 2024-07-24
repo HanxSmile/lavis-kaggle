@@ -109,7 +109,7 @@ class OOTDVitonNet(Blip2Base):
             self.unet_vton.enable_gradient_checkpointing()
 
         self._ssim_scorer = [StructuralSimilarityIndexMeasure(data_range=1.0)]
-        self._lpips_scorer = [LearnedPerceptualImagePatchSimilarity(net='alex', normalize=True)]
+        self._lpips_scorer = [LearnedPerceptualImagePatchSimilarity(net_type='alex', normalize=True)]
 
     @property
     def ssim_scorer(self):
