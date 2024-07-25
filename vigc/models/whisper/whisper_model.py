@@ -4,7 +4,8 @@ from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 from transformers import WhisperFeatureExtractor, WhisperTokenizer, WhisperProcessor, WhisperForConditionalGeneration
 import contextlib
-from vigc.models.whisper.whisper_pipeline import WhisperPipeline
+# from vigc.models.whisper.whisper_pipeline import WhisperPipeline
+from transformers import AutomaticSpeechRecognitionPipeline
 from torch.nn import CrossEntropyLoss
 
 
@@ -82,7 +83,7 @@ class Whisper(BaseModel):
         # forced_decoder_ids = self.processor.get_decoder_prompt_ids(language=self.LANGUAGE, task=self.TASK)
         # ori_forced_decoder_ids = self.model.config.forced_decoder_ids
         # self.model.config.forced_decoder_ids = forced_decoder_ids
-        pipe = WhisperPipeline(
+        pipe = AutomaticSpeechRecognitionPipeline(
             model=self.model,
             chunk_length_s=30,
             device=self.device,
@@ -93,6 +94,7 @@ class Whisper(BaseModel):
             transcription = pipe(
                 inputs.copy(),
                 batch_size=8,
+                generate_kwargs={"task": "transcribe", "language": self.language},
             )
         transcription = [_["text"] for _ in transcription]
         if not return_loss:
