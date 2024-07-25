@@ -41,6 +41,7 @@ class WhisperASRTask(BaseTask):
             results.append({
                 "loss": float(loss),
                 "wer": float(100 * jiwer.wer(gt, pred)),
+                "cer": float(100 * jiwer.cer(gt, pred)),
                 "gt": gt,
                 "pred": pred,
                 "id": id_
@@ -75,7 +76,8 @@ class WhisperASRTask(BaseTask):
         losses = [_["loss"] for _ in results]
         loss = np.mean(losses)
         wer = 100 * jiwer.wer(gts, preds)
-        log_stats = {split_name: {"wer": wer, "loss": loss}}
+        cer = 100 * jiwer.cer(gts, preds)
+        log_stats = {split_name: {"wer": wer, "cer": cer, "loss": loss}}
 
         with open(
                 os.path.join(registry.get_path("output_dir"), "evaluate.txt"), "a"
@@ -83,6 +85,8 @@ class WhisperASRTask(BaseTask):
             f.write(json.dumps(log_stats) + "\n")
         if self.metric_key == "wer":
             res = {"agg_metrics": 100 - wer, "wer": wer}
+        elif self.metric_key == "cer":
+            res = {"agg_metrics": 100 - cer, "cer": cer}
         else:
             res = {"agg_metrics": 10 - loss, "loss": loss}
         return res
