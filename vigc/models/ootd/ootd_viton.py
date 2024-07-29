@@ -362,7 +362,7 @@ class OOTDVitonNet(Blip2Base):
             )
 
             image_embeds = image_embeds.repeat(1, num_images_per_prompt, 1)  # [bs, seq_len * num_img_per_prompt, dim]
-            image_embeds = image_embeds.view(batch_size * num_images_per_prompt, prompt_embeds.shape[1], -1)
+            image_embeds = image_embeds.view(batch_size * num_images_per_prompt, 1, -1)
             prompt_embeds[:, 1:] = image_embeds[:]
         if do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
@@ -431,7 +431,7 @@ class OOTDVitonNet(Blip2Base):
 
             latents = self.inference_scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
 
-            init_latents_proper = vton_latents
+            init_latents_proper = vton_latents.chunk(2)[0]
             if i < len(timesteps) - 1:
                 init_latents_proper = self.inference_scheduler.add_noise(
                     init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
