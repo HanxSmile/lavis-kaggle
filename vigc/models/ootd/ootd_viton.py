@@ -351,7 +351,7 @@ class OOTDVitonNet(Blip2Base):
             assert len(negative_prompt) == batch_size
 
         with self.maybe_autocast():
-            image_embeds = self.vit_image_encoder(garm_vit_image).image_embeds
+            image_embeds = self.vit_image_encoder(garm_vit_image).image_embeds[:, None, :]
 
             prompt_embeds, negative_prompt_embeds = self.encode_prompt(
                 prompt=prompt,
