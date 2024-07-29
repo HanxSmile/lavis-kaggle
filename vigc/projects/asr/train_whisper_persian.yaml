@@ -12,32 +12,41 @@ model:
 
 datasets:
   # train
-  whisper_common_voice_train:
-    sample_ratio: 368172
-    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    language: fa
-    data_root: /mnt/data/hanxiao/dataset/audio/common-voice-17_0-persian
-    split:
-      - train
-      - validated
+  # whisper_common_voice_train:
+  #   sample_ratio: 5487
+  #   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
+  #   language: fa
+  #   data_root: /mnt/data/hanxiao/dataset/audio/common-voice-17_0-persian
+  #   pre_normalize: True
+  #   split:
+  #     - train
+  #     - validated
 
   whisper_fleurs_train:
-    sample_ratio: 3470
+    # sample_ratio: 3470
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
     data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fa
     language: fa
-    split: train
+    split:
+      - train
+      - test
 
   # eval
 #  whisper_myaudio_eval:
 #    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
 #    language: fa
 
-  whisper_fleurs_eval:
+  # whisper_common_voice_eval:
+  #   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
+  #   data_root: /mnt/data/hanxiao/dataset/audio/common-voice-17_0-persian
+  #   pre_normalize: True
+  #   language: fa
+  #   split: test
+
+  whisper_myaudio_eval:
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fa
+    pre_normalize: True
     language: fa
-    split: test
 
 
 run:
@@ -46,7 +55,7 @@ run:
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
   init_lr: 1e-5
-  min_lr: 1e-5
+  min_lr: 1e-6
   warmup_lr: 1e-6
 
   weight_decay: 0.05
@@ -62,7 +71,7 @@ run:
   max_iters: 10000
 
   seed: 42
-  output_dir: "./output/whisper_v3_fa"
+  output_dir: "./output/whisper_fleurs_fa_new"
   save_opt_ckpt: False
 
   amp: True
