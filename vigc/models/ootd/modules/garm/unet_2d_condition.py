@@ -1248,7 +1248,7 @@ class UNetGarm2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMi
             if hasattr(self.mid_block, "has_cross_attention") and self.mid_block.has_cross_attention:
                 sample, spatial_attn_inputs = self.mid_block(
                     sample,
-                    emb,
+                    temb=emb,
                     spatial_attn_inputs=spatial_attn_inputs,
                     encoder_hidden_states=encoder_hidden_states,
                     attention_mask=attention_mask,
