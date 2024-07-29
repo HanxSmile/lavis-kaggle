@@ -153,7 +153,7 @@ class OOTDVitonNet(Blip2Base):
             garm_latents = self.vae.encode(samples["garm_images"]).latent_dist.sample() * self.vae.config.scaling_factor
             latents = self.vae.encode(samples["gt_images"]).latent_dist.sample() * self.vae.config.scaling_factor
 
-            image_embeds = self.vit_image_encoder(samples["garm_vit_images"]).image_embeds
+            image_embeds = self.vit_image_encoder(samples["garm_vit_images"]).image_embeds[:, None, :]
             prompt_embeds = self.text_encoder(self.tokenize_captions(samples["captions"]), return_dict=False)[0]
 
             prompt_embeds[:, 1:] = image_embeds[:]
