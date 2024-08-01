@@ -8,7 +8,7 @@ from torchvision import transforms
 class VtonFolderDataset(torch.utils.data.Dataset):
     def __init__(self, path_info):
         self.path_info = path_info
-        self.gen_images = [_["gen_image_path"] for _ in path_info]
+        self.gen_images = [_["image_path"] for _ in path_info]
         self.ori_images = [_["ori_image_path"] for _ in path_info]
 
     def __len__(self):
