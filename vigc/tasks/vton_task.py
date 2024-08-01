@@ -210,7 +210,7 @@ class VtonTrain(BaseTask):
                 this_category_ds = VtonFolderDataset(category_info)
                 this_category_dl = DataLoader(this_category_ds, batch_size=self.batch_size, shuffle=False,
                                               num_workers=self.num_workers)
-                for idx, (gen_images, gt_images) in tqdm(this_category_dl, total=len(this_category_dl)):
+                for (gen_images, gt_images) in tqdm(this_category_dl, total=len(this_category_dl)):
                     gen_images = gen_images.to(self.model.device)
                     gt_images = gt_images.to(self.model.device)
 
