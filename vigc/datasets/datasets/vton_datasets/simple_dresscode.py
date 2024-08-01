@@ -306,6 +306,7 @@ class DressCodeDataset(data.Dataset):
             image_names.append(input_sample["image_name"])
             paireds.append(input_sample["paired"])
             ids.append(input_sample["id"])
+            dataset_names.append(input_sample["dataset_name"])
 
         return {
             "vton_images": torch.cat(vton_images),
