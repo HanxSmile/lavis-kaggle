@@ -25,12 +25,11 @@ class VtonFolderDataset(torch.utils.data.Dataset):
         ori_image = PIL.Image.open(ori_image_path).convert("RGB")
 
         size = gen_image.size[::-1]  # height, width
-        ori_image_transform = transforms.Compose([
+        image_transform = transforms.Compose([
             transforms.Resize(size),
             transforms.ToTensor(),
         ])
-        gen_image_transform = transforms.Compose([transforms.ToTensor])
-        gen_image = gen_image_transform(gen_image)
-        ori_image = ori_image_transform(ori_image)
+        gen_image = image_transform(gen_image)
+        ori_image = image_transform(ori_image)
 
         return gen_image, ori_image
