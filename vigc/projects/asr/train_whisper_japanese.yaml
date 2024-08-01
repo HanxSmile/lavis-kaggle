@@ -7,50 +7,35 @@ model:
   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
   arch: whisper
   model_type: medium
-  language: fa
+  language: japanese
   freeze_encoder: False
 
 datasets:
-  # train
+
   # whisper_common_voice_train:
-  #   sample_ratio: 5487
+  #   sample_ratio: 14118
   #   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-  #   language: fa
-  #   data_root: /mnt/data/hanxiao/dataset/audio/common-voice-17_0-persian
+  #   language: japanese
+  #   data_root: /mnt/data/hanxiao/dataset/audio/common_voice_17_0-ja
   #   pre_normalize: True
   #   split:
   #     - train
   #     - validated
 
-  # whisper_greek_single_speaker_speech_train:
-  #   # sample_ratio: 11135
-  #   sample_ratio: 3470
-  #   data_root: /mnt/data/hanxiao/models/nlp/mt_zh2en/en_multi_models/persian-tts-dataset-famale_and_male/persian-tts-dataset-female
-  #   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-  #   pre_normalize: True
-  #   language: fa
-
-  # whisper_greek_single_speaker_speech_train$copy1:
-  #   # sample_ratio: 16000
-  #   sample_ratio: 3470
-  #   data_root: /mnt/data/hanxiao/models/nlp/mt_zh2en/en_multi_models/persian-tts-dataset-famale_and_male/persian-tts-dataset-male
-  #   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-  #   pre_normalize: True
-  #   language: fa
-
   whisper_fleurs_train:
-    # sample_ratio: 3470
+    # sample_ratio: 2558
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fa
-    language: fa
+    data_root: /mnt/data/hanxiao/dataset/audio/fleurs-ja
+    language: ja
     split:
       - train
       - test
 
+
   whisper_fleurs_eval:
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fa
-    language: fa
+    data_root: /mnt/data/hanxiao/dataset/audio/fleurs-ja
+    language: ja
     split: test
 
 
@@ -59,7 +44,7 @@ run:
   task: whisper_asr_task
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 1e-5
+  init_lr: 1e-6
   min_lr: 1e-6
   warmup_lr: 1e-6
 
@@ -67,16 +52,16 @@ run:
 
   batch_size_train: 8
   batch_size_eval: 16
-  accum_grad_iters: 2
+  accum_grad_iters: 8
 
   num_workers: 4
-  warmup_steps: 200
+  warmup_steps: 256
 
-  iters_per_inner_epoch: 200
-  max_iters: 10000
+  iters_per_inner_epoch: 256
+  max_iters: 10240
 
   seed: 42
-  output_dir: "./output/whisper_fleurs_fa_new"
+  output_dir: "./output/whisper_fleurs_new_ja"
   save_opt_ckpt: False
 
   amp: True
@@ -85,7 +70,7 @@ run:
   evaluate: False
   train_splits: [ "train" ]
   valid_splits: [ "eval" ]
-  metric_key: wer
+  metric_key: cer
 
   device: "cuda"
   world_size: 1
