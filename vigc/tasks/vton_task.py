@@ -217,8 +217,8 @@ class VtonTrain(BaseTask):
                     self.ssim_scorer.update(gen_images, gt_images)
                     self.lpips_scorer.update(gen_images, gt_images)
 
-                ssim_score = self.ssim_scorer.compute()
-                lpips_score = self.lpips_scorer.compute()
+                ssim_score = self.ssim_scorer.compute().item()
+                lpips_score = self.lpips_scorer.compute().item()
                 paired_metric_dic[f"{dataset_name}_{category}_ssim_score"] = ssim_score
                 paired_metric_dic[f"{dataset_name}_{category}_lpips_score"] = lpips_score
                 self.ssim_scorer.reset()
