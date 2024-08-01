@@ -108,8 +108,10 @@ class OOTDVitonNet(Blip2Base):
             self.unet_garm.enable_gradient_checkpointing()
             self.unet_vton.enable_gradient_checkpointing()
 
-        self._ssim_scorer = [StructuralSimilarityIndexMeasure(data_range=1.0)]
-        self._lpips_scorer = [LearnedPerceptualImagePatchSimilarity(net_type='alex', normalize=True)]
+        self._ssim_scorer = [StructuralSimilarityIndexMeasure(data_range=1.0, sync_on_compute=False)]
+        self._lpips_scorer = [
+            LearnedPerceptualImagePatchSimilarity(net_type='alex', normalize=True, sync_on_compute=False)
+        ]
 
     @property
     def ssim_scorer(self):
@@ -466,7 +468,8 @@ class OOTDVitonNet(Blip2Base):
             freeze_vton_unet=param_cfg.get("freeze_vton_unet", True),
             freeze_garm_unet=param_cfg.get("freeze_garm_unet", False),
             tokenizer_name=param_cfg.get("tokenizer_name", None),
-            enable_xformers_memory_efficient_attention=param_cfg.get("enable_xformers_memory_efficient_attention", False),
+            enable_xformers_memory_efficient_attention=param_cfg.get("enable_xformers_memory_efficient_attention",
+                                                                     False),
             gradient_checkpointing=param_cfg.get("gradient_checkpointing", False),
             proportion_empty_prompts=param_cfg.get("proportion_empty_prompts", 0)
         )
