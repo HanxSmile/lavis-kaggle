@@ -26,6 +26,7 @@ class DressCodeDataset(data.Dataset):
             category: Tuple[str] = ('dresses', 'upper_body', 'lower_body'),
             size: Tuple[int, int] = (512, 384),
             clip_vit_path: str = "openai/clip-vit-large-patch14",
+            offset=None,
     ):
 
         super().__init__()
@@ -75,6 +76,7 @@ class DressCodeDataset(data.Dataset):
         self.c_names = c_names
         self.dataroot_names = dataroot_names
         self.vit_image_processor = AutoProcessor.from_pretrained(clip_vit_path)
+        self.offset = offset
 
     def __getitem__(self, index):
         c_name = self.c_names[index]
@@ -285,7 +287,10 @@ class DressCodeDataset(data.Dataset):
         return result
 
     def __len__(self):
-        return len(self.c_names)
+        if self.offset is None:
+            return len(self.c_names)
+        else:
+            return min(self.offset, len(self.c_names))
 
     def collater(self, samples):
         vton_images, garm_images, gt_images, garm_vit_images, mask_images, captions = [], [], [], [], [], []

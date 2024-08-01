@@ -6,7 +6,7 @@ from vigc.datasets.datasets.vton_datasets.simple_vitonhd import VitonHDDataset
 
 class VtonConcatTestDataset(Dataset):
 
-    def __init__(self, dataset_root_info, orders, clip_vit_path, datasets, size):
+    def __init__(self, dataset_root_info, orders, clip_vit_path, datasets, size, offset=None):
         if isinstance(orders, str):
             orders = [orders]
         if isinstance(datasets, str):
@@ -23,7 +23,8 @@ class VtonConcatTestDataset(Dataset):
                     order=order,
                     size=size,
                     phase="test",
-                    clip_vit_path=clip_vit_path
+                    clip_vit_path=clip_vit_path,
+                    offset=offset,
                 ))
         self.inner_datasets = all_datasets
 

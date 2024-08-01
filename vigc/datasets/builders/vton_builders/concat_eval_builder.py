@@ -22,6 +22,7 @@ class VtonConcatTestBuilder(BaseDatasetBuilder):
         orders = build_info.orders
         dataset_names = build_info.datasets
         size = tuple(list(build_info.size))
+        offset = build_info.get("offset", None)
 
         clip_vit_path = build_info.clip_vit_path
 
@@ -32,7 +33,8 @@ class VtonConcatTestBuilder(BaseDatasetBuilder):
             datasets=dataset_names,
             orders=orders,
             size=size,
-            clip_vit_path=clip_vit_path
+            clip_vit_path=clip_vit_path,
+            offset=offset
         )
         _ = datasets['eval'][0]
 
