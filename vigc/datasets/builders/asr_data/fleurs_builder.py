@@ -18,8 +18,8 @@ class FleursTrainBuilder(BaseDatasetBuilder):
         datasets = dict()
         musan_dir = self.config.get("musan_dir", None)
 
-        transform = get_augmentation(musan_dir)
         cfg = self.config
+        transform = get_augmentation(musan_dir) if cfg.get("augmentation", True) else None
         processor = WhisperProcessor.from_pretrained(cfg.model_name, language=cfg.language, task="transcribe")
         datasets["train"] = self.train_dataset_cls(
             processor=processor,
