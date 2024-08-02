@@ -40,6 +40,7 @@ datasets:
       dataset_root_info:
         dresscode: dresscode_data_root
         vitonhd: /mnt/data/hanxiao/models/text2image/Viton-HD
+      offset: 32
       orders:
         - paired
         - unpaired
@@ -73,7 +74,7 @@ run:
   max_iters: 60000
 
   seed: 42
-  output_dir: "./output/ootd_vton"
+  output_dir: "/mnt/data1/hanxiao/ootd/output/ootd_vton"
   save_dir: "generated_images"
 
   generate_cfg:
