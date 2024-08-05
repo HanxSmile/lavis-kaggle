@@ -432,8 +432,10 @@ class OOTDVitonNet(Blip2Base):
                 noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
             latents = self.inference_scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
-
-            init_latents_proper = vton_latents.chunk(2)[0]
+            if do_classifier_free_guidance:
+                init_latents_proper = vton_latents.chunk(2)[0]
+            else:
+                init_latents_proper = vton_latents
             if i < len(timesteps) - 1:
                 init_latents_proper = self.inference_scheduler.add_noise(
                     init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
