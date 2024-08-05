@@ -141,7 +141,8 @@ class OOTDVitonNet(Blip2Base):
 
         res = self.tokenizer(
             captions,
-            max_length=self.tokenizer.model_max_length,
+            # max_length=self.tokenizer.model_max_length,
+            max_length=2,
             padding="max_length",
             truncation=True,
             return_tensors="pt"
@@ -211,7 +212,8 @@ class OOTDVitonNet(Blip2Base):
         text_inputs = self.tokenizer(
             prompt,
             padding="max_length",
-            max_length=self.tokenizer.model_max_length,
+            # max_length=self.tokenizer.model_max_length,
+            max_length=2,
             truncation=True,
             return_tensors="pt",
         )
@@ -475,7 +477,7 @@ class OOTDVitonNet(Blip2Base):
             vit_model_name=param_cfg.get("vit_model_name"),
             vton_model_name=param_cfg.get("vton_model_name", None),
             garm_model_name=param_cfg.get("garm_model_name", None),
-            freeze_vton_unet=param_cfg.get("freeze_vton_unet", True),
+            freeze_vton_unet=param_cfg.get("freeze_vton_unet", False),
             freeze_garm_unet=param_cfg.get("freeze_garm_unet", False),
             tokenizer_name=param_cfg.get("tokenizer_name", None),
             enable_xformers_memory_efficient_attention=param_cfg.get("enable_xformers_memory_efficient_attention",

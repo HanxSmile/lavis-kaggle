@@ -13,7 +13,7 @@ model:
     vit_model_name: /mnt/data/hanxiao/models/autocv-cls/models/clip-vit-large-patch14
     vton_model_name: null
     garm_model_name: null
-    freeze_vton_unet: True
+    freeze_vton_unet: False
     freeze_garm_unet: False
     tokenizer_name: null
     enable_xformers_memory_efficient_attention: False
