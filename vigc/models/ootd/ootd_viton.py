@@ -141,8 +141,8 @@ class OOTDVitonNet(Blip2Base):
 
         res = self.tokenizer(
             captions,
-            # max_length=self.tokenizer.model_max_length,
-            max_length=2,
+            max_length=self.tokenizer.model_max_length,
+            # max_length=2,
             padding="max_length",
             truncation=True,
             return_tensors="pt"
@@ -212,8 +212,8 @@ class OOTDVitonNet(Blip2Base):
         text_inputs = self.tokenizer(
             prompt,
             padding="max_length",
-            # max_length=self.tokenizer.model_max_length,
-            max_length=2,
+            max_length=self.tokenizer.model_max_length,
+            # max_length=2,
             truncation=True,
             return_tensors="pt",
         )
