@@ -1,7 +1,7 @@
 from diffusers import (
     AutoencoderKL,
     DDPMScheduler,
-    DDIMScheduler,
+    UniPCMultistepScheduler,
 )
 from transformers import CLIPVisionModelWithProjection, AutoProcessor
 from .modules.garm import UNetGarm2DConditionModel
@@ -70,7 +70,7 @@ class OOTDVitonNet(Blip2Base):
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, use_fast=False)
 
         self.noise_scheduler = DDPMScheduler.from_pretrained(model_name, subfolder="scheduler")
-        self.inference_scheduler = DDIMScheduler.from_pretrained(model_name, subfolder="scheduler")
+        self.inference_scheduler = UniPCMultistepScheduler.from_config(self.noise_scheduler.config)
 
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
         self.vit_image_processor = AutoProcessor.from_pretrained(vit_model_name)
@@ -151,8 +151,8 @@ class OOTDVitonNet(Blip2Base):
     def forward(self, samples):
 
         with self.maybe_autocast():
-            vton_latents = self.vae.encode(samples["vton_images"]).latent_dist.sample() * self.vae.config.scaling_factor
-            garm_latents = self.vae.encode(samples["garm_images"]).latent_dist.sample() * self.vae.config.scaling_factor
+            vton_latents = self.vae.encode(samples["vton_images"]).latent_dist.mode()
+            garm_latents = self.vae.encode(samples["garm_images"]).latent_dist.mode()
             latents = self.vae.encode(samples["gt_images"]).latent_dist.sample() * self.vae.config.scaling_factor
 
             image_embeds = self.vit_image_encoder(samples["garm_vit_images"]).image_embeds[:, None, :]
@@ -276,7 +276,7 @@ class OOTDVitonNet(Blip2Base):
             int(height),
             int(width))
         latents = torch.randn(shape, generator=generator).to(self.device)
-        return latents
+        return latents * self.inference_scheduler.init_noise_sigma
 
     # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.StableDiffusionPipeline.prepare_extra_step_kwargs
     def prepare_extra_step_kwargs(self, generator, eta):
@@ -351,7 +351,7 @@ class OOTDVitonNet(Blip2Base):
 
         if negative_prompt is not None:
             assert len(negative_prompt) == batch_size
-
+        scheduler_is_in_sigma_space = hasattr(self.inference_scheduler, "sigmas")
         with self.maybe_autocast():
             image_embeds = self.vit_image_encoder(garm_vit_image).image_embeds[:, None, :]
 
@@ -367,10 +367,10 @@ class OOTDVitonNet(Blip2Base):
             image_embeds = image_embeds.view(batch_size * num_images_per_prompt, 1, -1)
             prompt_embeds[:, 1:] = image_embeds[:]
         if do_classifier_free_guidance:
-            prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
+            prompt_embeds = torch.cat([prompt_embeds, prompt_embeds], dim=0)
 
-        vton_latents = self.vae.encode(vton_image).latent_dist.sample() * self.vae.config.scaling_factor
-        garm_latents = self.vae.encode(garm_image).latent_dist.sample() * self.vae.config.scaling_factor
+        vton_latents = self.vae.encode(vton_image).latent_dist.mode()
+        garm_latents = self.vae.encode(garm_image).latent_dist.mode()
         _, _, height, width = vton_latents.shape
 
         vton_latents = vton_latents.repeat(1, num_images_per_prompt, 1, 1).view(batch_size * num_images_per_prompt,
@@ -413,8 +413,8 @@ class OOTDVitonNet(Blip2Base):
 
         for i, t in tqdm(enumerate(timesteps), total=len(timesteps)):
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-            latent_model_input = self.inference_scheduler.scale_model_input(latent_model_input, t)
-            latent_vton_model_input = torch.cat([latent_model_input, vton_latents], dim=1)
+            scaled_latent_model_input = self.inference_scheduler.scale_model_input(latent_model_input, t)
+            latent_vton_model_input = torch.cat([scaled_latent_model_input, vton_latents], dim=1)
 
             spatial_attn_inputs = spatial_attn_outputs.copy()
 
@@ -427,15 +427,23 @@ class OOTDVitonNet(Blip2Base):
                 return_dict=False,
             )[0]
 
+            if scheduler_is_in_sigma_space:
+                step_index = (self.inference_scheduler.timesteps == t).nonzero()[0].item()
+                sigma = self.inference_scheduler.sigmas[step_index]
+                noise_pred = latent_model_input - sigma * noise_pred
+
             if do_classifier_free_guidance:
                 noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                 noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
+            if scheduler_is_in_sigma_space:
+                noise_pred = (noise_pred - latents) / (-sigma)
+
             latents = self.inference_scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
             if do_classifier_free_guidance:
-                init_latents_proper = vton_latents.chunk(2)[0]
+                init_latents_proper = vton_latents.chunk(2)[0] * self.vae.config.scaling_factor
             else:
-                init_latents_proper = vton_latents
+                init_latents_proper = vton_latents * self.vae.config.scaling_factor
             if i < len(timesteps) - 1:
                 init_latents_proper = self.inference_scheduler.add_noise(
                     init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
