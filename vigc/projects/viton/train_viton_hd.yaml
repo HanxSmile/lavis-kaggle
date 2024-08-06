@@ -82,7 +82,7 @@ run:
     num_images_per_prompt: 1
     clip_skip: null
     num_inference_steps: 20
-    guidance_scale: 2.0
+    guidance_scale: 1.5
     use_png: False
     num_workers: 4
     batch_size: 32

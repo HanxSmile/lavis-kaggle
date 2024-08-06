@@ -305,9 +305,9 @@ class OOTDVitonNet(Blip2Base):
             do_classifier_free_guidance,
             num_images_per_prompt,
             clip_skip=None,
-            num_inference_steps=50,
+            num_inference_steps=20,
             generator=None,
-            guidance_scale=9.0,
+            guidance_scale=1.5,
             eta=0.0,
     ):
         prompt, negative_prompt = samples["captions"], samples.get("negative_captions", None)
