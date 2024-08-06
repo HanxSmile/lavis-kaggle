@@ -76,6 +76,7 @@ run:
   seed: 42
   output_dir: "/mnt/data1/hanxiao/ootd/output/ootd_vton"
   save_dir: "generated_images"
+  demo_mode: True
 
   generate_cfg:
     do_classifier_free_guidance: True

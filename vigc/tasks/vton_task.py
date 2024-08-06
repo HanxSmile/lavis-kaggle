@@ -27,7 +27,8 @@ class VtonTrain(BaseTask):
             eta=0.0,
             use_png=False,
             num_workers=4,
-            batch_size=32
+            batch_size=32,
+            demo_mode=True
     ):
         super(VtonTrain, self).__init__()
         self.save_dir = save_dir
@@ -47,6 +48,7 @@ class VtonTrain(BaseTask):
         self.batch_size = batch_size
         self.epoch = 0
         self.model = None
+        self.demo_mode = demo_mode
 
     @classmethod
     def setup_task(cls, cfg):
@@ -56,6 +58,7 @@ class VtonTrain(BaseTask):
         evaluate = run_cfg.evaluate
         report_metric = run_cfg.get("report_metric", True)
         save_dir = run_cfg.get("save_dir", "generated_images")
+        demo_mode = run_cfg.get("demo_mode", True)
 
         do_classifier_free_guidance = generate_cfg.get("do_classifier_free_guidance", False)
         num_images_per_prompt = generate_cfg.get("num_images_per_prompt", 1)
@@ -78,7 +81,8 @@ class VtonTrain(BaseTask):
             guidance_scale=guidance_scale,
             use_png=use_png,
             num_workers=num_workers,
-            batch_size=batch_size
+            batch_size=batch_size,
+            demo_mode=demo_mode
         )
 
     @property
@@ -189,13 +193,13 @@ class VtonTrain(BaseTask):
             for category, category_info in dataset_info.items():
                 save_dir = osp.join(save_root, f"{self.save_dir}-epoch-{self.epoch}", "unpaired", dataset_name,
                                     category)
-
+                fid_ds_name = f"{dataset_name}_{category}_demo" if self.demo_mode else f"{dataset_name}_{category}"
                 fid_score = fid.compute_fid(
-                    save_dir, dataset_name=f"{dataset_name}_{category}",
+                    save_dir, dataset_name=fid_ds_name,
                     mode='clean', verbose=True, dataset_split="custom", use_dataparallel=False
                 )
                 kid_score = fid.compute_kid(
-                    save_dir, dataset_name=f"{dataset_name}_{category}", mode='clean', verbose=True,
+                    save_dir, dataset_name=fid_ds_name, mode='clean', verbose=True,
                     dataset_split="custom", use_dataparallel=False)
                 unpaired_metric_dic[f"{dataset_name}_{category}_fid_score"] = fid_score
                 unpaired_metric_dic[f"{dataset_name}_{category}_kid_score"] = kid_score
