@@ -313,7 +313,7 @@ class OOTDVitonNet(Blip2Base):
         prompt, negative_prompt = samples["captions"], samples.get("negative_captions", None)
         garm_image, garm_vit_image, mask_image = samples["garm_images"], samples["garm_vit_images"], samples[
             "mask_images"]
-        vton_image = samples["vton_images"]  # use gt images!
+        vton_image = samples["gt_images"]  # use gt images!
 
         if isinstance(prompt, str):
             prompt = [prompt]
