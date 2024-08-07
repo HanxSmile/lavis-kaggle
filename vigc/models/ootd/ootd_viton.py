@@ -313,7 +313,8 @@ class OOTDVitonNet(Blip2Base):
         prompt, negative_prompt = samples["captions"], samples.get("negative_captions", None)
         garm_image, garm_vit_image, mask_image = samples["garm_images"], samples["garm_vit_images"], samples[
             "mask_images"]
-        vton_image = samples["gt_images"]  # use gt images!
+        ori_image = samples["gt_images"]  # use gt images!
+        vton_image = samples["vton_images"]
 
         if isinstance(prompt, str):
             prompt = [prompt]
@@ -374,13 +375,15 @@ class OOTDVitonNet(Blip2Base):
 
         vton_latents = self.vae.encode(vton_image).latent_dist.mode()
         garm_latents = self.vae.encode(garm_image).latent_dist.mode()
+        ori_latents = self.vae.encode(ori_image).latent_dist.mode()
         _, _, height, width = vton_latents.shape
 
         vton_latents = vton_latents.repeat(1, num_images_per_prompt, 1, 1).view(batch_size * num_images_per_prompt,
                                                                                 -1, height, width)
         garm_latents = garm_latents.repeat(1, num_images_per_prompt, 1, 1).view(batch_size * num_images_per_prompt,
                                                                                 -1, height, width)
-
+        ori_latents = ori_latents.repeat(1, num_images_per_prompt, 1, 1).view(batch_size * num_images_per_prompt,
+                                                                              -1, height, width)
         if do_classifier_free_guidance:
             vton_latents = torch.cat([vton_latents] * 2)
             garm_latents = torch.cat([torch.zeros_like(garm_latents), garm_latents])
@@ -443,10 +446,9 @@ class OOTDVitonNet(Blip2Base):
                 noise_pred = (noise_pred - latents) / (-sigma)
 
             latents = self.inference_scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
-            if do_classifier_free_guidance:
-                init_latents_proper = vton_latents.chunk(2)[0] * self.vae.config.scaling_factor
-            else:
-                init_latents_proper = vton_latents * self.vae.config.scaling_factor
+
+            init_latents_proper = ori_latents * self.vae.config.scaling_factor
+
             if i < len(timesteps) - 1:
                 init_latents_proper = self.inference_scheduler.add_noise(
                     init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
