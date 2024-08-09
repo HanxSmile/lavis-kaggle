@@ -36,13 +36,20 @@ class Whisper(BaseModel):
         self.model.generation_config.task = "transcribe"
 
         self.model.generation_config.forced_decoder_ids = None
-
-        self.tokenizer = WhisperTokenizer.from_pretrained(
-            model_name, language=self.language, task=self.task)
-        self.processor = WhisperProcessor.from_pretrained(
-            model_name, language=self.language, task=self.task)
-        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
-            model_name, language=self.language, task=self.task)
+        if language is not None:
+            self.tokenizer = WhisperTokenizer.from_pretrained(
+                model_name, language=self.language, task=self.task)
+            self.processor = WhisperProcessor.from_pretrained(
+                model_name, language=self.language, task=self.task)
+            self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
+                model_name, language=self.language, task=self.task)
+        else:
+            self.tokenizer = WhisperTokenizer.from_pretrained(
+                model_name, task=self.task)
+            self.processor = WhisperProcessor.from_pretrained(
+                model_name, task=self.task)
+            self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
+                model_name, task=self.task)
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -91,10 +98,13 @@ class Whisper(BaseModel):
             feature_extractor=self.feature_extractor,
         )
         with self.maybe_autocast():
+            generate_kwargs = {"task": "transcribe"}
+            if self.language is not None:
+                generate_kwargs["language"] = self.language
             transcription = pipe(
                 inputs.copy(),
                 batch_size=8,
-                generate_kwargs={"task": "transcribe", "language": self.language},
+                generate_kwargs=generate_kwargs,
             )
         transcription = [_["text"] for _ in transcription]
         if not return_loss:
@@ -146,7 +156,7 @@ class Whisper(BaseModel):
     def from_config(cls, cfg):
         model_name = cfg.get("model_name")
         freeze_encoder = cfg.get("freeze_encoder", False)
-        language = cfg.get("language")
+        language = cfg.get("language", None)
         model = cls(
             model_name=model_name,
             freeze_encoder=freeze_encoder,
