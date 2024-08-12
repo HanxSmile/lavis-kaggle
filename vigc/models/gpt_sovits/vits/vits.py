@@ -27,7 +27,6 @@ class TextEncoder(nn.Module):
             p_dropout,
             symbol_nums,
             latent_channels=192,
-            version="v2",
 
     ):
         super().__init__()
@@ -39,7 +38,6 @@ class TextEncoder(nn.Module):
         self.kernel_size = kernel_size
         self.p_dropout = p_dropout
         self.latent_channels = latent_channels
-        self.version = version
 
         self.ssl_proj = nn.Conv1d(768, hidden_channels, 1)
 
@@ -632,7 +630,6 @@ class SynthesizerTrn(nn.Module):
             use_sdp=True,
             semantic_frame_rate=None,
             freeze_quantizer=None,
-            version="v2",
             **kwargs
     ):
         super().__init__()
@@ -653,7 +650,6 @@ class SynthesizerTrn(nn.Module):
         self.segment_size = segment_size
         self.n_speakers = n_speakers
         self.gin_channels = gin_channels
-        self.version = version
 
         self.use_sdp = use_sdp
         self.enc_p = TextEncoder(
@@ -665,7 +661,6 @@ class SynthesizerTrn(nn.Module):
             kernel_size,
             p_dropout,
             symbol_nums=symbols_nums,
-            version=version,
         )
         self.dec = Generator(
             inter_channels,
@@ -690,11 +685,7 @@ class SynthesizerTrn(nn.Module):
             inter_channels, hidden_channels, 5, 1, 4, gin_channels=gin_channels
         )
 
-        # self.version=os.environ.get("version","v1")
-        if (self.version == "v1"):
-            self.ref_enc = MelStyleEncoder(spec_channels, style_vector_dim=gin_channels)
-        else:
-            self.ref_enc = MelStyleEncoder(704, style_vector_dim=gin_channels)
+        self.ref_enc = MelStyleEncoder(704, style_vector_dim=gin_channels)
 
         ssl_dim = 768
         assert semantic_frame_rate in ["25hz", "50hz"]
@@ -711,10 +702,7 @@ class SynthesizerTrn(nn.Module):
         y_mask = torch.unsqueeze(sequence_mask(y_lengths, y.size(2)), 1).to(
             y.dtype
         )
-        if (self.version == "v1"):
-            ge = self.ref_enc(y * y_mask, y_mask)
-        else:
-            ge = self.ref_enc(y[:, :704] * y_mask, y_mask)
+        ge = self.ref_enc(y[:, :704] * y_mask, y_mask)
         with autocast(enabled=False):
             maybe_no_grad = torch.no_grad() if self.freeze_quantizer else contextlib.nullcontext()
             with maybe_no_grad:
@@ -722,9 +710,7 @@ class SynthesizerTrn(nn.Module):
                     self.ssl_proj.eval()
                     self.quantizer.eval()
             ssl = self.ssl_proj(ssl)
-            quantized, codes, commit_loss, quantized_list = self.quantizer(
-                ssl, layers=[0]
-            )
+            quantized, codes, commit_loss, quantized_list = self.quantizer(ssl, layers=[0])
 
         if self.semantic_frame_rate == "25hz":
             quantized = F.interpolate(
@@ -755,11 +741,7 @@ class SynthesizerTrn(nn.Module):
         y_mask = torch.unsqueeze(sequence_mask(y_lengths, y.size(2)), 1).to(
             y.dtype
         )
-        if (self.version == "v1"):
-            ge = self.ref_enc(y * y_mask, y_mask)
-        else:
-            ge = self.ref_enc(y[:, :704] * y_mask, y_mask)
-
+        ge = self.ref_enc(y[:, :704] * y_mask, y_mask)
         ssl = self.ssl_proj(ssl)
         quantized, codes, commit_loss, _ = self.quantizer(ssl, layers=[0])
         if self.semantic_frame_rate == "25hz":
@@ -785,10 +767,8 @@ class SynthesizerTrn(nn.Module):
             refer_mask = torch.unsqueeze(
                 sequence_mask(refer_lengths, refer.size(2)), 1
             ).to(refer.dtype)
-            if (self.version == "v1"):
-                ge = self.ref_enc(refer * refer_mask, refer_mask)
-            else:
-                ge = self.ref_enc(refer[:, :704] * refer_mask, refer_mask)
+
+            ge = self.ref_enc(refer[:, :704] * refer_mask, refer_mask)
 
         y_lengths = torch.LongTensor([codes.size(2) * 2]).to(codes.device)
         text_lengths = torch.LongTensor([text.size(-1)]).to(text.device)
