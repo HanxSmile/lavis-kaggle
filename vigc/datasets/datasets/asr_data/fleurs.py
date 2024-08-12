@@ -82,7 +82,7 @@ class FleursTrain(torch_Dataset):
         return result
 
 
-class FluersTest(torch_Dataset):
+class FleursTest(torch_Dataset):
     def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test", language=None):
         if isinstance(split, str):
             split = [split]
@@ -153,4 +153,62 @@ class FluersTest(torch_Dataset):
         result["sentences"] = [_["sentence"] for _ in features]
         result["ids"] = [_["id"] for _ in features]
         result["raw_audios"] = [_["audio"] for _ in features]
+        return result
+
+
+class FleursConcatTest(torch_Dataset):
+    def __init__(self, data_root, processor, language, pre_normalize, split):
+        assert len(data_root) == len(processor) == len(language) == len(split)
+        all_datasets = []
+        for data_root_, processor_, language_, split_ in zip(data_root, processor, language, split):
+            all_datasets.append(
+                FleursTest(
+                    data_root_,
+                    processor_,
+                    pre_normalize=pre_normalize,
+                    split=split_,
+                    language=language_
+                )
+            )
+        self.inner_datasets = all_datasets
+        self.processors = [_.processor for _ in self.inner_datasets]
+
+    def __len__(self):
+        return sum([len(_) for _ in self.inner_datasets])
+
+    def __getitem__(self, index):
+        for i, dataset in enumerate(self.inner_datasets):
+            if index < len(dataset):
+                sample = dataset[index]
+                sample["language"] = dataset.language
+                return sample
+            else:
+                index -= len(dataset)
+
+    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        # split inputs and labels since they have to be of different lengths and need different padding methods
+        # first treat the audio inputs by simply returning torch tensors
+        input_features = [{"input_features": feature["input_features"]} for feature in features]
+        batch = self.processors[0].feature_extractor.pad(input_features, return_tensors="pt")
+
+        # get the tokenized label sequences
+        label_features = [{"input_ids": feature["labels"]} for feature in features]
+        # pad the labels to max length
+        labels_batch = self.processors[0].tokenizer.pad(label_features, return_tensors="pt")
+
+        # replace padding with -100 to ignore loss correctly
+        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
+
+        # if bos token is appended in previous tokenization step,
+        # cut bos token here as it's append later anyways
+        if (labels[:, 0] == self.processors[0].tokenizer.bos_token_id).all().cpu().item():
+            labels = labels[:, 1:]
+
+        result = {}
+        result["input_features"] = batch["input_features"]
+        result["labels"] = labels
+        result["sentences"] = [_["sentence"] for _ in features]
+        result["ids"] = [_["id"] for _ in features]
+        result["raw_audios"] = [_["audio"] for _ in features]
+        result["languages"] = [_["language"] for _ in features]
         return result

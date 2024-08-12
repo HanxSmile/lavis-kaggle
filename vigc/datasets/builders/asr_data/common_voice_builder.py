@@ -47,7 +47,7 @@ class CommonVoiceEvalBuilder(BaseDatasetBuilder):
         data_root = self.config.data_root
 
         cfg = self.config
-        processor = WhisperProcessor.from_pretrained(cfg.model_name, language="bn", task="transcribe")
+        processor = WhisperProcessor.from_pretrained(cfg.model_name, language=cfg.language, task="transcribe")
         datasets["eval"] = self.eval_dataset_cls(
             processor=processor,
             data_root=data_root,

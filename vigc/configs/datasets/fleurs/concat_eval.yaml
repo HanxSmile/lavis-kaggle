@@ -1,0 +1,10 @@
+datasets:
+  whisper_fleurs_concat_eval:
+    data_type: audios
+    pre_normalize: False
+    language:
+      - el
+    data_root:
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-el
+    split:
+      - [ test ]

@@ -45,6 +45,7 @@ from vigc.datasets.builders.asr_data.common_voice_complex_aug_builder import (
 from vigc.datasets.builders.asr_data.fleurs_builder import (
     FleursTrainBuilder,
     FleursEvalBuilder,
+    FleursConcatTestBuilder,
 )
 from vigc.datasets.builders.asr_data.greek_single_speaker_speech_builder import GreekSingleSpeakerSpeechTrainBuilder
 
@@ -77,6 +78,7 @@ __all__ = [
     "CommonVoiceSplitAndConcatTrainBuilder",
     "FleursTrainBuilder",
     "FleursEvalBuilder",
+    "FleursConcatTestBuilder",
     "GreekSingleSpeakerSpeechTrainBuilder",
 
     "TextPairTrainBuilder",
