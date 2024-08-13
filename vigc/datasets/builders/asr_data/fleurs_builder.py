@@ -58,7 +58,7 @@ class FleursEvalBuilder(BaseDatasetBuilder):
         return datasets
 
 
-@registry.register_builder("whisper_fleurs_concat_test")
+@registry.register_builder("whisper_fleurs_concat_eval")
 class FleursConcatTestBuilder(BaseDatasetBuilder):
     eval_dataset_cls = FleursConcatTest
     DATASET_CONFIG_DICT = {
