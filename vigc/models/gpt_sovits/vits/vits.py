@@ -759,16 +759,28 @@ class SynthesizerTrn(nn.Module):
         o = self.dec((z * y_mask)[:, :, :], g=ge)
         return o, y_mask, (z, z_p, m_p, logs_p)
 
+    def get_ge(self, refer):
+        ge = None
+        if refer is None:
+            return ge
+        refer_lengths = torch.LongTensor([refer.size(2)]).to(refer.device)
+        refer_mask = torch.unsqueeze(
+            sequence_mask(refer_lengths, refer.size(2)), 1
+        ).to(refer.dtype)
+
+        ge = self.ref_enc(refer[:, :704] * refer_mask, refer_mask)
+        return ge
+
     @torch.no_grad()
     def decode(self, codes, text, refer, noise_scale=0.5, speed=1):
-        ge = None
-        if refer is not None:
-            refer_lengths = torch.LongTensor([refer.size(2)]).to(refer.device)
-            refer_mask = torch.unsqueeze(
-                sequence_mask(refer_lengths, refer.size(2)), 1
-            ).to(refer.dtype)
-
-            ge = self.ref_enc(refer[:, :704] * refer_mask, refer_mask)
+        if isinstance(refer, list):
+            ges = []
+            for _refer in refer:
+                ge = self.get_ge(_refer)
+                ges.append(ge)
+            ge = torch.stack(ges, 0).mean(0)
+        else:
+            ge = self.get_ge(refer)
 
         y_lengths = torch.LongTensor([codes.size(2) * 2]).to(codes.device)
         text_lengths = torch.LongTensor([text.size(-1)]).to(text.device)
