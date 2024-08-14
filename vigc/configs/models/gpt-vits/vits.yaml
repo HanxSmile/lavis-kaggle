@@ -40,8 +40,8 @@ model:
       mel_fmin: 0.0
       mel_fmax: Null
       win_length: 2048
-      c_mel: 45
-      c_kl: 1.0
+      c_mel: 45  # rec loss coefficient
+      c_kl: 1.0  # kl loss coefficient
 
 
 
