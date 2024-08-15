@@ -2,165 +2,208 @@ from torch.utils.data import Dataset as torch_Dataset
 import datasets
 import torch
 from typing import Dict, List, Union
-from datasets import Audio, concatenate_datasets
+from datasets import concatenate_datasets
+from datasets.features import Audio
 import numpy as np
+import os
+import subprocess
+from transformers.feature_extraction_utils import BatchFeature
 
-MIN_SECS = 1
-MAX_SECS = 30
+
+def uromanize(input_string, uroman_path):
+    """Convert non-Roman strings to Roman using the `uroman` perl package."""
+    script_path = os.path.join(uroman_path, "bin", "uroman.pl")
+
+    command = ["perl", script_path]
+
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Execute the perl command
+    stdout, stderr = process.communicate(input=input_string.encode())
+
+    if process.returncode != 0:
+        raise ValueError(f"Error {process.returncode}: {stderr.decode()}")
+
+    # Return the output as a string and skip the new-line character at the end
+    return stdout.decode()[:-1]
 
 
-class FleursTTSTrain(torch_Dataset):
+class VitsTTSTrain(torch_Dataset):
     def __init__(
             self,
             data_root,
             processor,
+            tokenizer,
             sampling_rate,
+            audio_column_name,
+            text_column_name,
             max_duration_in_seconds=20,
             min_duration_in_seconds=1.0,
             max_tokens_length=500,
-            transform=None,
-            pre_normalize=False,
-            max_label_length=448,
+            do_lower_case=False,
+            speaker_id_column_name=None,
+            filter_on_speaker_id=None,
+            do_normalize=False,
+            num_workers=4,
+            is_uroman=False,
+            uroman_path=None,
             split="train",
             language=None
     ):
         if isinstance(split, str):
             split = [split]
+        if is_uroman:
+            assert uroman_path is not None
+            assert os.path.exists(uroman_path)
         inner_dataset = datasets.load_from_disk(data_root)
         inner_dataset = concatenate_datasets([inner_dataset[_] for _ in split])
-        self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=sampling_rate))
+        inner_dataset = inner_dataset.cast_column(audio_column_name, Audio(sampling_rate=sampling_rate))
+        max_input_length = max_duration_in_seconds * sampling_rate
+        min_input_length = min_duration_in_seconds * sampling_rate
+
+        def _is_audio_in_length_range(length, text):
+            length_ = len(length["array"])
+            return length_ > min_input_length and length_ < max_input_length and text is not None
+
+        inner_dataset = inner_dataset.filter(
+            _is_audio_in_length_range,
+            num_proc=num_workers,
+            input_columns=[audio_column_name, text_column_name]
+        )
+
+        self.speaker_id_dict = dict()
+        self.new_num_speakers = 0
+        if filter_on_speaker_id is not None:
+            inner_dataset = inner_dataset.filter(
+                lambda speaker_id: (speaker_id == filter_on_speaker_id),
+                num_proc=num_workers,
+                input_columns=[speaker_id_column_name],
+            )
+            self.speaker_id_dict = {
+                speaker_id: i for (i, speaker_id) in enumerate(sorted(list(set(inner_dataset[speaker_id_column_name]))))
+            }
+            self.new_num_speakers = len(self.speaker_id_dict)
+
         self.processor = processor
-        self.transform = transform
-        self.max_label_length = max_label_length
-        self.pre_normalize = pre_normalize
+        self.tokenizer = tokenizer
         self.language = language
+        self.max_tokens_length = max_tokens_length
+        self.audio_column_name = audio_column_name
+        self.text_column_name = text_column_name
+        self.speaker_id_column_name = speaker_id_column_name
+        self.inner_dataset = inner_dataset
+        self.do_normalize = do_normalize
+        self.do_lower_case = do_lower_case
+        self.is_uroman = is_uroman
+        self.uroman_path = uroman_path
 
     def __len__(self):
         return len(self.inner_dataset)
 
-    def _parse_ann_info(self, index):
-        ann = self.inner_dataset[index]
-        sentence = normalize(ann["transcription"], self.language) if self.pre_normalize else ann["transcription"]
-        return ann["audio"], sentence, str(index)
-
-    def is_valid(self, input_values):
-        input_length = len(input_values)
-        input_secs = input_length / TARGET_SR
-        return MAX_SECS > input_secs > MIN_SECS
-
-    def transform_array(self, audio):
-        audio["array"] = np.trim_zeros(audio["array"], "fb")
-        if self.transform is not None:
-            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
-        return audio
-
     def __getitem__(self, index):
-        audio, sentence, ann_id = self._parse_ann_info(index)
-        audio = self.transform_array(audio)
+        sample = self.inner_dataset[index]
+        audio = sample[self.audio_column_name]
+        text = sample[self.text_column_name]
+        audio_inputs = self.processor(
+            audio["array"],
+            sampling_rate=audio["sampling_rate"],
+            return_attention_mask=False,
+            do_normalize=self.do_normalize
+        )
 
-        if not self.is_valid(audio["array"]):
-            return self[(index + 1) % len(self)]  # filter too long or too short audio
+        labels = audio_inputs.get("input_features")[0]
+        input_str = text.lower() if self.do_lower_case else text
+        if self.is_uroman:
+            input_str = uromanize(input_str, self.uroman_path)
+        string_inputs = self.tokenizer(input_str, return_attention_mask=False)
+        if len(string_inputs) > self.max_tokens_length:
+            return self[(index + 1) % len(self.inner_dataset)]
+        input_ids = string_inputs[: self.max_tokens_length]
+        waveform_input_length = len(audio["array"])
+        tokens_input_length = len(input_ids)
+        waveform = audio["array"]
+        mel_scaled_input_features = audio_inputs.get("mel_scaled_input_features")[0]
+        speaker_id = 0
+        if self.new_num_speakers > 0:
+            speaker_id = self.speaker_id_dict.get(sample[self.speaker_id_column_name], 0)
 
-        input_features = self.processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
-        labels = self.processor.tokenizer(sentence, truncation=True, max_length=self.max_label_length).input_ids
+        return {
+            "labels": labels,
+            "input_ids": input_ids,
+            "tokens_input_length": tokens_input_length,
+            "waveform": waveform,
+            "mel_scaled_input_features": mel_scaled_input_features,
+            "speaker_id": speaker_id,
+            "waveform_input_length": waveform_input_length,
+            "id": index
+        }
 
-        return {"input_features": input_features, "labels": labels, "sentence": sentence, "id": ann_id}
+    def pad_waveform(self, raw_speech):
+        is_batched_numpy = isinstance(raw_speech, np.ndarray) and len(raw_speech.shape) > 1
+        if is_batched_numpy and len(raw_speech.shape) > 2:
+            raise ValueError(f"Only mono-channel audio is supported for input to {self}")
+        is_batched = is_batched_numpy or (
+                isinstance(raw_speech, (list, tuple)) and (isinstance(raw_speech[0], (np.ndarray, tuple, list)))
+        )
+
+        if is_batched:
+            raw_speech = [np.asarray([speech], dtype=np.float32).T for speech in raw_speech]
+        elif not is_batched and not isinstance(raw_speech, np.ndarray):
+            raw_speech = np.asarray(raw_speech, dtype=np.float32)
+        elif isinstance(raw_speech, np.ndarray) and raw_speech.dtype is np.dtype(np.float64):
+            raw_speech = raw_speech.astype(np.float32)
+
+        # always return batch
+        if not is_batched:
+            raw_speech = [np.asarray([raw_speech]).T]
+
+        batched_speech = BatchFeature({"input_features": raw_speech})
+
+        # convert into correct format for padding
+
+        padded_inputs = self.processor.pad(
+            batched_speech,
+            padding=True,
+            return_attention_mask=False,
+            return_tensors="pt",
+        )["input_features"]
+
+        return padded_inputs
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # split inputs and labels since they have to be of different lengths and need different padding methods
-        # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_features": feature["input_features"]} for feature in features]
-        batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
+        # split inputs and labels since they have to be of different lengths and need
+        # different padding methods
+        model_input_name = "input_ids"
+        input_ids = [{model_input_name: feature[model_input_name]} for feature in features]
 
-        # get the tokenized label sequences
-        label_features = [{"input_ids": feature["labels"]} for feature in features]
-        # pad the labels to max length
-        labels_batch = self.processor.tokenizer.pad(label_features, return_tensors="pt")
+        # pad input tokens
+        batch = self.tokenizer.pad(input_ids, return_tensors="pt", return_attention_mask=True)
 
-        # replace padding with -100 to ignore loss correctly
-        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
+        # pad waveform
+        waveforms = [np.array(feature["waveform"]) for feature in features]
+        batch["waveform"] = self.pad_waveform(waveforms)
 
-        # if bos token is appended in previous tokenization step,
-        # cut bos token here as it's append later anyways
-        if (labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
-            labels = labels[:, 1:]
-        result = {}
-        result["input_features"] = batch["input_features"]
-        result["labels"] = labels
-        result["sentences"] = [_["sentence"] for _ in features]
-        result["ids"] = [_["id"] for _ in features]
-        return result
+        # pad spectrogram
+        label_features = [np.array(feature["labels"]) for feature in features]
+        labels_batch = self.processor.pad(
+            {"input_features": [i.T for i in label_features]}, return_tensors="pt", return_attention_mask=True
+        )
 
+        labels = labels_batch["input_features"].transpose(1, 2)
+        batch["labels"] = labels
+        batch["labels_attention_mask"] = labels_batch["attention_mask"]
 
-class FluersTest(torch_Dataset):
-    def __init__(self, data_root, processor, pre_normalize=False, max_label_length=448, split="test", language=None):
-        if isinstance(split, str):
-            split = [split]
-        inner_dataset = datasets.load_from_disk(data_root)
-        inner_dataset = concatenate_datasets([inner_dataset[_] for _ in split])
-        self.inner_dataset = inner_dataset.cast_column("audio", Audio(sampling_rate=TARGET_SR))
-        self.processor = processor
-        self.transform = None
-        self.max_label_length = max_label_length
-        self.pre_normalize = pre_normalize
-        self.language = language
+        # pad mel spectrogram
+        mel_scaled_input_features = {
+            "input_features": [np.array(feature["mel_scaled_input_features"]).squeeze().T for feature in features]
+        }
+        mel_scaled_input_features = self.processor.pad(
+            mel_scaled_input_features, return_tensors="pt", return_attention_mask=True
+        )["input_features"].transpose(1, 2)
 
-    def __len__(self):
-        return len(self.inner_dataset)
+        batch["mel_scaled_input_features"] = mel_scaled_input_features
+        batch["speaker_id"] = (
+            torch.tensor([feature["speaker_id"] for feature in features]) if "speaker_id" in features[0] else None
+        )
+        batch["ids"] = [_["id"] for _ in features]
 
-    def _parse_ann_info(self, index):
-        ann = self.inner_dataset[index]
-        sentence = normalize(ann["transcription"], self.language) if self.pre_normalize else ann["transcription"]
-        return ann["audio"], sentence, str(index)
-
-    def is_valid(self, input_values):
-        input_length = len(input_values)
-        input_secs = input_length / TARGET_SR
-        return MAX_SECS > input_secs > MIN_SECS
-
-    def transform_array(self, audio):
-        audio["array"] = np.trim_zeros(audio["array"], "fb")
-        if self.transform is not None:
-            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
-        return audio
-
-    def __getitem__(self, index):
-        audio, sentence, ann_id = self._parse_ann_info(index)
-        audio = self.transform_array(audio)
-        if self.transform is not None:
-            audio["array"] = self.transform(audio["array"], sample_rate=audio["sampling_rate"])
-
-        if not self.is_valid(audio["array"]):
-            return self[(index + 1) % len(self)]  # filter too long or too short audio
-
-        input_features = self.processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
-        labels = self.processor.tokenizer(sentence, truncation=True, max_length=self.max_label_length).input_ids
-
-        return {"input_features": input_features, "labels": labels, "sentence": sentence, "id": ann_id, "audio": audio}
-
-    def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        # split inputs and labels since they have to be of different lengths and need different padding methods
-        # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_features": feature["input_features"]} for feature in features]
-        batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
-
-        # get the tokenized label sequences
-        label_features = [{"input_ids": feature["labels"]} for feature in features]
-        # pad the labels to max length
-        labels_batch = self.processor.tokenizer.pad(label_features, return_tensors="pt")
-
-        # replace padding with -100 to ignore loss correctly
-        labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
-
-        # if bos token is appended in previous tokenization step,
-        # cut bos token here as it's append later anyways
-        if (labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
-            labels = labels[:, 1:]
-
-        result = {}
-        result["input_features"] = batch["input_features"]
-        result["labels"] = labels
-        result["sentences"] = [_["sentence"] for _ in features]
-        result["ids"] = [_["id"] for _ in features]
-        result["raw_audios"] = [_["audio"] for _ in features]
-        return result
+        return batch
