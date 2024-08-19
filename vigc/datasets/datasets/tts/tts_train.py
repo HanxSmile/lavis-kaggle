@@ -107,8 +107,8 @@ class VitsTTSTrain(torch_Dataset):
         waveform = audio["array"]
         mel_scaled_input_features = audio_inputs.get("mel_scaled_input_features")[0]
         speaker_id = None
-        if self.new_num_speakers > 0:
-            speaker_id = self.speaker_id_dict.get(sample[self.speaker_id_column_name], 0)
+        if self.new_num_speakers > 1:
+            speaker_id = self.speaker_id_dict[sample[self.speaker_id_column_name]]
         res = {
             "labels": labels,
             "input_ids": input_ids,
