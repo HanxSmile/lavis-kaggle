@@ -524,6 +524,9 @@ class RunnerBase:
                 else:
                     sampler = None
 
+                if getattr(dataset, "get_sampler", None) is not None:
+                    sampler = dataset.get_sampler(batch_size=bsz)
+
                 loader = DataLoader(
                     dataset,
                     batch_size=bsz,

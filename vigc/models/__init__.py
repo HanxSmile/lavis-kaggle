@@ -34,6 +34,7 @@ from vigc.models.machine_translator.m2m100_translator import M2M100Translator
 from vigc.models.machine_translator.opus_translator import OpusTranslator
 
 from vigc.models.gpt_sovits.vits_model import VQVits
+from vigc.models.vits.vits import Vits
 
 __all__ = [
     "load_model",
@@ -58,6 +59,7 @@ __all__ = [
     "OpusTranslator",
 
     "VQVits",
+    "Vits",
 ]
 
 

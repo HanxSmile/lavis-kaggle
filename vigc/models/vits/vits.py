@@ -46,11 +46,8 @@ class Vits(GanBaseModel):
             generator_model_name, config=self.config
         )
         del self.generator.discriminator
+        self.generator.apply_weight_norm()
 
-        self.generator.decoder.apply_weight_norm()
-        for flow in self.generator.flow.flows:
-            torch.nn.utils.weight_norm(flow.conv_pre)
-            torch.nn.utils.weight_norm(flow.conv_post)
         if self.config.num_speakers != num_speakers and num_speakers > 1:
             self.generator.resize_speaker_embeddings(
                 num_speakers,
@@ -78,16 +75,23 @@ class Vits(GanBaseModel):
             samples,
             **kwargs
     ):
-        ssl, ssl_lengths, spec, spec_lengths, y, y_lengths, text, text_lengths = samples["ssl"], samples["ssl_lengths"], \
-            samples["spec"], samples["spec_lengths"], samples["y"], samples["y_lengths"], samples["text"], samples[
-            "text_lengths"]
+        batch_size = len(samples["texts"])
+        inputs = {
+            "input_ids": samples["input_ids"],
+            "attention_mask": samples["attention_mask"],
+            "speaker_id": samples["speaker_id"],
+        }
         with self.maybe_autocast():
-            y_hat, mask, *_ = self.generator.infer(ssl, spec, spec_lengths, text, text_lengths)
-        y_hat_lengths = mask.sum([1, 2]).long() * self.mel_hps.hop_length
-        batch_size = y_hat.shape[0]
+            outputs = self.generator(**inputs)
+
         all_results = []
         for i in range(batch_size):
-            audio = y_hat[i, :, :y_hat_lengths[i]]
+            audio = outputs.waveform[i, :outputs.sequence_lengths[i]].cpu().numpy()
+            sampling_rate = self.config.sampling_rate
+            audio = {
+                "audio": audio,
+                "sampling_rate": sampling_rate,
+            }
             all_results.append(audio)
 
         return all_results

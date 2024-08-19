@@ -58,6 +58,11 @@ from vigc.datasets.builders.translation.opus_builder import (
     OpusEvalBuilder
 )
 
+from vigc.datasets.builders.tts_data.vits import (
+    VitsTTSTrainBuilder,
+    VitsTTSEvalBuilder
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -85,6 +90,9 @@ __all__ = [
     "TextPairEvalBuilder",
     "OpusTrainBuilder",
     "OpusEvalBuilder",
+
+    "VitsTTSTrainBuilder",
+    "VitsTTSEvalBuilder",
 ]
 
 

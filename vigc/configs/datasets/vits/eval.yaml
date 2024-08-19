@@ -1,0 +1,12 @@
+datasets:
+  vits_eval:
+    data_type: audios
+    model_name: model_name
+    build_info:
+      data_root: data_root
+      speaker_nums: Null
+      max_tokens_length: 450
+      do_lower_case: False
+      do_normalize: False
+      uroman_path: uroman_path
+      language: Null

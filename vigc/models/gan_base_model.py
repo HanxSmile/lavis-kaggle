@@ -57,17 +57,27 @@ class GanBaseModel(BaseModel):
         else:
             return contextlib.nullcontext()
 
-    def get_generator_parameter_group(self, learning_rate):
-        params = [
-            {"params": self.generator.parameters(), "lr": learning_rate},
-        ]
-        return params
+    def get_generator_parameter_group(self):
+        params = {}
+        num_parameters = 0
+        for n, p in self.generator.named_parameters():
+            if not p.requires_grad:
+                continue
+            params[n] = p
+            num_parameters += p.data.nelement()
+        group = {"lr": 1.0, "params": params, "num_parameters": num_parameters}
+        return [group]
 
-    def get_discriminator_parameter_group(self, learning_rate):
-        params = [
-            {"params": self.discriminator.parameters(), "lr": learning_rate},
-        ]
-        return params
+    def get_discriminator_parameter_group(self):
+        params = {}
+        num_parameters = 0
+        for n, p in self.discriminator.named_parameters():
+            if not p.requires_grad:
+                continue
+            params[n] = p
+            num_parameters += p.data.nelement()
+        group = {"lr": 1.0, "params": params, "num_parameters": num_parameters}
+        return [group]
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """

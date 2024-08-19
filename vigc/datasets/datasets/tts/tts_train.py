@@ -6,25 +6,9 @@ from datasets import concatenate_datasets
 from datasets.features import Audio
 import numpy as np
 import os
-import subprocess
 from transformers.feature_extraction_utils import BatchFeature
-
-
-def uromanize(input_string, uroman_path):
-    """Convert non-Roman strings to Roman using the `uroman` perl package."""
-    script_path = os.path.join(uroman_path, "bin", "uroman.pl")
-
-    command = ["perl", script_path]
-
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # Execute the perl command
-    stdout, stderr = process.communicate(input=input_string.encode())
-
-    if process.returncode != 0:
-        raise ValueError(f"Error {process.returncode}: {stderr.decode()}")
-
-    # Return the output as a string and skip the new-line character at the end
-    return stdout.decode()[:-1]
+from .romanize import uromanize
+from transformers.trainer_pt_utils import DistributedLengthGroupedSampler
 
 
 class VitsTTSTrain(torch_Dataset):
@@ -33,7 +17,6 @@ class VitsTTSTrain(torch_Dataset):
             data_root,
             processor,
             tokenizer,
-            sampling_rate,
             audio_column_name,
             text_column_name,
             max_duration_in_seconds=20,
@@ -44,16 +27,13 @@ class VitsTTSTrain(torch_Dataset):
             filter_on_speaker_id=None,
             do_normalize=False,
             num_workers=4,
-            is_uroman=False,
             uroman_path=None,
             split="train",
             language=None
     ):
         if isinstance(split, str):
             split = [split]
-        if is_uroman:
-            assert uroman_path is not None
-            assert os.path.exists(uroman_path)
+        sampling_rate = processor.sampling_rate
         inner_dataset = datasets.load_from_disk(data_root)
         inner_dataset = concatenate_datasets([inner_dataset[_] for _ in split])
         inner_dataset = inner_dataset.cast_column(audio_column_name, Audio(sampling_rate=sampling_rate))
@@ -72,12 +52,13 @@ class VitsTTSTrain(torch_Dataset):
 
         self.speaker_id_dict = dict()
         self.new_num_speakers = 0
-        if filter_on_speaker_id is not None:
-            inner_dataset = inner_dataset.filter(
-                lambda speaker_id: (speaker_id == filter_on_speaker_id),
-                num_proc=num_workers,
-                input_columns=[speaker_id_column_name],
-            )
+        if speaker_id_column_name is not None:
+            if filter_on_speaker_id is not None:
+                inner_dataset = inner_dataset.filter(
+                    lambda speaker_id: (speaker_id == filter_on_speaker_id),
+                    num_proc=num_workers,
+                    input_columns=[speaker_id_column_name],
+                )
             self.speaker_id_dict = {
                 speaker_id: i for (i, speaker_id) in enumerate(sorted(list(set(inner_dataset[speaker_id_column_name]))))
             }
@@ -93,8 +74,11 @@ class VitsTTSTrain(torch_Dataset):
         self.inner_dataset = inner_dataset
         self.do_normalize = do_normalize
         self.do_lower_case = do_lower_case
-        self.is_uroman = is_uroman
+        self.is_uroman = tokenizer.is_uroman
         self.uroman_path = uroman_path
+        if self.is_uroman:
+            assert uroman_path is not None
+            assert os.path.exists(uroman_path)
 
     def __len__(self):
         return len(self.inner_dataset)
@@ -207,3 +191,10 @@ class VitsTTSTrain(torch_Dataset):
         batch["ids"] = [_["id"] for _ in features]
 
         return batch
+    #
+    # def get_sampler(self, batch_size):
+    #     return DistributedLengthGroupedSampler(
+    #         batch_size=batch_size,
+    #         dataset=self,
+    #         lengths=self.lengths
+    #     )
