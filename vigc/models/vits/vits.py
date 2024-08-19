@@ -1,5 +1,6 @@
 import torch
 from transformers import VitsTokenizer
+from typing import Optional
 
 from vigc.common.registry import registry
 from vigc.models.gan_base_model import GanBaseModel
@@ -28,7 +29,7 @@ class Vits(GanBaseModel):
             *,
             generator_model_name: str,
             discriminator_model_name: str,
-            num_speakers: int,
+            num_speakers: Optional[int] = None,
             override_vocabulary_embeddings: bool = False,
             gradient_checkpointing: bool = False,
             weight_disc=3.0,
@@ -48,7 +49,7 @@ class Vits(GanBaseModel):
         del self.generator.discriminator
         self.generator.apply_weight_norm()
 
-        if self.config.num_speakers != num_speakers and num_speakers > 1:
+        if num_speakers is not None and self.config.num_speakers != num_speakers and num_speakers > 1:
             self.generator.resize_speaker_embeddings(
                 num_speakers,
                 self.config.speaker_embedding_size if self.config.speaker_embedding_size > 1 else 256

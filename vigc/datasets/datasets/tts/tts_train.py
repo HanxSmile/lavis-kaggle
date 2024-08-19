@@ -106,20 +106,22 @@ class VitsTTSTrain(torch_Dataset):
         tokens_input_length = len(input_ids)
         waveform = audio["array"]
         mel_scaled_input_features = audio_inputs.get("mel_scaled_input_features")[0]
-        speaker_id = 0
+        speaker_id = None
         if self.new_num_speakers > 0:
             speaker_id = self.speaker_id_dict.get(sample[self.speaker_id_column_name], 0)
-
-        return {
+        res = {
             "labels": labels,
             "input_ids": input_ids,
             "tokens_input_length": tokens_input_length,
             "waveform": waveform,
             "mel_scaled_input_features": mel_scaled_input_features,
-            "speaker_id": speaker_id,
             "waveform_input_length": waveform_input_length,
             "id": index
         }
+        if speaker_id is not None:
+            res["speaker_id"] = speaker_id
+
+        return res
 
     def pad_waveform(self, raw_speech):
         is_batched_numpy = isinstance(raw_speech, np.ndarray) and len(raw_speech.shape) > 1
