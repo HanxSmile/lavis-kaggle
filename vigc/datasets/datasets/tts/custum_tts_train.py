@@ -98,7 +98,7 @@ class CustumVitsTTSTrain(torch_Dataset):
 
     def is_valid(self, input_values):
         input_length = len(input_values)
-        return self.min_input_length < input_length < self.max_tokens_length
+        return self.min_input_length < input_length < self.max_input_length
 
     def __getitem__(self, index):
         audio, text, raw_speaker_id = self._parse_ann_info(index)
