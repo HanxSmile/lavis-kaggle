@@ -76,7 +76,7 @@ class GanBaseTask(BaseTask):
                 # -----------------------
                 #  Train Discriminator
                 # -----------------------
-                disc_loss = model("discriminator", **common_outputs)
+                disc_loss = model("discriminator", *common_outputs)["loss"]
                 disc_loss /= accum_grad_iters
             if use_amp:
                 scaler.scale(disc_loss).backward()
@@ -99,7 +99,7 @@ class GanBaseTask(BaseTask):
                 # -----------------------
                 #  Train Generator
                 # -----------------------
-                gen_loss = model("generator", **common_outputs)
+                gen_loss = model("generator", *common_outputs)["loss"]
                 gen_loss /= accum_grad_iters
             if use_amp:
                 scaler.scale(gen_loss).backward()
@@ -118,7 +118,7 @@ class GanBaseTask(BaseTask):
                     optimizer.step()
                 optimizer["gen"].zero_grad()
 
-            loss_dict = {"disc": disc_loss * accum_grad_iters, "gen": gen_loss * accum_grad_iters}
+            loss_dict = {"loss": disc_loss * accum_grad_iters + gen_loss * accum_grad_iters}
 
             metric_logger.update(**loss_dict)
             metric_logger.update(lr=optimizer['gen'].param_groups[0]["lr"])

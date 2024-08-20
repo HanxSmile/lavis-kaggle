@@ -47,7 +47,10 @@ class Vits(GanBaseModel):
             generator_model_name, config=self.config
         )
         del self.generator.discriminator
-        self.generator.apply_weight_norm()
+        self.generator.decoder.apply_weight_norm()
+        for flow in self.generator.flow.flows:
+            torch.nn.utils.weight_norm(flow.conv_pre)
+            torch.nn.utils.weight_norm(flow.conv_post)
 
         if num_speakers is not None and self.config.num_speakers != num_speakers and num_speakers > 1:
             self.generator.resize_speaker_embeddings(

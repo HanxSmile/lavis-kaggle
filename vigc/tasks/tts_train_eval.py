@@ -41,7 +41,7 @@ class TTSTask(GanBaseTask):
             if not osp.exists(save_dir):
                 os.makedirs(save_dir, exist_ok=True)
             audio = pred["audio"]
-            sampling_rate = samples["sampling_rate"]
+            sampling_rate = pred["sampling_rate"]
             save_path = osp.join(save_dir, f"{id_}.wav")
             scipy.io.wavfile.write(save_path, rate=sampling_rate, data=audio)
             res = {
