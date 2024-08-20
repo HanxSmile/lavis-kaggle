@@ -90,7 +90,7 @@ class Vits(GanBaseModel):
 
         all_results = []
         for i in range(batch_size):
-            audio = outputs.waveform[i, :outputs.sequence_lengths[i]].cpu().numpy()
+            audio = outputs.waveform[i, :outputs.sequence_lengths[i]].float().cpu().numpy()
             sampling_rate = self.config.sampling_rate
             audio = {
                 "audio": audio,
