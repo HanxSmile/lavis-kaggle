@@ -55,8 +55,8 @@ class CustumVitsTTSTrain(torch_Dataset):
             assert os.path.exists(uroman_path)
 
     def prepare_samples(self, data_root):
-        data_root = osp.join(data_root, "transcript.txt")
-        with open(data_root) as f:
+        label_root = osp.join(data_root, "transcript.txt")
+        with open(label_root) as f:
             data = f.readlines()
         result = []
         for line in data:
