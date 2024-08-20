@@ -14,7 +14,6 @@ class VitsTTSEval(torch_Dataset):
             speaker_nums=None,
             max_tokens_length=500,
             do_lower_case=False,
-            do_normalize=False,
             uroman_path=None,
             language=None
     ):
@@ -28,7 +27,6 @@ class VitsTTSEval(torch_Dataset):
         self.tokenizer = tokenizer
         self.language = language
         self.max_tokens_length = max_tokens_length
-        self.do_normalize = do_normalize
         self.do_lower_case = do_lower_case
         self.is_uroman = tokenizer.is_uroman
         self.uroman_path = uroman_path
@@ -41,7 +39,7 @@ class VitsTTSEval(torch_Dataset):
 
     def __getitem__(self, index):
         sample = self.inner_dataset[index]
-        text = sample["text"]
+        text = sample["text"].strip()
         input_str = text.lower() if self.do_lower_case else text
         if self.is_uroman:
             input_str = uromanize(input_str, self.uroman_path)

@@ -60,7 +60,8 @@ from vigc.datasets.builders.translation.opus_builder import (
 
 from vigc.datasets.builders.tts_data.vits import (
     VitsTTSTrainBuilder,
-    VitsTTSEvalBuilder
+    VitsTTSEvalBuilder,
+    VitsTTSCustumTrainBuilder
 )
 
 __all__ = [
@@ -93,6 +94,7 @@ __all__ = [
 
     "VitsTTSTrainBuilder",
     "VitsTTSEvalBuilder",
+    "VitsTTSCustumTrainBuilder",
 ]
 
 

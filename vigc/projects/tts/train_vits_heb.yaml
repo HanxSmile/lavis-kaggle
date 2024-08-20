@@ -1,0 +1,88 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: vits
+  model_type: default
+  params:
+    generator_model_name: /mnt/data/hanxiao/models/audio/experiment/saspeech/mms-tts-heb/mms-tts-heb
+    discriminator_model_name: /mnt/data/hanxiao/models/audio/experiment/saspeech/mms-tts-heb/mms-tts-heb_disc
+    num_speakers: 1
+    override_vocabulary_embeddings: False
+    gradient_checkpointing: False
+    weight_disc: 3.0
+    weight_duration: 1.0
+    weight_kl: 1.5
+    weight_mel: 35.0
+    weight_gen: 1.0
+    weight_fmaps: 1.0
+
+datasets:
+  # train
+  vits_custum_train:
+    model_name: /mnt/data/hanxiao/models/audio/experiment/saspeech/mms-tts-heb/mms-tts-heb
+    build_info:
+      data_root: /mnt/data/hanxiao/models/audio/experiment/saspeech/saspeech_gold_standard/
+      max_duration_in_seconds: 20.0
+      min_duration_in_seconds: 1.0
+      max_tokens_length: 500
+      do_lower_case: False
+      filter_on_speaker_id: Null
+      do_normalize: False
+      language: heb
+
+  # eval
+  vits_eval:
+    model_name: /mnt/data/hanxiao/models/audio/experiment/saspeech/mms-tts-heb/mms-tts-heb
+    build_info:
+      data_root: /mnt/data/hanxiao/models/audio/experiment/saspeech/heb_eval.json
+      speaker_nums: 1
+      max_tokens_length: 500
+      do_lower_case: False
+      language: heb
+
+
+run:
+  runner: runner_gan_iter
+  task: tts_task
+  # optimizer
+  beta1: 0.8
+  beta2: 0.99
+  weight_decay: 0.05
+  # scheduler
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 2e-5
+  min_lr: 1e-6
+  warmup_lr: 1e-6
+  warmup_steps: 200
+
+
+  # dataset
+  batch_size_train: 16
+  batch_size_eval: 16
+  accum_grad_iters: 1
+
+  num_workers: 4
+
+  # runtime
+  iters_per_inner_epoch: 50
+  max_iters: 4000
+
+  seed: 42
+  output_dir: "./output/tts_heb"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+  metric_key: loss
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True

@@ -31,6 +31,8 @@ class RunnerGanIter(RunnerIter):
         learning_rate = float(self.config.run_cfg.init_lr)
         weight_decay = float(self.config.run_cfg.weight_decay)
         beta2 = self.config.run_cfg.get("beta2", 0.999)
+        beta1 = self.config.run_cfg.get("beta1", 0.9)
+        adam_eps = self.config.run_cfg.get("adam_eps", 1e-8)
         for group in self.unwrap_dist_model(self.model).get_generator_parameter_group():
             lr_ratio = group["lr"]
             group_param_nums = group["num_parameters"]
@@ -59,7 +61,8 @@ class RunnerGanIter(RunnerIter):
             gen_groups,
             lr=float(self.config.run_cfg.init_lr),
             weight_decay=float(self.config.run_cfg.weight_decay),
-            betas=(0.9, beta2),
+            betas=(beta1, beta2),
+            eps=adam_eps
         )
 
         for group in self.unwrap_dist_model(self.model).get_discriminator_parameter_group():
@@ -90,7 +93,8 @@ class RunnerGanIter(RunnerIter):
             disc_groups,
             lr=float(self.config.run_cfg.init_lr),
             weight_decay=float(self.config.run_cfg.weight_decay),
-            betas=(0.9, beta2),
+            betas=(beta1, beta2),
+            eps=adam_eps
         )
 
         self._optimizer = dict(
