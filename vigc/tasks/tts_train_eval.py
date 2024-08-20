@@ -1,13 +1,13 @@
 from vigc.common.dist_utils import main_process
 from vigc.common.registry import registry
-from vigc.tasks.base_task import BaseTask
+from vigc.tasks.gan_base_task import GanBaseTask
 import os
 import os.path as osp
 import scipy
 
 
 @registry.register_task("tts_task")
-class TTSTask(BaseTask):
+class TTSTask(GanBaseTask):
 
     def __init__(self, evaluate, report_metric=True):
         super().__init__()

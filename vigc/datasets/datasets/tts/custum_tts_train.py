@@ -211,4 +211,15 @@ class CustumVitsTTSTrain(torch_Dataset):
         )
         batch["ids"] = [_["id"] for _ in features]
 
-        return batch
+        result = dict(
+            input_ids=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            waveform=batch["waveform"],
+            labels=batch["labels"],
+            labels_attention_mask=batch["labels_attention_mask"],
+            mel_scaled_input_features=batch["mel_scaled_input_features"],
+            speaker_id=batch["speaker_id"],
+            ids=batch["ids"],
+        )
+
+        return result

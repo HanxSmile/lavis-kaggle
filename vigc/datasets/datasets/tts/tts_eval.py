@@ -76,4 +76,12 @@ class VitsTTSEval(torch_Dataset):
         batch["ids"] = [_["id"] for _ in features]
         batch["texts"] = [_["text"] for _ in features]
 
-        return batch
+        result = dict(
+            input_ids=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            speaker_id=batch["speaker_id"],
+            ids=batch["ids"],
+            texts=batch["texts"],
+        )
+
+        return result
