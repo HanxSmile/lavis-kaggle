@@ -13,7 +13,7 @@ from vigc.models.vits.losses import (
     feature_loss,
 )
 
-from .maximum_path import maximum_path
+from monotonic_align import maximum_path
 from .configuration_vits import VitsConfig
 from .modeling_vits import VitsModelForPreTraining, VitsDiscriminator, slice_segments
 
