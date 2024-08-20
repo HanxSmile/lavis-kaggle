@@ -117,7 +117,7 @@ class CustumVitsTTSTrain(torch_Dataset):
         input_str = text.lower() if self.do_lower_case else text
         if self.is_uroman:
             input_str = uromanize(input_str, self.uroman_path)
-        string_inputs = self.tokenizer(input_str, return_attention_mask=False)
+        string_inputs = self.tokenizer(input_str, return_attention_mask=False).input_ids
         if len(string_inputs) > self.max_tokens_length:
             return self[(index + 1) % len(self.inner_dataset)]
         input_ids = string_inputs[: self.max_tokens_length]

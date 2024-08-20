@@ -92,10 +92,10 @@ class VitsTTSEvalBuilder(BaseDatasetBuilder):
         build_cfg = cfg.build_info
 
         datasets["eval"] = self.eval_dataset_cls(
-            data_root=cfg.data_root,
+            data_root=build_cfg.data_root,
             tokenizer=tokenizer,
-            speaker_nums=cfg.get("speaker_nums", None),
-            max_tokens_length=cfg.get("max_tokens_length", 450),
+            speaker_nums=build_cfg.get("speaker_nums", None),
+            max_tokens_length=build_cfg.get("max_tokens_length", 450),
             do_lower_case=build_cfg.get("do_lower_case", False),
             uroman_path=build_cfg.get("uroman_path", None),
             language=build_cfg.get("language", None),
