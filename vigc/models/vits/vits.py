@@ -189,3 +189,15 @@ class Vits(GanBaseModel):
         )
         model.load_checkpoint_from_config(cfg)
         return model
+
+    def save_to_pretrained(self, output_dir):
+        self.generator.discriminator = self.discriminator
+        for disc in self.generator.discriminator.discriminators:
+            disc.remove_weight_norm()
+        self.generator.decoder.remove_weight_norm()
+        for flow in self.generator.flow.flows:
+            torch.nn.utils.remove_weight_norm(flow.conv_pre)
+            torch.nn.utils.remove_weight_norm(flow.conv_post)
+        self.generator.save_pretrained(output_dir)
+        self.tokenizer.save_pretrained(output_dir)
+        self.feature_extractor.save_pretrained(output_dir)
