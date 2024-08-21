@@ -16,6 +16,8 @@ from vigc.models.vits.losses import (
 from monotonic_align import maximum_path
 from .configuration_vits import VitsConfig
 from .modeling_vits import VitsModelForPreTraining, VitsDiscriminator, slice_segments
+from transformers import WhisperProcessor, WhisperForConditionalGeneration, AutomaticSpeechRecognitionPipeline
+import librosa
 
 
 @registry.register_model("vits")
@@ -37,7 +39,10 @@ class Vits(GanBaseModel):
             weight_kl=1.5,
             weight_mel=35.0,
             weight_gen=1.0,
-            weight_fmaps=1.0
+            weight_fmaps=1.0,
+            # for evaluate
+            whisper_model=None,
+            language=None,
     ):
         super().__init__()
         self.config = VitsConfig.from_pretrained(generator_model_name)
@@ -73,6 +78,25 @@ class Vits(GanBaseModel):
         self.weight_gen = weight_gen
         self.weight_fmaps = weight_fmaps
 
+        self._whisper_model = None
+        self.whisper_processor = None
+        self.language = None
+        if whisper_model is not None:
+            self._whisper_model = [WhisperForConditionalGeneration.from_pretrained(whisper_model)]
+            if language is not None:
+                self.whisper_processor = WhisperProcessor.from_pretrained(
+                    whisper_model, language=language, task="transcribe")
+            else:
+                self.whisper_processor = WhisperProcessor.from_pretrained(whisper_model, task="transcribe")
+
+    @property
+    def whisper_model(self):
+        if self._whisper_model is None:
+            return None
+        whisper_model = self._whisper_model[0].to(self.device)
+        self._whisper_model = [whisper_model]
+        return whisper_model
+
     @torch.no_grad()
     def generate(
             self,
@@ -89,6 +113,7 @@ class Vits(GanBaseModel):
             outputs = self.generator(**inputs)
 
         all_results = []
+
         for i in range(batch_size):
             audio = outputs.waveform[i, :outputs.sequence_lengths[i]].float().cpu().numpy()
             sampling_rate = self.config.sampling_rate
@@ -97,6 +122,37 @@ class Vits(GanBaseModel):
                 "sampling_rate": sampling_rate,
             }
             all_results.append(audio)
+
+        if self.whisper_model is None:
+            return all_results
+
+        whisper_inputs = list()
+        for item in all_results:
+            audio, sampling_rate = item["audio"], item["sampling_rate"]
+            if sampling_rate != 16_000:
+                audio = librosa.resample(audio, orig_sr=sampling_rate, target_sr=16_000)
+            whisper_inputs.append(
+                dict(array=audio, sampling_rate=sampling_rate)
+            )
+        pipe = AutomaticSpeechRecognitionPipeline(
+            model=self.whisper_model,
+            chunk_length_s=30,
+            device=self.device,
+            tokenizer=self.whisper_processor.tokenizer,
+            feature_extractor=self.whisper_processor.feature_extractor,
+        )
+        with self.maybe_autocast():
+            generate_kwargs = {"task": "transcribe"}
+            if self.language is not None:
+                generate_kwargs["language"] = self.language
+            transcription = pipe(
+                whisper_inputs.copy(),
+                batch_size=8,
+                generate_kwargs=generate_kwargs,
+            )
+        transcription = [_["text"] for _ in transcription]
+        for result_item, t_ in zip(all_results, transcription):
+            result_item["pred"] = t_
 
         return all_results
 
@@ -186,6 +242,8 @@ class Vits(GanBaseModel):
             weight_mel=model_params.weight_mel,
             weight_gen=model_params.weight_gen,
             weight_fmaps=model_params.weight_fmaps,
+            whisper_model=model_params.get("whisper_model", None),
+            language=model_params.get("language", None),
         )
         model.load_checkpoint_from_config(cfg)
         return model

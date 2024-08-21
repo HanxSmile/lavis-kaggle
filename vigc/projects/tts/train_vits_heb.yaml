@@ -18,6 +18,8 @@ model:
     weight_mel: 35.0
     weight_gen: 1.0
     weight_fmaps: 1.0
+    whisper_model: /mnt/data/hanxiao/models/audio/whisper-large-v3
+    language: he
 
 datasets:
   # train
@@ -67,6 +69,7 @@ run:
   num_workers: 4
 
   # runtime
+  metric_key: cer
   iters_per_inner_epoch: 50
   max_iters: 4000
 
@@ -80,7 +83,6 @@ run:
   evaluate: False
   train_splits: [ "train" ]
   valid_splits: [ "eval" ]
-  metric_key: loss
 
   device: "cuda"
   world_size: 1
