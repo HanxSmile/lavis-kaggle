@@ -35,7 +35,9 @@ class GanBaseTask(BaseTask):
 
         metric_logger = MetricLogger(delimiter="  ")
         metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value:.6f}"))
-        metric_logger.add_meter("loss", SmoothedValue(window_size=1, fmt="{value:.4f}"))
+        # metric_logger.add_meter("loss", SmoothedValue(window_size=1, fmt="{value:.4f}"))
+        metric_logger.add_meter("gen_loss", SmoothedValue(window_size=1, fmt="{value:.4f}"))
+        metric_logger.add_meter("disc_loss", SmoothedValue(window_size=1, fmt="{value:.4f}"))
 
         # if iter-based runner, schedule lr based on inner epoch.
         logging.info(
@@ -118,7 +120,7 @@ class GanBaseTask(BaseTask):
                     optimizer.step()
                 optimizer["gen"].zero_grad()
 
-            loss_dict = {"loss": disc_loss * accum_grad_iters + gen_loss * accum_grad_iters}
+            loss_dict = {"disc_loss": disc_loss * accum_grad_iters, "gen_loss": gen_loss * accum_grad_iters}
 
             metric_logger.update(**loss_dict)
             metric_logger.update(lr=optimizer['gen'].param_groups[0]["lr"])
