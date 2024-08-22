@@ -68,22 +68,22 @@ class Whisper(BaseModel):
             logging.info(f"Loaded finetuned model '{finetune_path}'.")
 
     @torch.no_grad()
-    def generate_(
+    def transcribe1(
             self,
             samples,
             **kwargs
     ):
         predicted_ids = self.model.generate(
             samples["input_features"],
+            attention_mask=samples["attention_mask"],
         )
         transcription = self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
         return transcription
 
     @torch.no_grad()
-    def generate(
+    def transcribe2(
             self,
             samples,
-            return_loss=False,
             **kwargs
     ):
         inputs = samples["raw_audios"]
@@ -107,6 +107,16 @@ class Whisper(BaseModel):
                 generate_kwargs=generate_kwargs,
             )
         transcription = [_["text"] for _ in transcription]
+        return transcription
+
+    @torch.no_grad()
+    def generate(
+            self,
+            samples,
+            return_loss=False,
+            **kwargs
+    ):
+        transcription = self.transcribe2(samples)
         if not return_loss:
             return transcription
 
@@ -132,10 +142,12 @@ class Whisper(BaseModel):
 
     def forward(self, samples, **kwargs):
         input_features = samples["input_features"]
+        attention_mask = samples["attention_mask"]
         labels = samples["labels"]
         with self.maybe_autocast():
             outputs = self.model(
                 input_features=input_features,
+                attention_mask=attention_mask,
                 labels=labels,
                 return_dict=True,
             )

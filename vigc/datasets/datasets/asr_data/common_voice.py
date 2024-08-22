@@ -111,6 +111,7 @@ class CommonVoiceTrain(torch_Dataset):
             labels = labels[:, 1:]
         result = {}
         result["input_features"] = batch["input_features"]
+        result["attention_mask"] = batch["attention_mask"]
         result["labels"] = labels
         result["sentences"] = [_["sentence"] for _ in features]
         result["ids"] = [_["id"] for _ in features]
@@ -186,6 +187,7 @@ class CommonVoiceTest(torch_Dataset):
 
         result = {}
         result["input_features"] = batch["input_features"]
+        result["attention_mask"] = batch["attention_mask"]
         result["labels"] = labels
         result["sentences"] = [_["sentence"] for _ in features]
         result["ids"] = [_["id"] for _ in features]
