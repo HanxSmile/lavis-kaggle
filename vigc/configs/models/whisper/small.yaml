@@ -6,3 +6,4 @@ model:
   model_type: small
   language: fa
   freeze_encoder: False
+  use_attention_mask: False

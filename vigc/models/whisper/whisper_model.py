@@ -22,11 +22,13 @@ class Whisper(BaseModel):
             model_name="openai/whisper-medium",
             freeze_encoder=False,
             language=None,
-            task="transcribe"
+            task="transcribe",
+            use_attention_mask=False,
     ):
         super().__init__()
         self.language = language
         self.task = task
+        self.use_attention_mask = use_attention_mask
         self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
         if freeze_encoder:
             self.model.freeze_encoder()
@@ -75,7 +77,7 @@ class Whisper(BaseModel):
     ):
         predicted_ids = self.model.generate(
             samples["input_features"],
-            attention_mask=samples["attention_mask"],
+            attention_mask=samples["attention_mask"] if self.use_attention_mask else None,
         )
         transcription = self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
         return transcription
@@ -122,10 +124,12 @@ class Whisper(BaseModel):
 
         with torch.no_grad():
             input_features = samples["input_features"]
+            attention_mask = samples["attention_mask"]
             labels = samples["labels"]
             with self.maybe_autocast():
                 logits = self.model(
                     input_features=input_features,
+                    attention_mask=attention_mask if self.use_attention_mask else None,
                     labels=labels,
                     return_dict=True,
                 ).logits
@@ -147,7 +151,7 @@ class Whisper(BaseModel):
         with self.maybe_autocast():
             outputs = self.model(
                 input_features=input_features,
-                attention_mask=attention_mask,
+                attention_mask=attention_mask if self.use_attention_mask else None,
                 labels=labels,
                 return_dict=True,
             )
@@ -172,7 +176,8 @@ class Whisper(BaseModel):
         model = cls(
             model_name=model_name,
             freeze_encoder=freeze_encoder,
-            language=language
+            language=language,
+            use_attention_mask=cfg.get("use_attention_mask", False),
         )
         model.load_checkpoint_from_config(cfg)
         return model

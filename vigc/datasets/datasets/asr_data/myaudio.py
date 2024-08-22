@@ -61,17 +61,22 @@ class MyAudioTest(torch_Dataset):
         # if not self.is_valid(audio["array"]):
         #     return self[(index + 1) % len(self)]  # filter too long or too short audio
 
-        input_features = self.processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
+        # input_features = self.processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
         labels = self.processor.tokenizer(sentence, truncation=True, max_length=self.max_label_length).input_ids
 
-        return {"input_features": input_features, "labels": labels, "sentence": sentence, "id": ann_id, "audio": audio}
+        return {"labels": labels, "sentence": sentence, "id": ann_id, "audio": audio}
 
     def collater(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
         # split inputs and labels since they have to be of different lengths and need different padding methods
         # first treat the audio inputs by simply returning torch tensors
-        input_features = [{"input_features": feature["input_features"]} for feature in features]
-        batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
-
+        audio_arrays = [_["audio"]["array"] for _ in features]
+        sampling_rate = features[0]["audio"]["sampling_rate"]
+        batch = self.processor(
+            audio_arrays,
+            sampling_rate=sampling_rate,
+            return_tensors="pt",
+            return_attention_mask=True
+        )
         # get the tokenized label sequences
         label_features = [{"input_ids": feature["labels"]} for feature in features]
         # pad the labels to max length
