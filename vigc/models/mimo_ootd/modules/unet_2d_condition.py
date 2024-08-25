@@ -66,7 +66,7 @@ class UNet2DConditionOutput(BaseOutput):
     sample: torch.FloatTensor = None
 
 
-class UNetVton2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin, PeftAdapterMixin):
+class UNetMIMO2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin, PeftAdapterMixin):
     r"""
     A conditional 2D UNet model that takes a noisy sample, conditional state, and a timestep and returns a sample
     shaped output.
@@ -479,6 +479,7 @@ class UNetVton2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMi
         )
 
         self._set_pos_net_if_use_gligen(attention_type=attention_type, cross_attention_dim=cross_attention_dim)
+        self._spatial_attn_idx = None
 
     def _check_config(
             self,
@@ -1210,7 +1211,7 @@ class UNetVton2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMi
         down_block_res_samples = (sample,)
 
         # for spatial attention
-        spatial_attn_idx = 0
+        spatial_attn_idx = self.spatial_attn_idx
 
         for downsample_block in self.down_blocks:
             if hasattr(downsample_block, "has_cross_attention") and downsample_block.has_cross_attention:
@@ -1319,9 +1320,18 @@ class UNetVton2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMi
             unscale_lora_layers(self, lora_scale)
 
         if not return_dict:
-            return (sample,)
+            return (sample,), spatial_attn_inputs
 
-        return UNet2DConditionOutput(sample=sample)
+        return UNet2DConditionOutput(sample=sample), spatial_attn_inputs
+
+    def set_spatial_attn_idx(self, idx):
+        assert idx in (-1, 0)
+        self._spatial_attn_idx = idx
+
+    @property
+    def spatial_attn_idx(self):
+        assert self._spatial_attn_idx is not None, "You should call 'set_spatial_attn_idx' method first."
+        return self._spatial_attn_idx
 
     def replace_first_conv_layer(self, new_in_channels):
         # Access the first convolutional layer
