@@ -22,19 +22,19 @@ from torchmetrics import StructuralSimilarityIndexMeasure
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
 
-@registry.register_model("ootd_viton")
-class OOTDVitonNet(Blip2Base):
+@registry.register_model("mimo_viton")
+class MIMOVitonNet(Blip2Base):
     """
-    OOTD VITON Model
+    MIMO VITON Model
     Supported model types:
         - default
     Usage:
         >>> from vigc.models import load_model
-        >>> model = load_model("ootd_viton", "default")
+        >>> model = load_model("mimo_viton", "default")
     """
 
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/vton/ootd_vton.yaml",
+        "default": "configs/models/vton/mimo_vton.yaml",
     }
 
     def __init__(
@@ -148,18 +148,17 @@ class OOTDVitonNet(Blip2Base):
         ).to(self.device)
         return res.input_ids
 
-    def forward(self, samples):
+    def forward_garm(self, samples):
+        self.unet_vton.set_spatial_attn_idx(-1)
+        self.unet_garm.set_spatial_attn_idx(0)
 
         with self.maybe_autocast():
             vton_latents = self.vae.encode(samples["vton_images"]).latent_dist.mode()
-            garm_latents = self.vae.encode(samples["garm_images"]).latent_dist.mode()
-            latents = self.vae.encode(samples["gt_images"]).latent_dist.sample() * self.vae.config.scaling_factor
-
-            image_embeds = self.vit_image_encoder(samples["garm_vit_images"]).image_embeds[:, None, :]
+            gt_latents = self.vae.encode(samples["gt_images"]).latent_dist.mode() * self.vae.config.scaling_factor
+            latents = self.vae.encode(samples["garm_images"]).latent_dist.sample() * self.vae.config.scaling_factor
+            # image_embeds = self.vit_image_encoder(samples["garm_vit_images"]).image_embeds[:, None, :]
             prompt_embeds = self.text_encoder(self.tokenize_captions(samples["captions"]), return_dict=False)[0]
-
-            prompt_embeds[:, 1:] = image_embeds[:]
-
+            # prompt_embeds[:, 1:] = image_embeds[:]
         bz = latents.shape[0]
         noise = torch.randn_like(latents)
 
@@ -167,10 +166,59 @@ class OOTDVitonNet(Blip2Base):
         timesteps = timesteps.long()
 
         noisy_latents = self.noise_scheduler.add_noise(latents, noise, timesteps)
+        with self.maybe_autocast():
+            _, spatial_attn_outputs = self.unet_vton(
+                torch.cat([gt_latents, vton_latents], dim=1),
+                [],
+                0,
+                encoder_hidden_states=prompt_embeds,
+                return_dict=False,
+            )
+            spatial_attn_inputs = spatial_attn_outputs.copy()
 
+            # Predict the noise residual
+            model_pred, _ = self.unet_garm(
+                noisy_latents,
+                spatial_attn_inputs,
+                timesteps,
+                encoder_hidden_states=prompt_embeds,
+                return_dict=False,
+            )[0]
+
+            # Get the target for loss depending on the prediction type
+            if self.noise_scheduler.config.prediction_type == "epsilon":
+                target = noise
+            elif self.noise_scheduler.config.prediction_type == "v_prediction":
+                target = self.noise_scheduler.get_velocity(latents, noise, timesteps)
+            else:
+                raise ValueError(f"Unknown prediction type {self.noise_scheduler.config.prediction_type}")
+
+            loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+
+        return loss
+
+    def forward_vton(self, samples):  # denoise garm unet
+        self.unet_vton.set_spatial_attn_idx(0)
+        self.unet_garm.set_spatial_attn_idx(-1)
+
+        with self.maybe_autocast():
+            vton_latents = self.vae.encode(samples["vton_images"]).latent_dist.mode()
+            garm_latents = self.vae.encode(samples["garm_images"]).latent_dist.mode() * self.vae.config.scaling_factor
+            latents = self.vae.encode(samples["gt_images"]).latent_dist.sample() * self.vae.config.scaling_factor
+            # image_embeds = self.vit_image_encoder(samples["garm_vit_images"]).image_embeds[:, None, :]
+            prompt_embeds = self.text_encoder(self.tokenize_captions(samples["captions"]), return_dict=False)[0]
+            # prompt_embeds[:, 1:] = image_embeds[:]
+        bz = latents.shape[0]
+        noise = torch.randn_like(latents)
+
+        timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bz,)).to(self.device)
+        timesteps = timesteps.long()
+
+        noisy_latents = self.noise_scheduler.add_noise(latents, noise, timesteps)
         with self.maybe_autocast():
             _, spatial_attn_outputs = self.unet_garm(
                 garm_latents,
+                [],
                 0,
                 encoder_hidden_states=prompt_embeds,
                 return_dict=False,
@@ -180,7 +228,7 @@ class OOTDVitonNet(Blip2Base):
             spatial_attn_inputs = spatial_attn_outputs.copy()
 
             # Predict the noise residual
-            model_pred = self.unet_vton(
+            model_pred, _ = self.unet_vton(
                 latent_vton_model_input,
                 spatial_attn_inputs,
                 timesteps,
@@ -197,6 +245,14 @@ class OOTDVitonNet(Blip2Base):
                 raise ValueError(f"Unknown prediction type {self.noise_scheduler.config.prediction_type}")
 
             loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+
+        return loss
+
+    def forward(self, samples):
+
+        vton_loss = self.forward_vton(samples)
+        garm_loss = self.forward_garm(samples)
+        loss = (vton_loss + garm_loss) / 2
 
         return {"loss": loss}
 
