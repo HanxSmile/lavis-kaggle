@@ -7,62 +7,72 @@ model:
   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
   arch: whisper
   model_type: medium
-  language: el
+  language: null
   freeze_encoder: False
+  use_attention_mask: False
 
 datasets:
   # train
-  whisper_common_voice_train:
-    sample_ratio: 19819
-    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    language: el
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/common_voice_17_0-el
-    split:
-      - train
-      - validated
 
   whisper_fleurs_train:
-    sample_ratio: 3486
+    sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    language: el
-    split: train
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-ru
+    language: ru
+    augmentation: True
+    split:
+      - train
+      - validation
+      - test
 
-  whisper_greek_single_speaker_speech_train:
-    sample_ratio: 1844
+  whisper_fleurs_train$copy1:
+    sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    language: el
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-pl
+    language: pl
+    augmentation: True
+    split:
+      - train
+      - validation
+      - test
 
 
-  # eval
-  whisper_fleurs_eval:
+  whisper_fleurs_concat_eval:
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    language: el
-    split: test
-
+    pre_normalize: False
+    data_root:
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-ru
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-pl
+    language:
+      - ru
+      - pl
+    split:
+      - test
+      - test
 
 run:
   runner: runner_iter
   task: whisper_asr_task
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 1e-5
-  min_lr: 1e-5
+  init_lr: 2e-6
+  min_lr: 1e-6
   warmup_lr: 1e-6
 
   weight_decay: 0.05
 
   batch_size_train: 8
   batch_size_eval: 16
-  accum_grad_iters: 2
+  accum_grad_iters: 8
 
   num_workers: 4
   warmup_steps: 200
 
   iters_per_inner_epoch: 200
-  max_iters: 5000
+  max_iters: 10000
 
-  seed: 84
-  output_dir: "./output/whisper_asr_el"
+  seed: 42
+  output_dir: "./output/whisper_fleurs_ru_pl"
   save_opt_ckpt: False
 
   amp: True
@@ -71,7 +81,7 @@ run:
   evaluate: False
   train_splits: [ "train" ]
   valid_splits: [ "eval" ]
-  metric_key: loss
+  metric_key: wer
 
   device: "cuda"
   world_size: 1

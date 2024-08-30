@@ -14,7 +14,6 @@ class Whisper(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
         "default": "configs/models/whisper/medium.yaml",
         "medium": "configs/models/whisper/medium.yaml",
-        "small": "configs/models/whisper/small.yaml",
     }
 
     def __init__(

@@ -12,54 +12,14 @@ from vigc.common.registry import registry
 
 from vigc.models.base_model import BaseModel
 
-from vigc.models.blip2_models.blip2 import Blip2Base
-from vigc.models.blip2_models.blip2_vicuna_instruct import Blip2VicunaInstruct
-from vigc.models.vit import VisionTransformerEncoder
-
 from vigc.processors.base_processor import BaseProcessor
 
-from vigc.models.hms_classifier.hms_model import HMSClassifier
-from vigc.models.hms_final.image_hms_model import ImageHMSClassifier
-from vigc.models.hms_final.spec_image_hms_model import SpecImageHMSClassifier
-from vigc.models.hms_final.eeg_wave_hms_model import EEGWaveHMSClassifier
-from vigc.models.hms_final.eeg_wave_hms_model2 import WaveNetHMSClassifier
-
-from vigc.models.chatphone.bert_classification import BertClassifier
-from vigc.models.drug_mm.clip_classification import ClipClassifier
-
 from vigc.models.whisper.whisper_model import Whisper
-
-from vigc.models.machine_translator.nllb_translator import NLLBTranslator
-from vigc.models.machine_translator.m2m100_translator import M2M100Translator
-from vigc.models.machine_translator.opus_translator import OpusTranslator
-
-from vigc.models.gpt_sovits.vits_model import VQVits
-from vigc.models.vits.vits import Vits
 
 __all__ = [
     "load_model",
     "BaseModel",
-    "Blip2Base",
-    "Blip2VicunaInstruct",
-    "VisionTransformerEncoder",
-
-    "HMSClassifier",
-    "ImageHMSClassifier",
-    "SpecImageHMSClassifier",
-    "EEGWaveHMSClassifier",
-    "WaveNetHMSClassifier",
-
-    "BertClassifier",
-    "ClipClassifier",
-
     "Whisper",
-
-    "NLLBTranslator",
-    "M2M100Translator",
-    "OpusTranslator",
-
-    "VQVits",
-    "Vits",
 ]
 
 

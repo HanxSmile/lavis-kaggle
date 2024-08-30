@@ -1,9 +1,0 @@
-datasets:
-  drug_mm_multi_class_eval:
-    data_type: images
-    label_map:
-      pass: 0
-      type_a: 1
-      type_b: 2
-    build_info:
-      ann_path: /home/work/hanxiao_train/input/drug/th_multiclass_data/th_val.json

@@ -36,6 +36,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Training")
     parser.add_argument("--src-path", required=True)
     parser.add_argument("--dst-path", required=True, help="path to save to hf weights.")
+    parser.add_argument("--lang", default='none', help="path to save to hf weights.")
 
     args = parser.parse_args()
 
@@ -45,10 +46,15 @@ def parse_args():
 def main():
     cfg = parse_args()
     # from vigc.models.whisper.bengali_wav2vec import BengaliWav2Vec
-    model = Whisper(
-        model_name="/mnt/data/hanxiao/models/audio/whisper-large-v3",
-        language="el"
-    )
+    if cfg.lang == 'none':
+        model = Whisper(
+            model_name="/mnt/data/hanxiao/models/audio/whisper-large-v3",
+        )
+    else:
+        model = Whisper(
+            model_name="/mnt/data/hanxiao/models/audio/whisper-large-v3",
+            language=cfg.lang
+        )
     model.load_checkpoint(cfg.src_path)
     hf_model = model.model
     hf_model.save_pretrained(cfg.dst_path)

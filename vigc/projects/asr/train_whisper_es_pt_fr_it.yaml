@@ -9,6 +9,7 @@ model:
   model_type: medium
   language: null
   freeze_encoder: False
+  use_attention_mask: False
 
 datasets:
   # train
@@ -16,53 +17,60 @@ datasets:
   whisper_fleurs_train:
     sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fa
-    language: fa
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-es
+    language: es
+    augmentation: True
     split:
       - train
+      - validation
       - test
 
   whisper_fleurs_train$copy1:
     sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-tr
-    language: tr
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-pt
+    language: pt
+    augmentation: True
     split:
       - train
+      - validation
       - test
 
   whisper_fleurs_train$copy2:
     sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-el
-    language: el
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fr
+    language: fr
+    augmentation: True
     split:
       - train
+      - validation
       - test
 
   whisper_fleurs_train$copy3:
     sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fr
-    language: fr
+    data_root: /mnt/data/hanxiao/dataset/audio/fleurs-it
+    language: it
+    augmentation: True
     split:
       - train
+      - validation
       - test
-
 
   whisper_fleurs_concat_eval:
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
     pre_normalize: False
     data_root:
-      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fa
-      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-tr
-      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-el
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-es
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-pt
       - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-fr
+      - /mnt/data/hanxiao/dataset/audio/fleurs-it
     language:
-      - fa
-      - tr
-      - el
+      - es
+      - pt
       - fr
+      - it
     split:
       - test
       - test
@@ -74,7 +82,7 @@ run:
   task: whisper_asr_task
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 1e-5
+  init_lr: 2e-6
   min_lr: 1e-6
   warmup_lr: 1e-6
 
@@ -82,7 +90,7 @@ run:
 
   batch_size_train: 8
   batch_size_eval: 16
-  accum_grad_iters: 2
+  accum_grad_iters: 8
 
   num_workers: 4
   warmup_steps: 200
@@ -91,7 +99,7 @@ run:
   max_iters: 10000
 
   seed: 42
-  output_dir: "./output/whisper_fleurs_multi"
+  output_dir: "./output/whisper_fleurs_es_pt_fr_it"
   save_opt_ckpt: False
 
   amp: True

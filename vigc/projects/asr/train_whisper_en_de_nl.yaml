@@ -7,59 +7,77 @@ model:
   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
   arch: whisper
   model_type: medium
-  language: tr
+  language: null
   freeze_encoder: False
+  use_attention_mask: False
 
 datasets:
   # train
-  whisper_common_voice_train:
-    sample_ratio: 160461
-    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    language: tr
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/common_voice_17_0-tr
-    split:
-      - train
-      - validated
 
   whisper_fleurs_train:
-    sample_ratio: 2864
+    sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-tr
-    language: tr
-    split: train
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-en
+    language: en
+    augmentation: True
+    split:
+      - train
+      - validation
+      - test
 
-  whisper_greek_single_speaker_speech_train:
-    sample_ratio: 2513
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/Open_SLR108_Turkish_10_hours
+  whisper_fleurs_train$copy1:
+    sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    language: tr
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-de
+    language: de
+    augmentation: True
+    split:
+      - train
+      - validation
+      - test
 
-  # eval
-#  whisper_myaudio_eval:
-#    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-#    language: fa
-
-  whisper_fleurs_eval:
+  whisper_fleurs_train$copy2:
+    sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-tr
-    language: tr
-    split: test
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-nl
+    language: nl
+    augmentation: True
+    split:
+      - train
+      - validation
+      - test
 
+
+  whisper_fleurs_concat_eval:
+    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
+    pre_normalize: False
+    data_root:
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-en
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-de
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-nl
+    language:
+      - en
+      - de
+      - nl
+    split:
+      - test
+      - test
+      - test
 
 run:
   runner: runner_iter
   task: whisper_asr_task
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 1e-5
-  min_lr: 1e-5
+  init_lr: 2e-6
+  min_lr: 1e-6
   warmup_lr: 1e-6
 
   weight_decay: 0.05
 
   batch_size_train: 8
   batch_size_eval: 16
-  accum_grad_iters: 2
+  accum_grad_iters: 8
 
   num_workers: 4
   warmup_steps: 200
@@ -68,7 +86,7 @@ run:
   max_iters: 10000
 
   seed: 42
-  output_dir: "./output/whisper_v3_tr"
+  output_dir: "./output/whisper_fleurs_en_de_nl"
   save_opt_ckpt: False
 
   amp: True
@@ -77,7 +95,7 @@ run:
   evaluate: False
   train_splits: [ "train" ]
   valid_splits: [ "eval" ]
-  metric_key: loss
+  metric_key: wer
 
   device: "cuda"
   world_size: 1

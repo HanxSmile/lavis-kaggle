@@ -7,44 +7,55 @@ model:
   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
   arch: whisper
   model_type: medium
-  language: japanese
+  language: null
   freeze_encoder: False
+  use_attention_mask: False
 
 datasets:
-
-  # whisper_common_voice_train:
-  #   sample_ratio: 14118
-  #   model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-  #   language: japanese
-  #   data_root: /mnt/data/hanxiao/dataset/audio/common_voice_17_0-ja
-  #   pre_normalize: True
-  #   split:
-  #     - train
-  #     - validated
+  # train
 
   whisper_fleurs_train:
-    # sample_ratio: 2558
+    sample_ratio: 1
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/audio/fleurs-ja
-    language: ja
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-ar
+    language: ar
+    augmentation: True
     split:
       - train
+      - validation
+      - test
+
+  whisper_fleurs_train$copy1:
+    sample_ratio: 1
+    model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-he
+    language: he
+    augmentation: True
+    split:
+      - train
+      - validation
       - test
 
 
-  whisper_fleurs_eval:
+  whisper_fleurs_concat_eval:
     model_name: /mnt/data/hanxiao/models/audio/whisper-large-v3
-    data_root: /mnt/data/hanxiao/dataset/audio/fleurs-ja
-    language: ja
-    split: test
-
+    pre_normalize: False
+    data_root:
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-ar
+      - /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-he
+    language:
+      - ar
+      - he
+    split:
+      - test
+      - test
 
 run:
   runner: runner_iter
   task: whisper_asr_task
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 1e-6
+  init_lr: 2e-6
   min_lr: 1e-6
   warmup_lr: 1e-6
 
@@ -55,13 +66,13 @@ run:
   accum_grad_iters: 8
 
   num_workers: 4
-  warmup_steps: 256
+  warmup_steps: 200
 
-  iters_per_inner_epoch: 256
-  max_iters: 10240
+  iters_per_inner_epoch: 200
+  max_iters: 10000
 
   seed: 42
-  output_dir: "./output/whisper_fleurs_new_ja"
+  output_dir: "./output/whisper_fleurs_ar_he"
   save_opt_ckpt: False
 
   amp: True
@@ -70,7 +81,7 @@ run:
   evaluate: False
   train_splits: [ "train" ]
   valid_splits: [ "eval" ]
-  metric_key: cer
+  metric_key: wer
 
   device: "cuda"
   world_size: 1
