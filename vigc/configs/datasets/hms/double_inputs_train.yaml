@@ -1,8 +1,0 @@
-datasets:
-  hms_double_inputs_train:
-    fold: 5
-    random_seed: 42
-    data_type: images
-    build_info:
-      data_root: /home/work/hanxiao_train/HMS_processed
-      ann_path: /home/work/hanxiao_train/HMS/train.csv

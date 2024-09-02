@@ -18,20 +18,6 @@ from vigc.models.vit import VisionTransformerEncoder
 
 from vigc.processors.base_processor import BaseProcessor
 
-from vigc.models.hms_classifier.hms_model import HMSClassifier
-from vigc.models.hms_final.image_hms_model import ImageHMSClassifier
-from vigc.models.hms_final.spec_image_hms_model import SpecImageHMSClassifier
-from vigc.models.hms_final.eeg_wave_hms_model import EEGWaveHMSClassifier
-from vigc.models.hms_final.eeg_wave_hms_model2 import WaveNetHMSClassifier
-
-from vigc.models.chatphone.bert_classification import BertClassifier
-from vigc.models.drug_mm.clip_classification import ClipClassifier
-
-from vigc.models.whisper.whisper_model import Whisper
-
-from vigc.models.machine_translator.nllb_translator import NLLBTranslator
-from vigc.models.machine_translator.m2m100_translator import M2M100Translator
-from vigc.models.machine_translator.opus_translator import OpusTranslator
 from vigc.models.ootd.ootd_viton import OOTDVitonNet
 
 __all__ = [
@@ -40,21 +26,6 @@ __all__ = [
     "Blip2Base",
     "Blip2VicunaInstruct",
     "VisionTransformerEncoder",
-
-    "HMSClassifier",
-    "ImageHMSClassifier",
-    "SpecImageHMSClassifier",
-    "EEGWaveHMSClassifier",
-    "WaveNetHMSClassifier",
-
-    "BertClassifier",
-    "ClipClassifier",
-
-    "Whisper",
-
-    "NLLBTranslator",
-    "M2M100Translator",
-    "OpusTranslator",
 
     "OOTDVitonNet",
 ]

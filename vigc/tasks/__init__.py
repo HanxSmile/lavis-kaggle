@@ -8,14 +8,6 @@
 from vigc.common.registry import registry
 from vigc.tasks.base_task import BaseTask
 
-from vigc.tasks.hms_train_eval import HMSClassifyTrainEvalTask
-from vigc.tasks.chatphone_train_eval import ChatPhoneTrainEvalTask
-from vigc.tasks.drug_mm_classification import DrugMMClassificationTrainEvalTask
-from vigc.tasks.drug_mm_binary_classification import DrugMMBinaryTrainEvalTask
-
-from vigc.tasks.whisper_asr_train_eval import WhisperASRTask
-from vigc.tasks.translation_train_eval import TranslationTask
-
 from vigc.tasks.vton_task import VtonTrain
 
 
@@ -31,10 +23,5 @@ def setup_task(cfg):
 
 __all__ = [
     "BaseTask",
-    "HMSClassifyTrainEvalTask",
-    "ChatPhoneTrainEvalTask",
-    "DrugMMClassificationTrainEvalTask",
-    "DrugMMBinaryTrainEvalTask",
-    "WhisperASRTask",
     "VtonTrain",
 ]

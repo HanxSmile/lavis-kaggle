@@ -1,6 +1,0 @@
-datasets:
-  text_pair_eval:
-    data_type: text
-    source_key: "source"
-    target_key: "target"
-    data_root: null

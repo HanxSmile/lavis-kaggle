@@ -9,85 +9,11 @@ from vigc.datasets.builders.base_dataset_builder import load_dataset_config
 
 from vigc.common.registry import registry
 
-from vigc.datasets.builders.hms.double_inputs import (
-    HMSDoubleInputsTrainBuilder,
-    HMSDoubleInputsEvalBuilder,
-)
-from vigc.datasets.builders.chatphone.chatphone_classification_builder import (
-    ChatPhoneTrainBuilder,
-    ChatPhoneEvalBuilder
-)
-from vigc.datasets.builders.drug_mm.multi_class_builder import (
-    DrugMMMultiClassTrainBuilder,
-    DrugMMMultiClassEvalBuilder,
-)
-from vigc.datasets.builders.drug_mm.binary_class_builder import (
-    DrugMMBinaryClassTrainBuilder,
-    DrugMMBinaryClassEvalBuilder,
-)
-
-from vigc.datasets.builders.drug_mm.balanced_multi_class_builder import (
-    DrugMMBalancedMultiClassTrainBuilder,
-    DrugMMBalancedMultiClassEvalBuilder
-)
-
-from vigc.datasets.builders.asr_data.common_voice_builder import (
-    CommonVoiceTrainBuilder,
-    CommonVoiceEvalBuilder
-)
-
-from vigc.datasets.builders.asr_data.my_audio_builder import MyAudioEvalBuilder
-from vigc.datasets.builders.asr_data.common_voice_complex_aug_builder import (
-    CommonVoiceSplitTrainBuilder,
-    CommonVoiceConcatTrainBuilder,
-    CommonVoiceSplitAndConcatTrainBuilder
-)
-from vigc.datasets.builders.asr_data.fleurs_builder import (
-    FleursTrainBuilder,
-    FleursEvalBuilder,
-)
-from vigc.datasets.builders.asr_data.greek_single_speaker_speech_builder import GreekSingleSpeakerSpeechTrainBuilder
-
-from vigc.datasets.builders.translation.text_pair_builder import (
-    TextPairTrainBuilder,
-    TextPairEvalBuilder,
-)
-from vigc.datasets.builders.translation.opus_builder import (
-    OpusTrainBuilder,
-    OpusEvalBuilder
-)
-
 from vigc.datasets.builders.vton_builders.vitonhd import VitonHDTrainBuilder, VitonHDTestBuilder
 from vigc.datasets.builders.vton_builders.dresscode import DressCodeTrainBuilder, DressCodeTestBuilder
 from vigc.datasets.builders.vton_builders.concat_eval_builder import VtonConcatTestBuilder
 
 __all__ = [
-    "HMSDoubleInputsTrainBuilder",
-    "HMSDoubleInputsEvalBuilder",
-    "ChatPhoneTrainBuilder",
-    "ChatPhoneEvalBuilder",
-    "DrugMMMultiClassTrainBuilder",
-    "DrugMMMultiClassEvalBuilder",
-    "DrugMMBinaryClassTrainBuilder",
-    "DrugMMBinaryClassEvalBuilder",
-    "DrugMMBalancedMultiClassTrainBuilder",
-    "DrugMMBalancedMultiClassEvalBuilder",
-
-    "CommonVoiceTrainBuilder",
-    "CommonVoiceEvalBuilder",
-    "MyAudioEvalBuilder",
-    "CommonVoiceSplitTrainBuilder",
-    "CommonVoiceConcatTrainBuilder",
-    "CommonVoiceSplitAndConcatTrainBuilder",
-    "FleursTrainBuilder",
-    "FleursEvalBuilder",
-    "GreekSingleSpeakerSpeechTrainBuilder",
-
-    "TextPairTrainBuilder",
-    "TextPairEvalBuilder",
-    "OpusTrainBuilder",
-    "OpusEvalBuilder",
-
     "VitonHDTrainBuilder",
     "VitonHDTestBuilder",
     "DressCodeTrainBuilder",

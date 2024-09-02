@@ -1,5 +1,0 @@
-datasets:
-  chatphone_eval:
-    data_type: images
-    build_info:
-      ann_path: /home/work/hanxiao_train/input/chatphone/eval_dataset.csv

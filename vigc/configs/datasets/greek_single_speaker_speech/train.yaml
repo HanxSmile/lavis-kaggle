@@ -1,7 +1,0 @@
-datasets:
-  whisper_greek_single_speaker_speech_train:
-    data_type: audios
-    language: el
-    musan_dir: null
-    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/GreekSingleSpeakerSpeechDataset
-    pre_normalize: False
