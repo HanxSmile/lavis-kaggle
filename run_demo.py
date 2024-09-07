@@ -1,5 +1,5 @@
 import gradio as gr
-from vigc.models import load_model_and_preprocess
+from aigc.models import load_model_and_preprocess
 import torch
 import argparse
 

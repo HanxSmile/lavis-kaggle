@@ -1,1 +1,0 @@
-cd /home/work/hanxiao_train/workspace/LAVIS && pip install -e . && bash run.sh  2>&1 | tee /home/work/log/train_run_2.log

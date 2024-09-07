@@ -1,5 +1,5 @@
 import gradio as gr
-from vigc.models import load_model_and_preprocess
+from aigc.models import load_model_and_preprocess
 import torch
 import argparse
 
@@ -9,7 +9,8 @@ if __name__ == '__main__':
     parser.add_argument("--model-type", default="vicuna7b")
     parser.add_argument("--device", default="0")
     parser.add_argument("--ckpt")
-    parser.add_argument("--pretrained", default="/mnt/petrelfs/hanxiao/input/instruct-blip/blip2_pretrained_flant5xxl.pth")
+    parser.add_argument("--pretrained",
+                        default="/mnt/petrelfs/hanxiao/input/instruct-blip/blip2_pretrained_flant5xxl.pth")
     parser.add_argument("--finetuned", default="/mnt/petrelfs/hanxiao/work/vigc/minigpt4_proj_7b.pth")
     args = parser.parse_args()
 

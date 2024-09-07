@@ -13,23 +13,23 @@ import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 
-import vigc.tasks as tasks
-from vigc.common.config import Config
-from vigc.common.dist_utils import get_rank, init_distributed_mode
-from vigc.common.logger import setup_logger
-from vigc.common.optims import (
+import aigc.tasks as tasks
+from aigc.common.config import Config
+from aigc.common.dist_utils import get_rank, init_distributed_mode
+from aigc.common.logger import setup_logger
+from aigc.common.optims import (
     LinearWarmupCosineLRScheduler,
     LinearWarmupStepLRScheduler,
 )
-from vigc.common.registry import registry
-from vigc.common.utils import now
+from aigc.common.registry import registry
+from aigc.common.utils import now
 
 # imports modules for registration
-from vigc.datasets.builders import *
-from vigc.models import *
-from vigc.processors import *
-from vigc.runners import *
-from vigc.tasks import *
+from aigc.datasets.builders import *
+from aigc.models import *
+from aigc.processors import *
+from aigc.runners import *
+from aigc.tasks import *
 
 
 def parse_args():
