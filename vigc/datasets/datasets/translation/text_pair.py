@@ -22,7 +22,7 @@ class TextPairDataset(torch_Dataset):
                 all_data_paths = [data_root]
         else:
             for path in data_root:
-                if osp.isdir(path) and path.endswith(".json"):
+                if osp.isfile(path) and path.endswith(".json"):
                     all_data_paths.append(path)
 
         for path in all_data_paths:

@@ -49,9 +49,8 @@ class M2M100Translator(BaseModel):
     ):
         text = samples["input"]
 
-        source_lang, target_lang = self.lang_token_map.get(samples["input_key"],
-                                                           samples["input_key"]), self.lang_token_map.get(
-            samples["output_key"], samples["output_key"])
+        source_lang = self.lang_token_map.get(samples["input_key"], samples["input_key"])
+        target_lang = self.lang_token_map.get(samples["output_key"], samples["output_key"])
 
         self.tokenizer.src_lang = source_lang
 
