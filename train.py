@@ -15,7 +15,7 @@ import torch.backends.cudnn as cudnn
 
 import vigc.tasks as tasks
 from vigc.common.config import Config
-from vigc.common.dist_utils import get_rank, init_distributed_mode
+from vigc.common.dist_utils import get_rank, init_distributed_mode, init_deepspeed_distributed_mode
 from vigc.common.logger import setup_logger
 from vigc.common.optims import (
     LinearWarmupCosineLRScheduler,
@@ -36,12 +36,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Training")
 
     parser.add_argument("--cfg-path", required=True, help="path to configuration file.")
+    parser.add_argument("--use-deepspeed", default=False, action='store_true')
     parser.add_argument(
         "--options",
         nargs="+",
         help="override some settings in the used config, the key-value pair "
-        "in xxx=yyy format will be merged into config file (deprecate), "
-        "change to --cfg-options instead.",
+             "in xxx=yyy format will be merged into config file (deprecate), "
+             "change to --cfg-options instead.",
     )
 
     args = parser.parse_args()
@@ -78,9 +79,13 @@ def main():
     # set before init_distributed_mode() to ensure the same job_id shared across all ranks.
     job_id = now()
 
-    cfg = Config(parse_args())
+    args = parse_args()
+    cfg = Config(args)
 
-    init_distributed_mode(cfg.run_cfg)
+    if not args.use_deepspeed:
+        init_distributed_mode(cfg.run_cfg)
+    else:
+        init_deepspeed_distributed_mode(cfg.run_cfg)
 
     setup_seeds(cfg)
 
