@@ -1,12 +1,18 @@
 import logging
 import os
+import time
+import datetime
 from pathlib import Path
 from omegaconf import OmegaConf
 
 import torch
+import torch.distributed as dist
 from vigc.common.registry import registry
 from vigc.runners.runner_base import RunnerBase
-
+from vigc.common.dist_utils import (
+    get_world_size,
+    is_main_process,
+)
 import deepspeed
 
 
@@ -41,7 +47,6 @@ class DeepSpeedRunner(RunnerBase):
             lr_scheduler=None,
             config=OmegaConf.to_container(self.deepspeed_config),
         )
-        self._wrapped_model.save_fp16_model()
 
     @property
     def model(self):
@@ -88,6 +93,70 @@ class DeepSpeedRunner(RunnerBase):
             betas=(0.9, beta2),
         )
         return self._optimizer
+
+    def train(self):
+        start_time = time.time()
+        best_agg_metric = 0
+        best_epoch = 0
+
+        self.log_config()
+
+        # resume from checkpoint if specified
+        if not self.evaluate_only and self.resume_ckpt_path is not None:
+            self._load_checkpoint(self.resume_ckpt_path)
+
+        for cur_epoch in range(self.start_epoch, self.max_epoch):
+            # training phase
+            if not self.evaluate_only:
+                logging.info("Start training")
+                train_stats = self.train_epoch(cur_epoch)
+                self.log_stats(split_name="train", stats=train_stats)
+
+            # evaluation phase
+            if len(self.valid_splits) > 0:
+                for split_name in self.valid_splits:
+                    logging.info("Evaluating on {}.".format(split_name))
+
+                    val_log = self.eval_epoch(
+                        split_name=split_name, cur_epoch=cur_epoch
+                    )
+                    best_flag = False
+                    if val_log is not None:
+                        if is_main_process():
+                            assert (
+                                    "agg_metrics" in val_log
+                            ), "No agg_metrics found in validation log."
+
+                            agg_metrics = val_log["agg_metrics"]
+                            if agg_metrics > best_agg_metric and split_name == "eval":
+                                best_epoch, best_agg_metric = cur_epoch, agg_metrics
+                                best_flag = True
+                            val_log.update({"best_epoch": best_epoch})
+                            self.log_stats(val_log, split_name)
+                    if best_flag:
+                        best_flag_tensor = torch.ones(1).to(self.device)
+                    else:
+                        best_flag_tensor = torch.zeros(1).to(self.device)
+
+                    flag_tensors = torch.zeros(get_world_size()).to(self.device)
+                    dist.all_gather_into_tensor(flag_tensors, best_flag_tensor)
+                    if torch.sum(flag_tensors) > 0:
+                        self._save_checkpoint(cur_epoch, is_best=True)
+
+            if self.evaluate_only:
+                break
+            if self.milestone and cur_epoch + 1 in self.milestone:
+                self._save_checkpoint(cur_epoch)
+            self._save_checkpoint(cur_epoch, latest=True)
+            dist.barrier()
+
+        # testing phase
+        test_epoch = "best" if len(self.valid_splits) > 0 else cur_epoch
+        self.evaluate(cur_epoch=test_epoch, skip_reload=self.evaluate_only)
+
+        total_time = time.time() - start_time
+        total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+        logging.info("Training time {}".format(total_time_str))
 
     def setup_output_dir(self):
         lib_root = Path(registry.get_path("library_root"))

@@ -9,10 +9,11 @@ import datetime
 import logging
 import os
 import time
+import torch
 
 import torch.distributed as dist
 import webdataset as wds
-from vigc.common.dist_utils import is_main_process, main_process
+from vigc.common.dist_utils import is_main_process, main_process, get_world_size
 from vigc.common.registry import registry
 from vigc.datasets.data_utils import reorg_datasets_by_split
 from vigc.runners.runner_base_ds import DeepSpeedRunner
@@ -102,6 +103,7 @@ class DeepSpeedRunnerIter(DeepSpeedRunner):
                     val_log = self.eval_epoch(
                         split_name=split_name, cur_epoch=self._progress(end_iters)
                     )
+                    best_flag = False
                     if val_log is not None:
                         if is_main_process():
                             assert (
@@ -111,10 +113,18 @@ class DeepSpeedRunnerIter(DeepSpeedRunner):
                             agg_metrics = val_log["agg_metrics"]
                             if agg_metrics > best_agg_metric and split_name == "eval":
                                 best_iters, best_agg_metric = end_iters, agg_metrics
-
-                                self._save_checkpoint(end_iters, is_best=True)
+                                best_flag = True
                             val_log.update({"best_iters": best_iters})
                             self.log_stats(val_log, split_name)
+                    if best_flag:
+                        best_flag_tensor = torch.ones(1).to(self.device)
+                    else:
+                        best_flag_tensor = torch.zeros(1).to(self.device)
+
+                    flag_tensors = torch.zeros(get_world_size()).to(self.device)
+                    dist.all_gather_into_tensor(flag_tensors, best_flag_tensor)
+                    if torch.sum(flag_tensors) > 0:
+                        self._save_checkpoint(best_iters, is_best=True)
 
             if self.evaluate_only:
                 break
@@ -149,7 +159,6 @@ class DeepSpeedRunnerIter(DeepSpeedRunner):
             accum_grad_iters=self.accum_grad_iters,
         )
 
-    @main_process
     def _save_checkpoint(self, cur_iters, is_best=False, latest=False):
         # only save the params requires gradient
         assert not (is_best and latest), "You can't set 'is_best' and 'latest' the same time."
