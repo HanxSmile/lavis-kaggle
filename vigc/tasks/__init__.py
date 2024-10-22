@@ -18,6 +18,8 @@ from vigc.tasks.translation_train_eval import TranslationTask
 from vigc.tasks.translation_ds_train_eval import TranslationDeepSpeedTask
 from vigc.tasks.tts_train_eval import TTSTask
 
+from vigc.tasks.qwen_caption_task import QwenCaptionTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
