@@ -36,6 +36,8 @@ from vigc.models.machine_translator.opus_translator import OpusTranslator
 from vigc.models.gpt_sovits.vits_model import VQVits
 from vigc.models.vits.vits import Vits
 
+from vigc.models.qwen_llm import Qwen2Instruct
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -60,6 +62,8 @@ __all__ = [
 
     "VQVits",
     "Vits",
+
+    "Qwen2Instruct",
 ]
 
 

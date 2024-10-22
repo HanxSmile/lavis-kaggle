@@ -1,0 +1,12 @@
+model:
+  model_name: Qwen/Qwen2.5-3B-Instruct
+  load_finetuned: False
+  finetuned: ""
+  arch: qwen2_instruct
+
+  model_type: default
+
+  use_grad_checkpoint: False
+  compute_type: bf16
+  max_txt_len: 128
+  max_output_txt_len: 256
