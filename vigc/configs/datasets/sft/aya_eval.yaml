@@ -1,0 +1,6 @@
+datasets:
+  aya_sft_eval:
+    data_type: text
+    data_root: Null
+    split: test
+    language: Null

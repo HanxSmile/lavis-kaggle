@@ -20,7 +20,7 @@ class Qwen2Instruct(Blip2Base):
     """
 
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/qwen2_instruct.yaml",
+        "default": "configs/models/qwen/qwen2_instruct.yaml",
     }
 
     def __init__(
@@ -117,7 +117,7 @@ class Qwen2Instruct(Blip2Base):
             targets[i][:l] = -100
 
         with self.maybe_autocast(self.compute_type):
-            outputs = self.llm_model(
+            outputs = self.model(
                 input_ids=llm_tokens['input_ids'],
                 attention_mask=llm_tokens['attention_mask'],
                 return_dict=True,

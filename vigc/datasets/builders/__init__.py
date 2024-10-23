@@ -64,6 +64,11 @@ from vigc.datasets.builders.tts_data.vits import (
     VitsTTSCustumTrainBuilder
 )
 
+from vigc.datasets.builders.sft.aya_builder import (
+    AyaSFTTrainBuilder,
+    AyaSFTEvalBuilder,
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -95,6 +100,9 @@ __all__ = [
     "VitsTTSTrainBuilder",
     "VitsTTSEvalBuilder",
     "VitsTTSCustumTrainBuilder",
+
+    "AyaSFTTrainBuilder",
+    "AyaSFTEvalBuilder",
 ]
 
 
