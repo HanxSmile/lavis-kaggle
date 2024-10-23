@@ -37,6 +37,20 @@ class DeepSpeedRunner(RunnerBase):
         return self.config.run_cfg.deepspeed_config
 
     @property
+    def only_save_latest(self):
+        only_save_latest = self.config.run_cfg.get("only_save_latest", False)
+        only_save_best = self.config.run_cfg.get("only_save_best", False)
+        assert only_save_latest + only_save_best <= 1
+        return only_save_latest
+
+    @property
+    def only_save_best(self):
+        only_save_latest = self.config.run_cfg.get("only_save_latest", False)
+        only_save_best = self.config.run_cfg.get("only_save_best", False)
+        assert only_save_latest + only_save_best <= 1
+        return only_save_best
+
+    @property
     def use_distributed(self):
         return True
 
@@ -140,14 +154,16 @@ class DeepSpeedRunner(RunnerBase):
 
                     flag_tensors = torch.zeros(get_world_size()).to(self.device)
                     dist.all_gather_into_tensor(flag_tensors, best_flag_tensor)
-                    if torch.sum(flag_tensors) > 0:
+                    if torch.sum(flag_tensors) > 0 and (not self.only_save_latest):
                         self._save_checkpoint(cur_epoch, is_best=True)
 
             if self.evaluate_only:
                 break
-            if self.milestone and cur_epoch + 1 in self.milestone:
+            if self.milestone and cur_epoch + 1 in self.milestone and (not self.only_save_latest) and (
+                    not self.only_save_best):
                 self._save_checkpoint(cur_epoch)
-            self._save_checkpoint(cur_epoch, latest=True)
+            if not self.only_save_best:
+                self._save_checkpoint(cur_epoch, latest=True)
             dist.barrier()
 
         # testing phase

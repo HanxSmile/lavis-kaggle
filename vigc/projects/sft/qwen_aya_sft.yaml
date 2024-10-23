@@ -62,6 +62,7 @@ run:
   world_size: 1
   dist_url: "env://"
   distributed: True
+  only_save_best: True
 
   generate_cfg:
     do_sample: True

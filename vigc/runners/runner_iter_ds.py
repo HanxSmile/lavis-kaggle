@@ -123,14 +123,16 @@ class DeepSpeedRunnerIter(DeepSpeedRunner):
 
                     flag_tensors = torch.zeros(get_world_size()).to(self.device)
                     dist.all_gather_into_tensor(flag_tensors, best_flag_tensor)
-                    if torch.sum(flag_tensors) > 0:
+                    if torch.sum(flag_tensors) > 0 and (not self.only_save_latest):
                         self._save_checkpoint(best_iters, is_best=True)
 
             if self.evaluate_only:
                 break
-            if self.milestone and cur_epoch + 1 in self.milestone:
+            if self.milestone and cur_epoch + 1 in self.milestone and (not self.only_save_latest) and (
+                    not self.only_save_best):
                 self._save_checkpoint(cur_epoch)
-            self._save_checkpoint(end_iters, latest=True)
+            if not self.only_save_best:
+                self._save_checkpoint(end_iters, latest=True)
             dist.barrier()
             cur_epoch += 1
 
