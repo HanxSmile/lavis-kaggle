@@ -56,7 +56,9 @@ class QwenCaptionTask(DeepSpeedBaseTask):
 
     def valid_step(self, model, samples):
         results = []
-        ids, gts, languages = samples["id"], samples["text_output"], samples["language"]
+        ids, gts, languages, questions, system_inputs = samples["id"], samples["text_output"], samples["language"], \
+            samples[
+                "text_input"], samples["system_input"]
 
         answers = model.generate(
             samples,
@@ -68,13 +70,16 @@ class QwenCaptionTask(DeepSpeedBaseTask):
             repetition_penalty=self.repetition_penalty,
             temperature=self.temperature,
         )
-        for id_, gt, answer, language in zip(ids, gts, answers, languages):
+        for id_, gt, answer, language, question, system_input in zip(
+                ids, gts, answers, languages, questions, system_inputs):
             answer = answer.strip()
             res = {
                 "id": id_,
                 "gt": gt,
                 "pred": answer,
                 "language": language,
+                "question": question,
+                "system_input": system_input,
             }
             results.append(res)
 
