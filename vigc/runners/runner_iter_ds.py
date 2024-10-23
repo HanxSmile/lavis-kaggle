@@ -13,7 +13,7 @@ import torch
 
 import torch.distributed as dist
 import webdataset as wds
-from vigc.common.dist_utils import is_main_process, main_process, get_world_size
+from vigc.common.dist_utils import is_main_process, get_world_size
 from vigc.common.registry import registry
 from vigc.datasets.data_utils import reorg_datasets_by_split
 from vigc.runners.runner_base_ds import DeepSpeedRunner
