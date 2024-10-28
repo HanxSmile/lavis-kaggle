@@ -37,6 +37,7 @@ from vigc.models.gpt_sovits.vits_model import VQVits
 from vigc.models.vits.vits import Vits
 
 from vigc.models.qwen_llm import Qwen2Instruct
+from vigc.models.llama_llm import Llama3Instruct
 
 __all__ = [
     "load_model",
@@ -64,6 +65,7 @@ __all__ = [
     "Vits",
 
     "Qwen2Instruct",
+    "Llama3Instruct",
 ]
 
 
