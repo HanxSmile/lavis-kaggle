@@ -39,6 +39,8 @@ from vigc.models.vits.vits import Vits
 from vigc.models.qwen_llm import Qwen2Instruct
 from vigc.models.llama_llm import Llama3Instruct
 
+from vigc.models.bge import BgeEmbeddingModel
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -66,6 +68,8 @@ __all__ = [
 
     "Qwen2Instruct",
     "Llama3Instruct",
+
+    "BgeEmbeddingModel",
 ]
 
 
