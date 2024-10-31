@@ -1,0 +1,12 @@
+model:
+  load_finetuned: False
+  finetuned: ""
+  arch: unet_semantic_segmentation
+
+  model_type: default
+
+  encoder_name: "efficientnet-b1"
+  encoder_weights: "imagenet"
+  in_channels: 3
+  classes: -1
+  activation: Null

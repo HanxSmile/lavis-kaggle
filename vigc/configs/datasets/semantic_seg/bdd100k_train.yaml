@@ -1,0 +1,11 @@
+datasets:
+  bdd100k_train:
+    data_type: images
+    ann_path: ""
+    media_dir: ""
+
+    vis_processor:
+      train:
+        name: "semantic_segmentation_train"
+        image_size: 224
+

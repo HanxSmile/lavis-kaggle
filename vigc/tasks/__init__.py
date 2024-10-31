@@ -20,6 +20,8 @@ from vigc.tasks.tts_train_eval import TTSTask
 
 from vigc.tasks.qwen_caption_task import QwenCaptionTask
 
+from vigc.tasks.semantic_segmentation_task import SemanticSegmentationTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."

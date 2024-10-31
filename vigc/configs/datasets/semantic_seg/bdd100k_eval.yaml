@@ -1,0 +1,11 @@
+datasets:
+  bdd100k_eval:
+    data_type: images
+    ann_path: ""
+    media_dir: ""
+
+    vis_processor:
+      eval:
+        name: "semantic_segmentation_eval"
+        image_size: 224
+

@@ -41,6 +41,8 @@ from vigc.models.llama_llm import Llama3Instruct
 
 from vigc.models.bge import BgeEmbeddingModel
 
+from vigc.models.semantic_segmentation import UnetSemanticSegmentationModel
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -70,6 +72,8 @@ __all__ = [
     "Llama3Instruct",
 
     "BgeEmbeddingModel",
+
+    "UnetSemanticSegmentationModel",
 ]
 
 

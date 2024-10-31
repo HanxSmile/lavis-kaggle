@@ -69,6 +69,13 @@ from vigc.datasets.builders.sft.aya_builder import (
     AyaSFTEvalBuilder,
 )
 
+from vigc.datasets.builders.semantic_segmentation import (
+    BDD100kTrainBuilder,
+    BDD100kEvalBuilder,
+    CityScapesTrainBuilder,
+    CityScapesEvalBuilder,
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -103,6 +110,11 @@ __all__ = [
 
     "AyaSFTTrainBuilder",
     "AyaSFTEvalBuilder",
+
+    "BDD100kTrainBuilder",
+    "BDD100kEvalBuilder",
+    "CityScapesTrainBuilder",
+    "CityScapesEvalBuilder",
 ]
 
 

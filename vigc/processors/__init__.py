@@ -20,6 +20,11 @@ from vigc.processors.clip_processor import (
     ClipCaptionProcessor
 )
 
+from vigc.processors.semantic_segmentation_processor import (
+    SemanticSegmentationTrainProcessor,
+    SemanticSegmentationEvalProcessor,
+)
+
 from vigc.common.registry import registry
 
 __all__ = [
@@ -32,7 +37,10 @@ __all__ = [
     # CLIP
     "ClipImageTrainProcessor",
     "ClipImageEvalProcessor",
-    "ClipCaptionProcessor"
+    "ClipCaptionProcessor",
+    # SemanticSeg
+    "SemanticSegmentationTrainProcessor",
+    "SemanticSegmentationEvalProcessor",
 ]
 
 
