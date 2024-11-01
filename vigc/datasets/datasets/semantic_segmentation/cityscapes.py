@@ -26,6 +26,9 @@ class CityScapes(SemanticSegmentationDataset):
         ]
 
     def load_label(self, label_path):
+        if label_path.endswith(".npy"):
+            label = np.load(label_path)
+            return label.astype(np.float32)
         color_map = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
         label_shape = [color_map.shape[0], color_map.shape[1], len(self.classes)]
         label = np.zeros(label_shape)

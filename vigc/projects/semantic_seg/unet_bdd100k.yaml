@@ -1,0 +1,85 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: unet_semantic_segmentation
+  model_type: default
+  encoder_name: "efficientnet-b1"
+  encoder_weights: "imagenet"
+  in_channels: 3
+  classes: 19
+  activation: Null
+
+
+datasets:
+  # train
+  bdd100k_train:
+    sample_ratio: 1
+    ann_path: ""
+    media_dir: ""
+
+    vis_processor:
+      train:
+        name: "semantic_segmentation_train"
+        image_size: 224
+
+  cityscapes_train:
+    sample_ratio: 1
+    ann_path: ""
+    media_dir: ""
+
+    vis_processor:
+      train:
+        name: "semantic_segmentation_train"
+        image_size: 224
+
+  # eval
+  bdd100k_eval:
+    ann_path: ""
+    media_dir: ""
+
+    vis_processor:
+      eval:
+        name: "semantic_segmentation_eval"
+        image_size: 224
+
+
+run:
+  runner: runner_iter
+  task: semantic_segmentation_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 2e-3
+  min_lr: 1e-6
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 32
+  batch_size_eval: 32
+  accum_grad_iters: 2
+
+  num_workers: 8
+  warmup_steps: 1000
+
+  iters_per_inner_epoch: 2000
+  max_iters: 60000
+
+  seed: 42
+  output_dir: "./output/segmentation"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  metric: iou
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True

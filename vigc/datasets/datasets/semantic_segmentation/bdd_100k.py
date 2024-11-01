@@ -24,6 +24,9 @@ class BDD(SemanticSegmentationDataset):
         ]
 
     def load_label(self, label_path):
+        if label_path.endswith(".npy"):
+            label = np.load(label_path)
+            return label.astype(np.float32)
         color_map = Image.open(label_path).convert('RGB')
         color_map = np.array(color_map)
         label_shape = [color_map.shape[0], color_map.shape[1], len(self.classes)]

@@ -57,8 +57,8 @@ class SemanticSegmentationDataset(Dataset):
             image = data['image']
             label = data['mask']
 
-        img = np.transpose(image, (2, 0, 1))
-        msk = np.transpose(label, (2, 0, 1))
+        img = torch.from_numpy(np.transpose(image, (2, 0, 1)))
+        msk = torch.from_numpy(np.transpose(label, (2, 0, 1)))
 
         return {
             "image": img,
