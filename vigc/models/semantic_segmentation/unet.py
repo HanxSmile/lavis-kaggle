@@ -4,6 +4,7 @@ from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 import segmentation_models_pytorch as smp
 import contextlib
+import torchvision.transforms.functional as F
 
 
 @registry.register_model("unet_semantic_segmentation")
@@ -32,9 +33,9 @@ class UnetSemanticSegmentationModel(BaseModel):
 
         self.JaccardLoss = smp.losses.JaccardLoss(mode='multilabel')
         self.DiceLoss = smp.losses.DiceLoss(mode='multilabel')
-        self.BCELoss = smp.losses.SoftBCEWithLogitsLoss()
+        self.BCELoss = smp.losses.SoftBCEWithLogitsLoss(ignore_index=-100)
         self.LovaszLoss = smp.losses.LovaszLoss(mode='multilabel', per_image=False)
-        self.TverskyLoss = smp.losses.TverskyLoss(mode='multilabel', log_loss=False)
+        self.TverskyLoss = smp.losses.TverskyLoss(mode='multilabel', log_loss=False, ignore_index=-100)
 
     def criterion(self, y_pred, y_true):
         return 0.5 * self.BCELoss(y_pred, y_true) + 0.5 * self.TverskyLoss(y_pred, y_true)
@@ -75,15 +76,30 @@ class UnetSemanticSegmentationModel(BaseModel):
     def generate(
             self,
             samples,
+            image_size=None,
             threshold=0.5,
             **kwargs
     ):
+        if isinstance(image_size, int):
+            image_size = [image_size, image_size]  # H, W
+
         images, masks = samples["image"], samples["mask"]
 
         with self.maybe_autocast():
             y_pred = self.model(images)
 
         y_pred = torch.sigmoid(y_pred)
+
+        y_h, y_w = images.shape[-2:]
+        m_h, m_w = masks.shape[-2:]
+        if image_size is not None:
+            if y_h != image_size[0] or y_w != image_size[1]:
+                y_pred = F.resize(y_pred, list(image_size))
+            if m_h != image_size[0] or m_w != image_size[1]:
+                masks = F.resize(masks, list(image_size), F.InterpolationMode.NEAREST)
+        else:
+            if y_h != m_h or y_w != m_w:
+                y_pred = F.resize(y_pred, [m_h, m_w])
 
         val_dice = self.dice_coef(masks, y_pred, thr=threshold).cpu().detach().numpy()
         val_jaccard = self.iou_coef(masks, y_pred, thr=threshold).cpu().detach().numpy()

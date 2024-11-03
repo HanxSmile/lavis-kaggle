@@ -9,12 +9,13 @@ import numpy as np
 @registry.register_task("semantic_segmentation_task")
 class SemanticSegmentationTask(BaseTask):
 
-    def __init__(self, evaluate, report_metric=True, metric="iou"):
+    def __init__(self, evaluate, report_metric=True, metric="iou", image_size=None):
         super().__init__()
         assert metric in ["iou", "dice"]
         self.evaluate = evaluate
         self.report_metric = report_metric
         self.metric = metric
+        self.image_size = image_size
 
     @classmethod
     def setup_task(cls, cfg):
@@ -22,17 +23,19 @@ class SemanticSegmentationTask(BaseTask):
         report_metric = run_cfg.get("report_metric", True)
         metric = run_cfg.get("metric", "iou")
         evaluate = run_cfg.evaluate
+        image_size = run_cfg.get("image_size", None)
 
         return cls(
             evaluate=evaluate,
             report_metric=report_metric,
             metric=metric,
+            image_size=image_size,
         )
 
     def valid_step(self, model, samples):
         results = []
         names = samples["name"]
-        preds = model.generate(samples)
+        preds = model.generate(samples, image_size=self.image_size)
         dice_scores = preds["dice_score"]
         iou_scores = preds["iou_score"]
         for name, dice_score, iou_score in zip(names, dice_scores, iou_scores):
