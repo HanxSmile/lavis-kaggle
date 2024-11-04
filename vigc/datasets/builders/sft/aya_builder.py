@@ -20,6 +20,7 @@ class AyaSFTTrainBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             split=cfg.get("split", "train"),
             language=cfg.get("language", None),
+            use_system_prompt=cfg.get("use_system_prompt", False),
         )
         _ = datasets["train"][0]
         return datasets
@@ -41,6 +42,7 @@ class AyaSFTEvalBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             split=cfg.get("split", "test"),
             language=cfg.get("language", None),
+            use_system_prompt=cfg.get("use_system_prompt", False),
         )
         _ = datasets["eval"][0]
         return datasets

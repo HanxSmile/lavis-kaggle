@@ -4,3 +4,4 @@ datasets:
     data_root: Null
     split: test
     language: Null
+    use_system_prompt: False

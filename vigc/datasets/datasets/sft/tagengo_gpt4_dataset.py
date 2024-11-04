@@ -2,24 +2,23 @@ from torch.utils.data import Dataset as torch_Dataset
 import datasets
 
 
-class AyaInstructionDataset(torch_Dataset):
+class TagengoGPT4Dataset(torch_Dataset):
     def __init__(
             self,
             data_root,
-            split="train",
             language=None,
             use_system_prompt=True
     ):
-        if isinstance(split, str):
-            split = [split]
-        inner_dataset = datasets.load_from_disk(data_root)
-        inner_dataset = datasets.concatenate_datasets([inner_dataset[_] for _ in split])
+
+        inner_dataset = datasets.load_dataset(data_root)["train"]
         if language is not None:
             if isinstance(language, str):
                 language = [language]
             else:
                 language = list(language)
-            inner_dataset = inner_dataset.filter(lambda x: x in language, input_columns=["language"])
+            inner_dataset = inner_dataset.filter(lambda x: x.lower() in [_.lower() for _ in language],
+                                                 input_columns=["language"])
+        inner_dataset = inner_dataset.filter(lambda x: x[0] is not None, input_columns=["response"])
         self.inner_dataset = inner_dataset
         self.language = language
         self.use_system_prompt = use_system_prompt
@@ -29,7 +28,10 @@ class AyaInstructionDataset(torch_Dataset):
 
     def __getitem__(self, index):
         item = self.inner_dataset[index]
-        text_input, text_output, language = item["inputs"].strip(), item["targets"].strip(), item["language"].strip()
+        language = item["language"].strip()
+        conversation = item["conversations"]
+        text_input, text_output = conversation[0]["value"].strip(), conversation[-1]["value"].strip()
+        assert conversation[0]['from'] == "human" and conversation[-1]['from'] == 'gpt'
         system_input = f"You are an expert in {language}, please always response in {language}."
         sample = {
             "system_input": system_input if self.use_system_prompt else None,

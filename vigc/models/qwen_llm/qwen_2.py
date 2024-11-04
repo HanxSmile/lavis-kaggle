@@ -73,8 +73,10 @@ class Qwen2Instruct(Blip2Base):
         system_inputs = samples["system_input"]
         text_inputs = samples["text_input"]
         text_outputs = samples["text_output"]
-        model_input_templates = [[{'role': "system", "content": sys_in}, {'role': 'user', 'content': txt_in}] for
-                                 sys_in, txt_in in zip(system_inputs, text_inputs)]
+        model_input_templates = [
+            [{'role': "system", "content": sys_in}, {'role': 'user', 'content': txt_in}] if sys_in else [
+                {'role': 'user', 'content': txt_in}] for
+            sys_in, txt_in in zip(system_inputs, text_inputs)]
         text_inputs = [
             self.tokenizer.apply_chat_template(
                 _,
@@ -142,8 +144,10 @@ class Qwen2Instruct(Blip2Base):
     ):
         system_inputs = samples["system_input"]
         text_inputs = samples["text_input"]
-        model_input_templates = [[{'role': "system", "content": sys_in}, {'role': 'user', 'content': txt_in}] for
-                                 sys_in, txt_in in zip(system_inputs, text_inputs)]
+        model_input_templates = [
+            [{'role': "system", "content": sys_in}, {'role': 'user', 'content': txt_in}] if sys_in else [
+                {'role': 'user', 'content': txt_in}] for
+            sys_in, txt_in in zip(system_inputs, text_inputs)]
         text_inputs = [
             self.tokenizer.apply_chat_template(
                 _,

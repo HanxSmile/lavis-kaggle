@@ -1,7 +1,6 @@
 datasets:
-  aya_sft_train:
+  tagengo_gpt4_sft_train:
     data_type: text
     data_root: Null
-    split: train
     language: Null
     use_system_prompt: False
