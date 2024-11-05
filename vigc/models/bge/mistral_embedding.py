@@ -8,6 +8,7 @@ import contextlib
 from transformers import MistralModel, AutoTokenizer, BitsAndBytesConfig
 from typing import Optional
 from peft import LoraConfig, get_peft_model
+import random
 
 
 @registry.register_model("mistral_embedding")
@@ -87,6 +88,21 @@ class MistralEmbeddingModel(BaseModel):
         if use_grad_checkpoint:
             self.model.gradient_checkpointing_enable()
 
+    def mask_pad_token(self, q):
+        if random.random() > 0.9:
+            tensor = q['input_ids'].float()
+            # 创建一个与原始张量形状相同的随机张量
+            mask = torch.rand(tensor.shape)
+
+            # 设置阈值，将大于阈值的部分设置为1，小于阈值的部分设置为0
+            mask = (mask > 0.9).float()
+
+            # 使用mask张量将原始张量中的一部分元素设置为2
+            tensor = tensor * (1 - mask) + self.tokenizer.pad_token_id * mask
+            tensor = tensor.long()
+            q['input_ids'] = tensor
+        return q
+
     def last_token_pool(
             self, last_hidden_states: torch.Tensor,
             attention_mask: torch.Tensor) -> torch.Tensor:
@@ -157,6 +173,8 @@ class MistralEmbeddingModel(BaseModel):
             max_length=self.query_max_len,
             return_tensors='pt',
         )
+        query = self.mask_pad_token(query)
+
         passage = self.tokenizer(
             all_message,
             padding=True,
@@ -164,6 +182,8 @@ class MistralEmbeddingModel(BaseModel):
             max_length=self.passage_max_len,
             return_tensors='pt',
         )
+        passage = self.mask_pad_token(passage)
+
         with self.maybe_autocast():
             q_reps = self.encode(query)  # [B, D]
             p_reps = self.encode(passage)  # [B * G, D]
