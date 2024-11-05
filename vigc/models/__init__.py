@@ -39,7 +39,7 @@ from vigc.models.vits.vits import Vits
 from vigc.models.qwen_llm import Qwen2Instruct
 from vigc.models.llama_llm import Llama3Instruct
 
-from vigc.models.bge import BgeEmbeddingModel
+from vigc.models.bge import BgeEmbeddingModel, MistralEmbeddingModel
 
 from vigc.models.semantic_segmentation import UnetSemanticSegmentationModel
 
@@ -72,6 +72,7 @@ __all__ = [
     "Llama3Instruct",
 
     "BgeEmbeddingModel",
+    "MistralEmbeddingModel",
 
     "UnetSemanticSegmentationModel",
 ]
