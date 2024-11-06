@@ -234,7 +234,18 @@ class MistralEmbeddingModel(BaseModel):
             samples,
             **kwargs
     ):
-        pass
+        texts = samples['text']
+        text_input = self.tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=max([self.query_max_len, self.passage_max_len]),
+            return_tensors='pt',
+        )
+
+        with self.maybe_autocast():
+            embeddings = self.encode(text_input)  # [B, D]
+        return embeddings
 
     def maybe_autocast(self, dtype=torch.float16):
         # if on cpu, don't use autocast

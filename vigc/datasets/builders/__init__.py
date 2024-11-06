@@ -77,6 +77,11 @@ from vigc.datasets.builders.semantic_segmentation import (
     CityScapesEvalBuilder,
 )
 
+from vigc.datasets.builders.rag import (
+    RAGEvalBuilder,
+    RAGTrainBuilder,
+)
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -117,6 +122,9 @@ __all__ = [
     "BDD100kEvalBuilder",
     "CityScapesTrainBuilder",
     "CityScapesEvalBuilder",
+
+    "RAGTrainBuilder",
+    "RAGEvalBuilder",
 ]
 
 
