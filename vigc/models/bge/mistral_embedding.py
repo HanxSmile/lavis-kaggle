@@ -92,7 +92,7 @@ class MistralEmbeddingModel(BaseModel):
         if random.random() > 0.9:
             tensor = q['input_ids'].float()
             # 创建一个与原始张量形状相同的随机张量
-            mask = torch.rand(tensor.shape)
+            mask = torch.rand(tensor.shape, device=self.device)
 
             # 设置阈值，将大于阈值的部分设置为1，小于阈值的部分设置为0
             mask = (mask > 0.9).float()
@@ -172,7 +172,7 @@ class MistralEmbeddingModel(BaseModel):
             truncation=True,
             max_length=self.query_max_len,
             return_tensors='pt',
-        )
+        ).to(self.device)
         query = self.mask_pad_token(query)
 
         passage = self.tokenizer(
@@ -181,7 +181,7 @@ class MistralEmbeddingModel(BaseModel):
             truncation=True,
             max_length=self.passage_max_len,
             return_tensors='pt',
-        )
+        ).to(self.device)
         passage = self.mask_pad_token(passage)
 
         with self.maybe_autocast():
@@ -241,7 +241,7 @@ class MistralEmbeddingModel(BaseModel):
             truncation=True,
             max_length=max([self.query_max_len, self.passage_max_len]),
             return_tensors='pt',
-        )
+        ).to(self.device)
 
         with self.maybe_autocast():
             embeddings = self.encode(text_input)  # [B, D]

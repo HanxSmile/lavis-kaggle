@@ -101,6 +101,7 @@ class RAGEvalDataset(torch_Dataset):
             ann = self.all_queries[index]
             pos = ann["pos"]
             query = ann["query"]
+            original_text = query
             if self.processor is not None:
                 query = self.processor(query)
             if self.query_prompt is not None:
@@ -109,12 +110,14 @@ class RAGEvalDataset(torch_Dataset):
             result = {
                 "id": str(index),
                 "text": query,
+                "original_text": original_text,
                 "pos": pos,
                 "text_type": text_type,
             }
         else:  # passage
             index = index
             passage = self.all_passages[index]
+            original_text = passage
             pos = None
             if self.processor is not None:
                 passage = self.processor(passage)
@@ -124,6 +127,7 @@ class RAGEvalDataset(torch_Dataset):
             result = {
                 "id": str(index),
                 "text": passage,
+                "original_text": original_text,
                 "pos": pos,
                 "text_type": text_type,
             }
@@ -134,10 +138,12 @@ class RAGEvalDataset(torch_Dataset):
         texts = [_["text"] for _ in batch]
         pos = [_["pos"] for _ in batch]
         text_types = [_["text_type"] for _ in batch]
+        original_texts = [_["original_text"] for _ in batch]
 
         return {
             "id": ids,
             "text": texts,
+            "original_text": original_texts,
             "pos_messages": pos,
             "text_type": text_types,
         }

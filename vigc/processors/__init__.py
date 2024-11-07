@@ -25,6 +25,10 @@ from vigc.processors.semantic_segmentation_processor import (
     SemanticSegmentationEvalProcessor,
 )
 
+from vigc.processors.rag_processor import (
+    RAGCaptionProcessor,
+)
+
 from vigc.common.registry import registry
 
 __all__ = [
@@ -41,6 +45,8 @@ __all__ = [
     # SemanticSeg
     "SemanticSegmentationTrainProcessor",
     "SemanticSegmentationEvalProcessor",
+    # RAG
+    "RAGCaptionProcessor",
 ]
 
 

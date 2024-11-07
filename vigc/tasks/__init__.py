@@ -22,6 +22,8 @@ from vigc.tasks.qwen_caption_task import QwenCaptionTask
 
 from vigc.tasks.semantic_segmentation_task import SemanticSegmentationTask
 
+from vigc.tasks.rag_embedding_task import RAGEmbeddingTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
