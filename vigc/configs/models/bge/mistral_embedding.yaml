@@ -8,11 +8,11 @@ model:
 
   model_type: default
 
-  normalized: False
+  normalized: True
   sentence_pooling_method: 'last'
-  negatives_cross_device: False
-  temperature: 1.0
+  negatives_cross_device: True
+  temperature: 0.02
   use_inbatch_neg: True
   use_grad_checkpoint: False
-  query_max_len: 32
-  passage_max_len: 128
+  query_max_len: 256
+  passage_max_len: 256

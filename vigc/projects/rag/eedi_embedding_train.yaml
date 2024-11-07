@@ -1,0 +1,121 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  model_name: Salesforce/SFR-Embedding-2_R
+  arch: mistral_embedding
+
+  model_type: default
+
+  normalized: True
+  sentence_pooling_method: 'last'
+  negatives_cross_device: True
+  temperature: 0.02
+  use_inbatch_neg: True
+  use_grad_checkpoint: False
+  query_max_len: 256
+  passage_max_len: 256
+
+
+datasets:
+
+  rag_train:
+    data_root: Null
+    query_prompt: Null
+    passage_prompt: Null
+    group_size: 4
+
+    text_processor:
+      train:
+        name: "rag_caption"
+        max_words: 256
+
+  rag_eval:
+    data_root: Null
+    query_prompt: Null
+    passage_prompt: Null
+
+    text_processor:
+      eval:
+        name: "rag_caption"
+        max_words: 256
+
+run:
+  runner: runner_iter_ds
+  task: rag_embedding
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-4
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 4
+  batch_size_eval: 4
+
+  num_workers: 4
+  warmup_steps: 100
+
+  iters_per_inner_epoch: 1000
+  max_iters: 30000
+
+  seed: 42
+  output_dir: "./output/rag_embedding"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+  only_save_best: True
+
+  generate_cfg:
+    range_for_sampling: 10-210
+    negative_number: 15
+
+  deepspeed_config:
+    gradient_accumulation_steps: 1
+    train_micro_batch_size_per_gpu: 4
+
+    gradient_clipping: 1.
+    steps_per_print: 128
+    wall_clock_breakdown: False
+    dump_state: False
+
+    fp16:
+      enabled: False
+      loss_scale: 0
+      loss_scale_window: 1000
+      initial_scale_power: 16
+      hysteresis: 2
+      min_loss_scale: 1
+
+    bf16:
+      enabled: True
+
+    optimizer:
+      type: "AdamW"
+      params:
+        lr: 1e-4
+        betas: [ 0.9,0.99 ]
+        eps: 1e-7
+        weight_decay: 0.05
+
+    zero_optimization:
+      stage: 2
+      offload_optimizer:
+        device: "cpu"
+        pin_memory: True
+      overlap_comm: True
+      contiguous_gradients: True
+      sub_group_size: 1e9

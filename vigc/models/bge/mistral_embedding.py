@@ -184,7 +184,7 @@ class MistralEmbeddingModel(BaseModel):
         ).to(self.device)
         passage = self.mask_pad_token(passage)
 
-        with self.maybe_autocast():
+        with self.maybe_autocast(torch.bfloat16):
             q_reps = self.encode(query)  # [B, D]
             p_reps = self.encode(passage)  # [B * G, D]
 
@@ -243,9 +243,9 @@ class MistralEmbeddingModel(BaseModel):
             return_tensors='pt',
         ).to(self.device)
 
-        with self.maybe_autocast():
+        with self.maybe_autocast(torch.bfloat16):
             embeddings = self.encode(text_input)  # [B, D]
-        return embeddings
+        return embeddings.float()
 
     def maybe_autocast(self, dtype=torch.float16):
         # if on cpu, don't use autocast
