@@ -34,7 +34,7 @@ class EediDataset(torch_Dataset):
 
         query = f"###question###:{ann['SubjectName']}-{ann['ConstructName']}-{ann['QuestionText']}\n###Correct Answer###:{ann['CorrectAnswer']}\n###Misconcepte Incorrect answer###:{ann['IncorrectAnswer']}"
         pos = ann['MisconceptionText']
-        pos_id = ann["MisconceptionId"]
+        pos_id = str(ann["MisconceptionId"])
         neg_ids = random.sample(self.misconception_mapping_ids, self.group_size)
         if pos_id in neg_ids:
             neg_ids.remove(pos_id)
@@ -100,7 +100,7 @@ class EediEvalDataset(torch_Dataset):
             index = index - len(self.all_passages)
             ann = self.all_queries[index]
             query = f"###question###:{ann['SubjectName']}-{ann['ConstructName']}-{ann['QuestionText']}\n###Correct Answer###:{ann['CorrectAnswer']}\n###Misconcepte Incorrect answer###:{ann['IncorrectAnswer']}"
-            pos_id = ann["MisconceptionId"]
+            pos_id = str(ann["MisconceptionId"])
             pos = self.passages_id[pos_id]
             pos = [pos]
 

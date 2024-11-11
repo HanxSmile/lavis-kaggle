@@ -5,7 +5,7 @@ from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 import torch.distributed as dist
 import contextlib
-from transformers import MistralModel, AutoTokenizer, BitsAndBytesConfig
+from transformers import MistralModel, AutoTokenizer, BitsAndBytesConfig, AutoModel
 from typing import Optional
 from peft import LoraConfig, get_peft_model
 import random
@@ -36,7 +36,7 @@ class MistralEmbeddingModel(BaseModel):
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16
         )
-        self.model = MistralModel.from_pretrained(
+        self.model = AutoModel.from_pretrained(
             model_name,
             quantization_config=bnb_config
         )
@@ -55,7 +55,7 @@ class MistralEmbeddingModel(BaseModel):
             ],
             bias="none",
             lora_dropout=0.05,  # Conventional
-            task_type="CAUSAL_LM",
+            task_type="FEATURE_EXTRACTION",
         )
 
         self.model = get_peft_model(self.model, lora_config)
@@ -129,7 +129,7 @@ class MistralEmbeddingModel(BaseModel):
             return None
         psg_out = self.model(**features, return_dict=True)
         p_reps = self.sentence_embedding(psg_out.last_hidden_state, features['attention_mask'])
-        if self.normlized:
+        if self.normalized:
             p_reps = torch.nn.functional.normalize(p_reps, dim=-1)
         return p_reps.contiguous()
 
