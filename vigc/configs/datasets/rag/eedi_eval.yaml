@@ -1,0 +1,6 @@
+datasets:
+  eedi_eval:
+    data_type: text
+    data_root: Null
+    misconception_root: Null
+    fold_idx: [ 0, 1, 2, 3, 4 ]

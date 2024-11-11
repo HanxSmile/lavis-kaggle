@@ -26,21 +26,14 @@ datasets:
     query_prompt: Null
     passage_prompt: Null
     group_size: 4
+    text_processor: Null
 
-    text_processor:
-      train:
-        name: "rag_caption"
-        max_words: 256
 
-  rag_eval:
+  eedi_eval:
+    data_type: text
     data_root: Null
-    query_prompt: Null
-    passage_prompt: Null
-
-    text_processor:
-      eval:
-        name: "rag_caption"
-        max_words: 256
+    misconception_root: Null
+    fold_idx: [ 0 ]  # fold 0
 
 run:
   runner: runner_iter_ds
@@ -59,8 +52,8 @@ run:
   num_workers: 4
   warmup_steps: 100
 
-  iters_per_inner_epoch: 1000
-  max_iters: 30000
+  iters_per_inner_epoch: 100
+  max_iters: 1000
 
   seed: 42
   output_dir: "./output/rag_embedding"
