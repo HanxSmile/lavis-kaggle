@@ -1,6 +1,7 @@
 import logging
 import torch
 import torch.nn as nn
+import numpy as np
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 import torch.distributed as dist
@@ -72,6 +73,7 @@ class MistralEmbeddingModel(BaseModel):
         self.query_max_len = query_max_len
         self.passage_max_len = passage_max_len
 
+        self.trainable_parameter = False
         if not normalized:
             self.temperature = 1.0
             logging.info("reset temperature = 1.0 due to using inner product to compute similarity")
@@ -79,6 +81,12 @@ class MistralEmbeddingModel(BaseModel):
             if self.temperature > 0.5:
                 raise ValueError(
                     "Temperature should be smaller than 1.0 when use cosine similarity (i.e., normlized=True). Recommend to set it 0.01-0.1")
+        if self.temperature < 0:
+            logging.info(
+                "temperature < 0, which means it will be set to a trainable parameter which initialized as log(1 / 0.07)")
+            self.temperature = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+            self.trainable_parameter = True
+
         self.negatives_cross_device = negatives_cross_device
         if self.negatives_cross_device:
             if not dist.is_initialized():
@@ -194,17 +202,26 @@ class MistralEmbeddingModel(BaseModel):
 
         group_size = p_reps.size(0) // q_reps.size(0)  # G
         if self.use_inbatch_neg:
-            scores = self.compute_similarity(q_reps, p_reps) / self.temperature  # [W * B, W * B * G]
+            if not self.trainable_parameter:
+                scores = self.compute_similarity(q_reps, p_reps) / self.temperature  # [W * B, W * B * G]
+            else:
+                scores = self.compute_similarity(q_reps, p_reps) * self.temperature.exp()
             scores = scores.view(q_reps.size(0), -1)
 
             target = torch.arange(scores.size(0), device=scores.device, dtype=torch.long)  # [1:W*B]
             target = target * group_size
             loss = self.compute_loss(scores, target)
         else:
-            scores = self.compute_similarity(
-                q_reps[:, None, :, ],  # [W * B, 1, D]
-                p_reps.view(q_reps.size(0), group_size, -1)  # [W * B, G, D]
-            ).squeeze(1) / self.temperature  # [W * B, G]
+            if not self.trainable_parameter:
+                scores = self.compute_similarity(
+                    q_reps[:, None, :, ],  # [W * B, 1, D]
+                    p_reps.view(q_reps.size(0), group_size, -1)  # [W * B, G, D]
+                ).squeeze(1) / self.temperature  # [W * B, G]
+            else:
+                scores = self.compute_similarity(
+                    q_reps[:, None, :, ],  # [W * B, 1, D]
+                    p_reps.view(q_reps.size(0), group_size, -1)  # [W * B, G, D]
+                ).squeeze(1) * self.temperature.exp()  # [W * B, G]
 
             scores = scores.view(q_reps.size(0), -1)
             target = torch.zeros(scores.size(0), device=scores.device, dtype=torch.long)
