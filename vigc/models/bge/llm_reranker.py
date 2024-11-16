@@ -1,15 +1,13 @@
-# TODO
 import logging
 import torch
 import torch.nn as nn
+from torch import Tensor
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
-import torch.distributed as dist
 import contextlib
-from transformers import MistralModel, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from typing import Optional
 from peft import LoraConfig, get_peft_model
-import random
 
 
 @registry.register_model("llm_reranker")
@@ -20,44 +18,61 @@ class LLMRerankerModel(BaseModel):
 
     def __init__(
             self,
-            model_name: str = "Salesforce/SFR-Embedding-2_R",
+            model_name: str = "upstage/SOLAR-10.7B-v1.0",
+            torch_dtype: Optional[str] = None,
+            use_lora: bool = False,
             use_grad_checkpoint: bool = False,
-            query_max_len: int = 32,
-            passage_max_len: int = 128,
-            prompt: str = "Given a query A and a passage B, determine whether the passage contains an answer to the query by providing a prediction of either 'Yes' or 'No'."
+            query_max_len: int = 256,
+            passage_max_len: int = 256,
     ):
         super().__init__()
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-        self.model = MistralModel.from_pretrained(
+        if torch_dtype == "f16":
+            self.compute_type = torch.float16
+        elif torch_dtype == "bf16":
+            self.compute_type = torch.bfloat16
+        else:
+            self.compute_type = torch.float32
+        self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            quantization_config=bnb_config
+            torch_dtype=self.compute_type,
+            trust_remote_code=True
         )
+        if use_lora:
+            lora_config = LoraConfig(
+                r=64,
+                lora_alpha=32,
+                target_modules=[
+                    "q_proj",
+                    "k_proj",
+                    "v_proj",
+                    "o_proj",
+                    "gate_proj",
+                    "up_proj",
+                    "down_proj",
+                    "lm_head"
+                ],
+                bias="none",
+                lora_dropout=0.05,  # Conventional
+                task_type="CAUSAL_LM",
+            )
 
-        lora_config = LoraConfig(
-            r=64,
-            lora_alpha=128,
-            target_modules=[
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj",
-            ],
-            bias="none",
-            lora_dropout=0.05,  # Conventional
-            task_type="CAUSAL_LM",
-        )
+            self.model = get_peft_model(self.model, lora_config)
+            self.model.print_trainable_parameters()
 
-        self.model = get_peft_model(self.model, lora_config)
-        self.model.print_trainable_parameters()
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, use_fast=False)
+
+        if tokenizer.pad_token_id is None:
+            if tokenizer.unk_token_id is not None:
+                tokenizer.pad_token_id = tokenizer.unk_token_id
+            elif tokenizer.eod_id is not None:
+                tokenizer.pad_token_id = tokenizer.eod_id
+                tokenizer.bos_token_id = tokenizer.im_start_id
+                tokenizer.eos_token_id = tokenizer.im_end_id
+        self.tokenizer = tokenizer
+
+        if self.model.config.pad_token_id is None:
+            self.model.config.pad_token_id = self.tokenizer.pad_token_id
+
         self.cross_entropy = nn.CrossEntropyLoss(reduction='mean')
 
         self.query_max_len = query_max_len
@@ -68,75 +83,131 @@ class LLMRerankerModel(BaseModel):
 
         self.yes_loc = self.tokenizer('Yes', add_special_tokens=False)['input_ids'][0]
 
-    def last_token_pool(
-            self,
-            last_hidden_states: torch.Tensor,
-            attention_mask: torch.Tensor
-    ) -> torch.Tensor:
+    def encode(self, features):
+        outputs = self.model(
+            input_ids=features['input_ids'],
+            attention_mask=features['attention_mask'],
+            position_ids=features['position_ids'] if 'position_ids' in features.keys() else None,
+            output_hidden_states=True
+        )
+
+        logits = outputs.logits
+        scores = self.last_logit_pool(logits, features['attention_mask'])
+        scores = scores[:, self.yes_loc]
+        return scores.contiguous()
+
+    @staticmethod
+    def last_logit_pool(
+            logits: Tensor,
+            attention_mask: Tensor
+    ) -> Tensor:
         left_padding = (attention_mask[:, -1].sum() == attention_mask.shape[0])
         if left_padding:
-            return last_hidden_states[:, -1]
+            return logits[:, -1, :]
         else:
             sequence_lengths = attention_mask.sum(dim=1) - 1
-            batch_size = last_hidden_states.shape[0]
-            return last_hidden_states[torch.arange(batch_size, device=last_hidden_states.device), sequence_lengths]
+            batch_size = logits.shape[0]
+            return torch.stack([logits[i, sequence_lengths[i], :] for i in range(batch_size)], dim=0)
 
     def compute_loss(self, scores, target):
         return self.cross_entropy(scores, target)
 
-    def forward(self, samples):
-        query, pos_message, neg_message = samples['query'], samples['pos_message'], samples['neg_message']
-        assert len(query) == len(pos_message) == len(neg_message)
-        assert isinstance(pos_message[0], str) and isinstance(neg_message[0], list) and isinstance(query[0], str)
-        group_size = len(samples["neg_message"][0])
-        all_message = []
-        for pos_m, neg_m_lst in zip(pos_message, neg_message):
-            assert len(neg_m_lst) == group_size
-            all_message.append(pos_m)
-            all_message.extend(neg_m_lst)
+    def concat_text_input_output(self, input_ids, input_atts, output_ids, output_atts):
+        input_part_targets_len = []
+        llm_tokens = {"input_ids": [], "attention_mask": []}
+        for i in range(input_ids.size(0)):
+            this_input_ones = input_atts[i].sum()
+            input_part_targets_len.append(this_input_ones)
+            llm_tokens['input_ids'].append(
+                torch.cat([
+                    input_ids[i][:this_input_ones],
+                    output_ids[i][:],
+                    input_ids[i][this_input_ones:]
+                ])
+            )
+            llm_tokens['attention_mask'].append(
+                torch.cat([
+                    input_atts[i][:this_input_ones],
+                    output_atts[i][:],
+                    input_atts[i][this_input_ones:]
+                ])
+            )
+        llm_tokens['input_ids'] = torch.stack(llm_tokens['input_ids'])
+        llm_tokens['attention_mask'] = torch.stack(llm_tokens['attention_mask'])
+        return llm_tokens, input_part_targets_len
+
+    def prepare_inputs(self, query, passage, prompt):
+
+        self.tokenizer.truncation_side = "right"
         query = self.tokenizer(
             query,
-            padding=True,
+            padding="longest",
             truncation=True,
             max_length=self.query_max_len,
             return_tensors='pt',
+            add_special_tokens=False
         ).to(self.device)
-        query = self.mask_pad_token(query)
 
         passage = self.tokenizer(
-            all_message,
-            padding=True,
+            ["\n" + _ for _ in passage],
+            padding="longest",
             truncation=True,
             max_length=self.passage_max_len,
             return_tensors='pt',
+            add_special_tokens=False
         ).to(self.device)
-        passage = self.mask_pad_token(passage)
 
-        with self.maybe_autocast(torch.bfloat16):
-            q_reps = self.encode(query)  # [B, D]
-            p_reps = self.encode(passage)  # [B * G, D]
+        self.tokenizer.truncation_side = "left"
+        prompt = self.tokenizer(
+            ["\n" + _ for _ in prompt],
+            padding="longest",
+            truncation=True,
+            max_length=self.query_max_len,
+            return_tensors='pt',
+            add_special_tokens=False
+        ).to(self.device)
 
-        if self.negatives_cross_device and self.use_inbatch_neg:
-            q_reps = self._dist_gather_tensor(q_reps)  # [W * B, D]
-            p_reps = self._dist_gather_tensor(p_reps)  # [W * B * G, D]
+        llm_tokens, _ = self.concat_text_input_output(
+            query.input_ids,
+            query.attention_mask,
+            passage.input_ids,
+            passage.attention_mask,
+        )
 
-        group_size = p_reps.size(0) // q_reps.size(0)  # G
-        if self.use_inbatch_neg:
-            scores = self.compute_similarity(q_reps, p_reps) / self.temperature  # [W * B, W * B * G]
-            scores = scores.view(q_reps.size(0), -1)
+        llm_tokens, _ = self.concat_text_input_output(
+            llm_tokens['input_ids'],
+            llm_tokens['attention_mask'],
+            prompt.input_ids,
+            prompt.attention_mask,
+        )
 
-            target = torch.arange(scores.size(0), device=scores.device, dtype=torch.long)  # [1:W*B]
-            target = target * group_size
-            loss = self.compute_loss(scores, target)
-        else:
-            scores = self.compute_similarity(
-                q_reps[:, None, :, ],  # [W * B, 1, D]
-                p_reps.view(q_reps.size(0), group_size, -1)  # [W * B, G, D]
-            ).squeeze(1) / self.temperature  # [W * B, G]
+        return llm_tokens
 
-            scores = scores.view(q_reps.size(0), -1)
-            target = torch.zeros(scores.size(0), device=scores.device, dtype=torch.long)
-            loss = self.compute_loss(scores, target)
+    def forward(self, samples):
+        query, pos_message, neg_message, prompt = \
+            samples['query'], samples['pos_message'], samples['neg_message'], samples['prompt']
+        assert len(query) == len(pos_message) == len(neg_message) == len(prompt)
+        assert isinstance(pos_message[0], str) and isinstance(neg_message[0], list) \
+               and isinstance(query[0], str) and isinstance(prompt[0], str)
+        group_size = len(samples["neg_message"][0]) + 1
+        batch_size = len(query)
+        all_message = []
+        all_queries = []
+        all_prompts = []
+
+        for query_, prompt_, pos_m, neg_m_lst in zip(query, prompt, pos_message, neg_message):
+            assert len(neg_m_lst) == group_size - 1
+            all_message.append(pos_m)
+            all_message.extend(neg_m_lst)
+            all_queries.extend([query_] * group_size)
+            all_prompts.extend([prompt_] * group_size)
+
+        llm_tokens = self.prepare_inputs(all_queries, all_message, all_prompts)
+
+        with self.maybe_autocast(self.compute_type):
+            logits = self.encode(llm_tokens).view(batch_size, group_size)
+            target = torch.zeros(batch_size, device=self.device, dtype=torch.long)
+            loss = self.compute_loss(logits, target)
 
         return {"loss": loss}
 
@@ -162,18 +233,14 @@ class LLMRerankerModel(BaseModel):
             samples,
             **kwargs
     ):
-        texts = samples['text']
-        text_input = self.tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            max_length=max([self.query_max_len, self.passage_max_len]),
-            return_tensors='pt',
-        ).to(self.device)
+        query, passage, prompt = samples['query'], samples['passage'], samples['prompt']
+        llm_tokens = self.prepare_inputs(query, passage, prompt)
 
-        with self.maybe_autocast(torch.bfloat16):
-            embeddings = self.encode(text_input)  # [B, D]
-        return embeddings.float()
+        with self.maybe_autocast(self.compute_type):
+            logits = self.encode(llm_tokens)  # [B, D]
+            scores = torch.sigmoid(logits)
+
+        return scores.detach().float().cpu()
 
     def maybe_autocast(self, dtype=torch.float16):
         # if on cpu, don't use autocast
@@ -187,26 +254,20 @@ class LLMRerankerModel(BaseModel):
 
     @classmethod
     def from_config(cls, cfg):
-        model_name = cfg.get("model_name", "Salesforce/SFR-Embedding-2_R")
-        normalized = cfg.get("normalized", True)
-        sentence_pooling_method = cfg.get("sentence_pooling_method", "cls")
-        temperature = cfg.get("temperature", 0.02)
-        use_inbatch_neg = cfg.get("use_inbatch_neg", False)
-        negatives_cross_device = cfg.get("negatives_cross_device", False)
+        model_name = cfg.get("model_name", "upstage/SOLAR-10.7B-v1.0")
+        torch_dtype = cfg.get("torch_dtype", "bf16")
+        use_lora = cfg.get("use_lora", False)
         use_grad_checkpoint = cfg.get("use_grad_checkpoint", False)
-        query_max_len = cfg.get("query_max_len", 64)
+        query_max_len = cfg.get("query_max_len", 256)
         passage_max_len = cfg.get("passage_max_len", 256)
 
         model = cls(
             model_name=model_name,
-            normalized=normalized,
-            sentence_pooling_method=sentence_pooling_method,
-            temperature=temperature,
-            use_inbatch_neg=use_inbatch_neg,
-            negatives_cross_device=negatives_cross_device,
             use_grad_checkpoint=use_grad_checkpoint,
             query_max_len=query_max_len,
             passage_max_len=passage_max_len,
+            use_lora=use_lora,
+            torch_dtype=torch_dtype,
         )
         model.load_checkpoint_from_config(cfg)
         return model

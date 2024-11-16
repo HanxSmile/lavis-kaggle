@@ -80,6 +80,8 @@ from vigc.datasets.builders.semantic_segmentation import (
 from vigc.datasets.builders.rag import (
     RAGEvalBuilder,
     RAGTrainBuilder,
+    RerankTrainBuilder,
+    RerankEvalBuilder
 )
 
 __all__ = [
@@ -125,6 +127,8 @@ __all__ = [
 
     "RAGTrainBuilder",
     "RAGEvalBuilder",
+    "RerankTrainBuilder",
+    "RerankEvalBuilder",
 ]
 
 

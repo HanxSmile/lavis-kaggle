@@ -1,0 +1,13 @@
+datasets:
+  rerank_train:
+    data_type: text
+    data_root: Null
+    query_prompt: Null
+    passage_prompt: Null
+    group_size: 4
+    prompt: Null
+
+    text_processor:
+      train:
+        name: "rag_caption"
+        max_words: 256

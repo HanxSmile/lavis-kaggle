@@ -1,0 +1,12 @@
+datasets:
+  rerank_eval:
+    data_type: text
+    data_root: Null
+    query_prompt: Null
+    passage_prompt: Null
+    prompt: Null
+
+    text_processor:
+      eval:
+        name: "rag_caption"
+        max_words: 256

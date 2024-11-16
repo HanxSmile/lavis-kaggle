@@ -23,6 +23,7 @@ from vigc.tasks.qwen_caption_task import QwenCaptionTask
 from vigc.tasks.semantic_segmentation_task import SemanticSegmentationTask
 
 from vigc.tasks.rag_embedding_task import RAGEmbeddingTask
+from vigc.tasks.rag_rerank_task import RAGRerankTask
 
 
 def setup_task(cfg):

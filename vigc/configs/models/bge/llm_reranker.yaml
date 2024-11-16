@@ -1,0 +1,15 @@
+model:
+  model_name: upstage/SOLAR-10.7B-v1.0
+  load_finetuned: False
+  finetuned: ""
+  load_pretrained: False
+  pretrained: ""
+  arch: llm_reranker
+
+  model_type: default
+
+  use_lora: False
+  torch_dtype: bf16
+  use_grad_checkpoint: False
+  query_max_len: 256
+  passage_max_len: 256
