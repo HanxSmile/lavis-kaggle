@@ -5,7 +5,7 @@ from torch import Tensor
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 import contextlib
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from typing import Optional
 from peft import LoraConfig, get_peft_model
 
@@ -32,12 +32,18 @@ class LLMRerankerModel(BaseModel):
             self.compute_type = torch.bfloat16
         else:
             self.compute_type = torch.float32
+
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
+            # quantization_config=bnb_config,
             torch_dtype=self.compute_type,
             trust_remote_code=True
         )
         if use_lora:
+
+            for name, param in self.model.named_parameters():
+                param.requires_grad = False
+
             lora_config = LoraConfig(
                 r=64,
                 lora_alpha=32,
@@ -73,7 +79,7 @@ class LLMRerankerModel(BaseModel):
         if self.model.config.pad_token_id is None:
             self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
-        self.cross_entropy = nn.CrossEntropyLoss(reduction='mean')
+        self.cross_entropy = nn.CrossEntropyLoss(reduction='mean', label_smoothing=0.3)
 
         self.query_max_len = query_max_len
         self.passage_max_len = passage_max_len

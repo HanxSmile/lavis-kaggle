@@ -212,7 +212,8 @@ class DeepSpeedRunner(RunnerBase):
             save_tag = "checkpoint_{}".format(cur_epoch)
         logging.info(
             "Saving checkpoint at epoch {} to {}.".format(cur_epoch, os.path.join(self.deepspeed_ckpt_dir, save_tag)))
-        self.model.save_checkpoint(self.deepspeed_ckpt_dir, tag=save_tag, client_state=client_sd)
+        self.model.save_checkpoint(self.deepspeed_ckpt_dir, tag=save_tag, client_state=client_sd,
+                                   exclude_frozen_parameters=True)
 
     # 暂时没经过严格测试，应该会有问题
     def _reload_best_model(self, model):

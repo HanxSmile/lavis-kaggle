@@ -30,6 +30,8 @@ class RerankDataset(torch_Dataset):
     def __getitem__(self, index):
         ann = self.inner_dataset[index]
         query, pos, negs = ann['query'], ann['pos'], ann['neg']
+        if "Query:" in query:
+            query = query.split("Query:")[1].strip()
         prompt = ann.get('prompt', self.prompt)
         if isinstance(pos, str):
             pos = [pos]
@@ -86,15 +88,16 @@ class RerankEvalDataset(torch_Dataset):
             processor=None,
             prompt=None,
     ):
-        with open(data_root, 'r') as f:
-            all_data = json.load(f)
-        self.inner_dataset = self.prepare_ds(all_data)
 
         self.query_prompt = query_prompt or "A: {query}"
         self.passage_prompt = passage_prompt or "B: {passage}"
         self.prompt = prompt or "Given a query A and a passage B, determine whether the passage contains an answer to the query by providing a prediction of either 'Yes' or 'No'."
 
         self.processor = processor
+
+        with open(data_root, 'r') as f:
+            all_data = json.load(f)
+        self.inner_dataset = self.prepare_ds(all_data)
 
     def prepare_ds(self, data):
         all_res = []
@@ -129,7 +132,8 @@ class RerankEvalDataset(torch_Dataset):
     def __getitem__(self, index):
         ann = self.inner_dataset[index]
         query, passage, prompt, label = ann['query'], ann['passage'], ann['prompt'], ann["label"]
-
+        if "Query:" in query:
+            query = query.split("Query:")[1].strip()
         if self.processor is not None:
             query = self.processor(query)
             passage = self.processor(passage)

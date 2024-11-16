@@ -177,7 +177,8 @@ class DeepSpeedRunnerIter(DeepSpeedRunner):
             save_tag = "checkpoint_{}".format(cur_iters)
         logging.info(
             "Saving checkpoint at iter {} to {}.".format(cur_iters, os.path.join(self.deepspeed_ckpt_dir, save_tag)))
-        self.model.save_checkpoint(self.deepspeed_ckpt_dir, tag=save_tag, client_state=client_sd)
+        self.model.save_checkpoint(self.deepspeed_ckpt_dir, tag=save_tag, client_state=client_sd,
+                                   exclude_frozen_parameters=True)
 
     def _load_checkpoint(self, load_dir, tag=None):
         """
