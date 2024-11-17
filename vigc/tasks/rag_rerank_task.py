@@ -140,6 +140,15 @@ class RAGRerankTask(DeepSpeedBaseTask):
             if label:
                 pred_info[query]["gt"].append(passage)
 
+        for query in queries_set:
+            score_lst = pred_info[query]['score']
+            pred_lst = pred_info[query]['pred']
+            order_index = np.argsort(-1 * np.array(score_lst)).tolist()
+            score_lst = [score_lst[_] for _ in order_index]
+            pred_lst = [pred_lst[_] for _ in order_index]
+            pred_info[query]["score"] = score_lst
+            pred_info[query]['pred'] = pred_lst
+
         all_preds = [pred_info[_]["pred"] for _ in queries_set]
         all_pred_scores = np.array([pred_info[_]["score"] for _ in queries_set])
         all_gts = [pred_info[_]["gt"] for _ in queries_set]

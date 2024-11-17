@@ -244,9 +244,8 @@ class LLMRerankerModel(BaseModel):
 
         with self.maybe_autocast(self.compute_type):
             logits = self.encode(llm_tokens)  # [B, D]
-            scores = torch.sigmoid(logits)
-
-        return scores.detach().float().cpu()
+        scores = torch.sigmoid(logits.float())
+        return scores.detach().cpu()
 
     def maybe_autocast(self, dtype=torch.float16):
         # if on cpu, don't use autocast
