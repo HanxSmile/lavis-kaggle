@@ -9,6 +9,8 @@ model:
   model_type: default
 
   use_lora: False
+  use_qlora: False
+
   torch_dtype: bf16
   use_grad_checkpoint: False
   query_max_len: 256

@@ -1,19 +1,25 @@
+# %%writefile rerank_inference.py
+
 import torch
 import argparse
 import json
+import numpy as np
 import pandas as pd
 import torch.nn as nn
 from torch import Tensor
 from torch.utils.data import Dataset as torch_Dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from torch.utils.data import DataLoader
+from transformers import  AutoTokenizer, BitsAndBytesConfig
+from modeling_qwen import Qwen2ForCausalLM
 from typing import Optional
 from peft import LoraConfig, get_peft_model
+from tqdm.auto import tqdm
 
 
-class RerankEvalDataset(torch_Dataset):
+class RerankDataset(torch_Dataset):
     def __init__(
             self,
-            data_root,
+            all_data,
             query_prompt=None,
             passage_prompt=None,
             prompt=None,
@@ -23,8 +29,6 @@ class RerankEvalDataset(torch_Dataset):
         self.passage_prompt = passage_prompt or "B: {passage}"
         self.prompt = prompt or "Given a query A and a passage B, determine whether the passage contains an answer to the query by providing a prediction of either 'Yes' or 'No'."
 
-        with open(data_root, 'r') as f:
-            all_data = json.load(f)
         self.inner_dataset = self.prepare_ds(all_data)
 
     def prepare_ds(self, data):
@@ -74,7 +78,7 @@ class RerankEvalDataset(torch_Dataset):
         return {
             "id": ids,
             "uid": uids,
-            "passage_ids": passage_ids,
+            "passage_id": passage_ids,
             "query": queries,
             "passage": passages,
             "prompt": prompts,
@@ -86,7 +90,6 @@ class LLMRerankerModel(nn.Module):
             self,
             model_name: str = "upstage/SOLAR-10.7B-v1.0",
             torch_dtype: Optional[str] = "bf16",
-            use_lora: bool = True,
             query_max_len: int = 512,
             passage_max_len: int = 512,
     ):
@@ -98,32 +101,39 @@ class LLMRerankerModel(nn.Module):
         else:
             self.compute_type = torch.float32
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=self.compute_type,
-            trust_remote_code=True
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=self.compute_type,
         )
-        if use_lora:
-            lora_config = LoraConfig(
-                r=64,
-                lora_alpha=32,
-                target_modules=[
-                    "q_proj",
-                    "k_proj",
-                    "v_proj",
-                    "o_proj",
-                    "gate_proj",
-                    "up_proj",
-                    "down_proj",
-                    "lm_head"
-                ],
-                bias="none",
-                lora_dropout=0.05,  # Conventional
-                task_type="CAUSAL_LM",
-            )
 
-            self.model = get_peft_model(self.model, lora_config)
-            self.model.print_trainable_parameters()
+        self.model = Qwen2ForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=bnb_config,
+            trust_remote_code=True,
+        )
+
+        lora_config = LoraConfig(
+            r=64,
+            lora_alpha=32,
+            target_modules=[
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj",
+                "lm_head"
+            ],
+            bias="none",
+            lora_dropout=0.05,  # Conventional
+            task_type="CAUSAL_LM",
+        )
+
+        self.model = get_peft_model(self.model, lora_config)
+        self.model.print_trainable_parameters()
 
         tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, use_fast=False)
 
@@ -263,7 +273,25 @@ class LLMRerankerModel(nn.Module):
             self,
             dataloader,
     ):
-        pass
+        infer_results = []
+        for samples in tqdm(dataloader, total=len(dataloader)):
+            scores = self.generate(samples)
+
+            uids, passage_ids = samples['uid'], samples['passage_id']
+            for score, uid, passage_id in zip(scores, uids, passage_ids):
+                res = {
+                    "uid": uid,
+                    "passage_id": passage_id,
+                    "score": float(score.item())
+                }
+                infer_results.append(res)
+        all_uids = list(set([_["uid"] for _ in infer_results]))
+        all_results = {uid: {"passage_id": [], "score": []} for uid in all_uids}
+        for res in infer_results:
+            uid, passage_id, score = res["uid"], res["passage_id"], res["score"]
+            all_results[uid]["passage_id"].append(passage_id)
+            all_results[uid]["score"].append(score)
+        return all_results
 
 
 def parse_args():
@@ -282,16 +310,15 @@ dst_path = cfg.dst_path
 recall_path = cfg.recall_path
 
 path_prefix = "/kaggle/input/eedi-mining-misconceptions-in-mathematics"
-model_path = "/kaggle/input/sfr-embedding-mistral/SFR-Embedding-2_R"
+model_path = "/kaggle/input/gte-qwen2-7b-instruct/transformers/default/1"
 with open("/kaggle/input/data-process/misconception_mapping.json") as f:
     misconception_dic = json.load(f)
 
 with open(recall_path) as f:
     recall_info = json.load(f)
 model = LLMRerankerModel(
-    model_name="upstage/SOLAR-10.7B-v1.0",
+    model_name=model_path,
     torch_dtype="bf16",
-    use_lora=True,
     query_max_len=512,
     passage_max_len=512,
 )
@@ -321,3 +348,34 @@ for _, row in tra.iterrows():
             "passage_ids": recall_info[uid],
             "passages": [misconception_dic[_] for _ in recall_info[uid]],
         }
+
+dataset = RerankDataset(
+    train_data,
+    query_prompt="Math question and its answers: {query}",
+    passage_prompt="Reason for the misconception: {passage}",
+    prompt="Given a math question, a misconcepte incorrect answer and a possible reason for the misconception, please determine if the reason is correct by providing a prediction of either 'Yes' or 'No'.",
+)
+
+eedi_dataloader = DataLoader(
+    dataset,
+    batch_size=4,
+    shuffle=False,
+    num_workers=4,
+    drop_last=False,
+    collate_fn=dataset.collater,
+)
+
+infer_results = model.inference(eedi_dataloader)
+
+result = {}
+for uid in infer_results:
+    passage_ids = infer_results[uid]["passage_id"]
+    scores = infer_results[uid]["score"]
+
+    order_index = np.argsort(-1 * np.array(scores)).tolist()
+    scores = [scores[_] for _ in order_index]
+    passage_ids = [passage_ids[_] for _ in order_index]
+    result[uid] = {"passage_id": passage_ids, "score": scores}
+
+with open(dst_path, "w") as f:
+    json.dump(result, f)

@@ -8,7 +8,7 @@ model:
   model_type: default
 
   model_name: upstage/SOLAR-10.7B-v1.0
-  use_lora: True
+  use_qlora: True
   torch_dtype: bf16
   use_grad_checkpoint: False
   query_max_len: 512

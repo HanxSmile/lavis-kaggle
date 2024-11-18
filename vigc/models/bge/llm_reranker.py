@@ -21,6 +21,7 @@ class LLMRerankerModel(BaseModel):
             model_name: str = "upstage/SOLAR-10.7B-v1.0",
             torch_dtype: Optional[str] = None,
             use_lora: bool = False,
+            use_qlora: bool = False,
             use_grad_checkpoint: bool = False,
             query_max_len: int = 256,
             passage_max_len: int = 256,
@@ -33,13 +34,14 @@ class LLMRerankerModel(BaseModel):
         else:
             self.compute_type = torch.float32
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            # quantization_config=bnb_config,
-            torch_dtype=self.compute_type,
-            trust_remote_code=True
-        )
         if use_lora:
+
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                # quantization_config=bnb_config,
+                torch_dtype=self.compute_type,
+                trust_remote_code=True
+            )
 
             for name, param in self.model.named_parameters():
                 param.requires_grad = False
@@ -64,6 +66,47 @@ class LLMRerankerModel(BaseModel):
 
             self.model = get_peft_model(self.model, lora_config)
             self.model.print_trainable_parameters()
+        elif use_qlora:
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=self.compute_type,
+            )
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=bnb_config,
+                trust_remote_code=True
+            )
+
+            lora_config = LoraConfig(
+                r=64,
+                lora_alpha=32,
+                target_modules=[
+                    "q_proj",
+                    "k_proj",
+                    "v_proj",
+                    "o_proj",
+                    "gate_proj",
+                    "up_proj",
+                    "down_proj",
+                    "lm_head"
+                ],
+                bias="none",
+                lora_dropout=0.05,  # Conventional
+                task_type="CAUSAL_LM",
+            )
+
+            self.model = get_peft_model(self.model, lora_config)
+            self.model.print_trainable_parameters()
+
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                # quantization_config=bnb_config,
+                torch_dtype=self.compute_type,
+                trust_remote_code=True
+            )
 
         tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, use_fast=False)
 
@@ -262,6 +305,7 @@ class LLMRerankerModel(BaseModel):
         model_name = cfg.get("model_name", "upstage/SOLAR-10.7B-v1.0")
         torch_dtype = cfg.get("torch_dtype", "bf16")
         use_lora = cfg.get("use_lora", False)
+        use_qlora = cfg.get("use_qlora", False)
         use_grad_checkpoint = cfg.get("use_grad_checkpoint", False)
         query_max_len = cfg.get("query_max_len", 256)
         passage_max_len = cfg.get("passage_max_len", 256)
@@ -272,6 +316,7 @@ class LLMRerankerModel(BaseModel):
             query_max_len=query_max_len,
             passage_max_len=passage_max_len,
             use_lora=use_lora,
+            use_qlora=use_qlora,
             torch_dtype=torch_dtype,
         )
         model.load_checkpoint_from_config(cfg)
