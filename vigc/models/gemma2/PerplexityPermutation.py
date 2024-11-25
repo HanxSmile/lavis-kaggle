@@ -32,7 +32,9 @@ class PerplexityCalculator(BaseModel):
         self.tokenizer.padding_side = "right"
         # Configure model loading based on quantization setting and device availability
         if load_in_8bit:
-            quantization_config = transformers.BitsAndBytesConfig(load_in_8bit=True)
+            quantization_config = transformers.BitsAndBytesConfig(
+                load_in_8bit=True
+            )
             self.model = transformers.AutoModelForCausalLM.from_pretrained(
                 model_path,
                 quantization_config=quantization_config,

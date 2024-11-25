@@ -11,8 +11,8 @@ model:
 
 datasets:
   perplexity_permutation:
-    initial_text: "advent chimney elf family fireplace gingerbread mistletoe ornament reindeer scrooge"
-    permutation_idx: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+    initial_text: "scrooge the mistletoe and ornament reindeer elf family advent fireplace chimney night sleep walk laugh give jump bake gingerbread drive"
+    permutation_idx: [ 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ]
 
 run:
   runner: runner_iter

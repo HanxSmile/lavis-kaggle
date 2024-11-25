@@ -33,9 +33,8 @@ class PerplexityPermutationEvalTask(BaseTask):
         scores = model.generate(samples["text"])
         ids, texts = samples["id"], samples["text"]
 
-        min_idx = np.argmin(scores)
-        results.append({"id": ids[min_idx], "text": texts[min_idx], "score": scores[min_idx]})
-
+        for id_, text, score in zip(ids, texts, scores):
+            results.append({"id": id_, "text": text, "score": score})
         return results
 
     def after_evaluation(self, val_result, split_name, epoch, **kwargs):
@@ -67,6 +66,15 @@ class PerplexityPermutationEvalTask(BaseTask):
         min_idx = np.argmin(all_scores)
         min_score = all_scores[min_idx]
         best_text = all_texts[min_idx]
+
+        min_idxs = np.argsort(all_scores)
+        min_scores = [all_scores[_] for _ in min_idxs]
+        min_texts = [all_texts[_] for _ in min_idxs]
+
+        store_results = {"text": min_texts, "score": min_scores}
+
+        with open(os.path.join(registry.get_path("result_dir"), "filter_results.json"), "w") as f:
+            json.dump(store_results, f)
 
         metrics_result = {"score": min_score, "text": best_text}
 
