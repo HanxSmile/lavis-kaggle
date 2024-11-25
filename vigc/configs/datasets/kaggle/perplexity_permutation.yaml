@@ -1,0 +1,5 @@
+datasets:
+  perplexity_permutation:
+    data_type: text
+    initial_text: "advent chimney elf family fireplace gingerbread mistletoe ornament reindeer scrooge"
+    permutation_idx: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]

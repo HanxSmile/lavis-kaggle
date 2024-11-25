@@ -1,0 +1,43 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: gemma2_perplexity
+  model_type: default
+  model_path: google/gemma-2-9b
+  load_in_8bit: True
+
+datasets:
+  perplexity_permutation:
+    initial_text: "advent chimney elf family fireplace gingerbread mistletoe ornament reindeer scrooge"
+    permutation_idx: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+
+run:
+  runner: runner_iter
+  task: perplexity_permutation
+
+  batch_size_train: 1024
+  batch_size_eval: 1024
+
+  num_workers: 4
+  warmup_steps: 100
+
+  iters_per_inner_epoch: 100
+  max_iters: 1000
+
+  seed: 42
+  output_dir: "./output/perplexity_permutation"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: True
+  test_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True

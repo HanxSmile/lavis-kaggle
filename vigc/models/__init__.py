@@ -42,6 +42,7 @@ from vigc.models.llama_llm import Llama3Instruct
 from vigc.models.bge import BgeEmbeddingModel, MistralEmbeddingModel, LLMRerankerModel
 
 from vigc.models.semantic_segmentation import UnetSemanticSegmentationModel
+from vigc.models.gemma2.PerplexityPermutation import PerplexityCalculator
 
 __all__ = [
     "load_model",
@@ -76,6 +77,7 @@ __all__ = [
     "LLMRerankerModel",
 
     "UnetSemanticSegmentationModel",
+    "PerplexityCalculator",
 ]
 
 

@@ -84,6 +84,8 @@ from vigc.datasets.builders.rag import (
     RerankEvalBuilder
 )
 
+from vigc.datasets.builders.perplexity_permutation import PerplexityPermutationBuilder
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -129,6 +131,8 @@ __all__ = [
     "RAGEvalBuilder",
     "RerankTrainBuilder",
     "RerankEvalBuilder",
+
+    "PerplexityPermutationBuilder",
 ]
 
 

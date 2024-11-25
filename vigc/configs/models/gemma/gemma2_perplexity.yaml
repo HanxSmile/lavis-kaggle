@@ -1,0 +1,12 @@
+model:
+  model_path: google/gemma-2-9b
+  load_finetuned: False
+  finetuned: ""
+  load_pretrained: False
+  pretrained: ""
+  arch: gemma2_perplexity
+
+  model_type: default
+
+  load_in_8bit: True
+
