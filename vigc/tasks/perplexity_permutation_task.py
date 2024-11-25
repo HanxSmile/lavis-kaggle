@@ -42,7 +42,7 @@ class PerplexityPermutationEvalTask(BaseTask):
             result=val_result,
             result_dir=registry.get_path("result_dir"),
             filename="{}_epoch{}".format(split_name, epoch),
-            remove_duplicate="id",
+            remove_duplicate="",
         )
 
         if self.report_metric:
