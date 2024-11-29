@@ -4,6 +4,7 @@
  SPDX-License-Identifier: BSD-3-Clause
  For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
+import logging
 
 
 class Registry:
@@ -198,7 +199,8 @@ class Registry:
         """
         assert isinstance(path, str), "All path must be str."
         if name in cls.mapping["paths"]:
-            raise KeyError("Name '{}' already registered.".format(name))
+            # raise KeyError("Name '{}' already registered.".format(name))
+            logging.warning("Name '{}' already registered.".format(name))
         cls.mapping["paths"][name] = path
 
     @classmethod
