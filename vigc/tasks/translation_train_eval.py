@@ -9,38 +9,50 @@ import sacrebleu
 @registry.register_task("translation_task")
 class TranslationTask(BaseTask):
 
-    def __init__(self, evaluate, report_metric=True, num_beams=5):
+    def __init__(self, evaluate, report_metric=True, num_beams=5, return_loss=False):
         super().__init__()
         self.evaluate = evaluate
         self.report_metric = report_metric
         self.num_beams = num_beams
+        self.return_loss = return_loss
 
     @classmethod
     def setup_task(cls, cfg):
         run_cfg = cfg.run_cfg
         report_metric = run_cfg.get("report_metric", True)
-        num_beams = run_cfg.get("num_beams", 5)
+        generate_cfg = run_cfg.get("generate_cfg")
+
+        num_beams = generate_cfg.get("num_beams", 5)
+        return_loss = generate_cfg.get("return_loss", False)
+
         evaluate = run_cfg.evaluate
 
         return cls(
             evaluate=evaluate,
             report_metric=report_metric,
             num_beams=num_beams,
+            return_loss=return_loss
         )
 
     def valid_step(self, model, samples):
         results = []
         gts = samples["output"]
+        inputs = samples["input"]
         ids = samples["ids"]
-        preds = model.generate(
+        preds, loss_lst = model.generate(
             samples,
             num_beams=self.num_beams,
+            return_loss=self.return_loss
         )
-        for gt, pred, id_ in zip(gts, preds, ids):
+        for gt, pred, id_, loss_, input_ in zip(gts, preds, ids, loss_lst, inputs):
+            score = sacrebleu.corpus_bleu([pred], [gt]).score
             results.append({
+                "input": input_,
                 "gt": gt,
                 "pred": pred,
-                "id": id_
+                "id": id_,
+                "loss": loss_,
+                "bleu": score
             })
 
         return results

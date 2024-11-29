@@ -45,6 +45,7 @@ class NLLBTranslator(BaseModel):
             self,
             samples,
             num_beams=5,
+            return_loss=False,
             **kwargs
     ):
         text = samples["input"]
@@ -73,7 +74,47 @@ class NLLBTranslator(BaseModel):
             )
         result = self.tokenizer.batch_decode(result, skip_special_tokens=True)
         result = [_.strip() for _ in result]
-        return result
+        if not return_loss:
+            return result, [0] * len(result)
+
+        source_texts, target_texts = samples["input"], samples["output"]
+        self.tokenizer.src_lang = source_lang
+        inputs = self.tokenizer(
+            source_texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self.max_length
+        ).to(self.device)
+
+        self.tokenizer.src_lang = target_lang
+        labels = self.tokenizer(
+            target_texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=self.max_length
+        ).to(self.device)
+        labels.input_ids[labels.input_ids == self.tokenizer.pad_token_id] = -100
+
+        with self.maybe_autocast():
+            logits = self.model(
+                **inputs, labels=labels.input_ids
+            ).logits
+
+        shift_logits = logits.contiguous()
+        shift_labels = labels.input_ids.contiguous()
+        loss = torch.nn.CrossEntropyLoss(reduction='none')(
+            shift_logits.view(-1, shift_logits.size(-1)),
+            shift_labels.view(-1)
+        )
+
+        valid_length = (shift_labels != -100).sum(dim=-1)
+
+        loss = loss.view(len(logits), -1)
+        loss = torch.sum(loss, -1) / valid_length
+        loss_list = loss.float().cpu().tolist()
+        return result, loss_list
 
     def forward(self, samples, **kwargs):
 

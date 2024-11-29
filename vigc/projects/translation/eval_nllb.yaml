@@ -1,0 +1,55 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  model_name: /mnt/data/hanxiao/models/nlp/nllb-200-distilled-1.3B
+  arch: nllb_translator
+  model_type: default
+  lang_token_map:
+    zh: "zho_Hans"
+    ar: "arb_Arab"
+    th: "tha_Thai"
+    de: "deu_Latn"
+    pl: "pol_Latn"
+    fa: "pes_Arab"
+    en: "eng_Latn"
+    el: "ell_Grek"
+    tr: "tur_Latn"
+
+
+datasets:
+
+  text_pair_eval:
+    source_key: "tr"
+    target_key: "en"
+    data_root:
+      - /mnt/data/hanxiao/dataset/nlp/opus/en-tr/validation-00000-of-00001.json
+      - /mnt/data/hanxiao/dataset/nlp/opus/en-tr/train-00000-of-00001.json
+
+run:
+  runner: runner_iter
+  task: translation_task
+
+  batch_size_train: 8
+  batch_size_eval: 16
+
+  num_workers: 4
+
+  seed: 42
+  output_dir: "./output/translate_tr2en"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: True
+  generate_cfg:
+    return_loss: True
+  test_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
