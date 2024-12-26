@@ -81,7 +81,8 @@ from vigc.datasets.builders.rag import (
     RAGEvalBuilder,
     RAGTrainBuilder,
     RerankTrainBuilder,
-    RerankEvalBuilder
+    RerankEvalBuilder,
+    RAG_CLS_TrainBuilder
 )
 
 from vigc.datasets.builders.perplexity_permutation import PerplexityPermutationBuilder
@@ -131,6 +132,7 @@ __all__ = [
     "RAGEvalBuilder",
     "RerankTrainBuilder",
     "RerankEvalBuilder",
+    "RAG_CLS_TrainBuilder",
 
     "PerplexityPermutationBuilder",
 ]

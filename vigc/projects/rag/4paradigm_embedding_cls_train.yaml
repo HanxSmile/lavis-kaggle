@@ -1,0 +1,51 @@
+model:
+  arch: bge_embedding_cls
+  model_type: default
+
+  model_name: BAAI/bge-m3
+  normalized: True
+  sentence_pooling_method: 'cls'
+  query_max_len: 128
+  class_nums: 2
+  freeze_backbone: False
+
+
+datasets:
+  rag_cls_train:
+    data_root: Null
+
+run:
+  runner: runner_iter
+  task: only_train_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-4
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 128
+  batch_size_eval: 128
+
+  num_workers: 4
+  warmup_steps: 500
+
+  iters_per_inner_epoch: 1000
+  max_iters: 30000
+
+  seed: 42
+  output_dir: "/mnt/data/wangyesong01/output/ics"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True

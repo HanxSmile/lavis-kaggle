@@ -1,0 +1,4 @@
+datasets:
+  rag_cls_train:
+    data_type: text
+    data_root: Null

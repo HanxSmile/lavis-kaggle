@@ -1,0 +1,16 @@
+model:
+  model_name: BAAI/bge-m3
+  load_finetuned: False
+  finetuned: ""
+  load_pretrained: False
+  pretrained: ""
+  arch: bge_embedding_cls
+
+  model_type: default
+
+  normalized: True
+  sentence_pooling_method: 'cls'
+  query_max_len: 128
+  class_nums: 2
+  temperature: 1.0
+  freeze_backbone: False
