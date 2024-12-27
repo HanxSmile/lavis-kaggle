@@ -44,6 +44,8 @@ from vigc.models.bge import BgeEmbeddingModel, MistralEmbeddingModel, LLMReranke
 from vigc.models.semantic_segmentation import UnetSemanticSegmentationModel
 from vigc.models.gemma2.PerplexityPermutation import PerplexityCalculator
 
+from vigc.models.text_rec.crnn import MobilenetV1EnhanceModel
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -79,6 +81,8 @@ __all__ = [
 
     "UnetSemanticSegmentationModel",
     "PerplexityCalculator",
+
+    "MobilenetV1EnhanceModel",
 ]
 
 
