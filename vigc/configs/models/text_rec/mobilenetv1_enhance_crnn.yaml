@@ -1,0 +1,13 @@
+model:
+  load_finetuned: False
+  finetuned: ""
+  arch: mobilenetv1_enhance_crnn
+  model_type: default
+  in_channels: 3
+  mobilenet_scale: 0.5
+  neck_encoder_type: rnn
+  neck_hidden_size: 64
+  head_mid_channels: 96
+  head_out_channels: 6625
+  character_dict_path: Null
+  use_space_char: False

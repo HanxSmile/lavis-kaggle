@@ -1,0 +1,85 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  load_finetuned: False
+  finetuned: ""
+  arch: mobilenetv1_enhance_crnn
+  model_type: default
+  in_channels: 3
+  mobilenet_scale: 0.5
+  neck_encoder_type: rnn
+  neck_hidden_size: 64
+  head_mid_channels: 96
+  head_out_channels: 6625
+  character_dict_path: Null
+  use_space_char: False
+
+
+datasets:
+  ctc_encode_train:
+    ann_file: ""
+    media_dir: ""
+    max_text_length: 25
+    character_dict_path: Null
+    use_space_char: False
+
+    vis_processor:
+      train:
+        name: "text_rec_train"
+        image_shape: [ 3, 32, 320 ]
+
+
+  ctc_encode_eval:
+    ann_file: ""
+    media_dir: ""
+    max_text_length: 25
+    character_dict_path: Null
+    use_space_char: False
+
+    vis_processor:
+      eval:
+        name: "text_rec_eval"
+        image_shape: [ 3, 32, 320 ]
+
+run:
+  runner: runner_iter
+  task: text_rec_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-4
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 128
+  batch_size_eval: 128
+
+  num_workers: 4
+  warmup_steps: 1000
+
+  iters_per_inner_epoch: 1000
+  max_iters: 10000
+
+  seed: 42
+  output_dir: "./output/text_rec"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
+  metric_cfg:
+    is_filter: False
+    ignore_space: True

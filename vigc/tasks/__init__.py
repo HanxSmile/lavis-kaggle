@@ -29,6 +29,8 @@ from vigc.tasks.perplexity_permutation_task import PerplexityPermutationEvalTask
 
 from vigc.tasks.only_train_task import OnlyTrainTask
 
+from vigc.tasks.text_rec_train_eval import TextRecTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."

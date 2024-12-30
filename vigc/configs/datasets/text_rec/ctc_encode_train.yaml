@@ -1,0 +1,21 @@
+datasets:
+  ctc_encode_train:
+    data_type: images
+    ann_file: ""
+    media_dir: ""
+    max_text_length: 25
+    character_dict_path: Null
+    use_space_char: False
+
+    vis_processor:
+      train:
+        name: "text_rec_train"
+        image_shape: [ 3, 32, 320 ]
+        tia_prob: 0.4
+        crop_prob: 0.4
+        reverse_prob: 0.4
+        noise_prob: 0.4
+        jitter_prob: 0.4
+        blur_prob: 0.4
+        hsv_aug_prob: 0.4
+

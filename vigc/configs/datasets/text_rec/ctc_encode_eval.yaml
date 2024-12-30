@@ -1,0 +1,14 @@
+datasets:
+  ctc_encode_eval:
+    data_type: images
+    ann_file: ""
+    media_dir: ""
+    max_text_length: 25
+    character_dict_path: Null
+    use_space_char: False
+
+    vis_processor:
+      eval:
+        name: "text_rec_eval"
+        image_shape: [3, 32, 320]
+

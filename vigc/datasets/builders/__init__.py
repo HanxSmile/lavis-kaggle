@@ -86,6 +86,7 @@ from vigc.datasets.builders.rag import (
 )
 
 from vigc.datasets.builders.perplexity_permutation import PerplexityPermutationBuilder
+from vigc.datasets.builders.text_rec.ctc_encode_builder import CTCTextRecTrainBuilder, CTCTextRecEvalBuilder
 
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
@@ -135,6 +136,9 @@ __all__ = [
     "RAG_CLS_TrainBuilder",
 
     "PerplexityPermutationBuilder",
+
+    "CTCTextRecTrainBuilder",
+    "CTCTextRecEvalBuilder",
 ]
 
 

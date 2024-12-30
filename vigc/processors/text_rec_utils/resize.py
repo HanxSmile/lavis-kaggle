@@ -11,31 +11,28 @@ import cv2
 import numpy as np
 
 
-class RecResizeImg(object):
+class RecResizeAndNormImg:
     def __init__(
             self,
             image_shape,
-            infer_mode=False,
             eval_mode=False,
-            character_dict_path='./ppocr/utils/ppocr_keys_v1.txt',
             padding=True,
             **kwargs):
         self.image_shape = image_shape
-        self.infer_mode = infer_mode
         self.eval_mode = eval_mode
-        self.character_dict_path = character_dict_path
         self.padding = padding
 
-    def __call__(self, data):
-        img = data['image']
-        if self.eval_mode or (self.infer_mode and
-                              self.character_dict_path is not None):
+    def __call__(self, img):
+        """
+        0~255 uint8 [H, W, C]
+        --->
+        -1~1 float32 [new_C, new_H, new_W]
+        """
+        if self.eval_mode:
             norm_img, valid_ratio = resize_norm_img_chinese(img, self.image_shape)
         else:
             norm_img, valid_ratio = resize_norm_img(img, self.image_shape, self.padding)
-        data['image'] = norm_img
-        data['valid_ratio'] = valid_ratio
-        return data
+        return norm_img
 
 
 def resize_norm_img_chinese(img, image_shape):

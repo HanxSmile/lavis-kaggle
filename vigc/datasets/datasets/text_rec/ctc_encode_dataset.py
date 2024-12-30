@@ -67,6 +67,7 @@ class SimpleDataSet(Dataset):
             "id": str(index),
             "gt": text,
             "image": image,
+            "image_path": img_path,
             "label": torch.LongTensor(label),
             "label_length": torch.LongTensor([label_length])
         }
@@ -78,10 +79,12 @@ class SimpleDataSet(Dataset):
         images = [_["image"] for _ in features]
         labels = [_["label"] for _ in features]
         label_lengths = [_["label_length"] for _ in features]
+        image_paths = [_["image_path"] for _ in features]
         result = {
             "id": ids,
             "gt": gts,
             "image": torch.stack(images),
+            "image_path": image_paths,
             "label": torch.stack(labels),
             "label_length": torch.cat(label_lengths)
         }

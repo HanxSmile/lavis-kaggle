@@ -28,6 +28,10 @@ from vigc.processors.semantic_segmentation_processor import (
 from vigc.processors.rag_processor import (
     RAGCaptionProcessor,
 )
+from vigc.processors.text_rec_processors import (
+    TextRecTrainProcessor,
+    TextRecEvalProcessor
+)
 
 from vigc.common.registry import registry
 
@@ -47,6 +51,9 @@ __all__ = [
     "SemanticSegmentationEvalProcessor",
     # RAG
     "RAGCaptionProcessor",
+    # Text Rec
+    "TextRecTrainProcessor",
+    "TextRecEvalProcessor",
 ]
 
 
