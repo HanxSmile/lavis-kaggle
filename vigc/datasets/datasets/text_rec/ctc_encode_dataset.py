@@ -66,7 +66,7 @@ class SimpleDataSet(Dataset):
         res = {
             "id": str(index),
             "gt": text,
-            "image": image,
+            "image": torch.from_numpy(image),
             "image_path": img_path,
             "label": torch.LongTensor(label),
             "label_length": torch.LongTensor([label_length])
