@@ -30,6 +30,7 @@ class MobilenetV1EnhanceModel(BaseModel):
             use_space_char: bool = False,
     ):
         super().__init__()
+        self.in_channels = in_channels
         self.backbone = MobileNetV1Enhance(
             in_channels=in_channels, scale=mobilenet_scale)
         self.neck = SequenceEncoder(
@@ -52,11 +53,31 @@ class MobilenetV1EnhanceModel(BaseModel):
         return x
 
     def forward(self, samples):
-        images, labels, label_lengths = samples["image"], samples["label"], samples["label_length"]
-        with self.maybe_autocast():
-            logits = self.encode(images)
-            loss = self.criterion(logits, labels, label_lengths)
-        return {"loss": loss}
+        if self.training:
+            images, labels, label_lengths = samples["image"], samples["label"], samples["label_length"]
+            with self.maybe_autocast():
+                logits = self.encode(images)
+                loss = self.criterion(logits, labels, label_lengths)
+            return {"loss": loss}
+        else:
+            logits = self.encode(samples)
+            probs = F.softmax(logits, dim=-1)
+            return probs
+
+    def to_onnx(self, dummy_input, dynamic_axes, save_path="model.onnx"):
+        input_axis_name = ['batch_size', 'channel', 'in_width', 'int_height']
+        output_axis_name = ['batch_size', 'channel', 'out_width', 'out_height']
+        torch.onnx.export(
+            self,
+            dummy_input,
+            save_path,
+            input_names=["input"],
+            output_names=["output"],  # the model's output names
+            dynamic_axes={
+                "input": {axis: input_axis_name[axis] for axis in dynamic_axes},
+                "output": {axis: output_axis_name[axis] for axis in dynamic_axes},
+            },
+        )
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
