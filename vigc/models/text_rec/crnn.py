@@ -83,7 +83,7 @@ class MobilenetV1EnhanceModel(BaseModel):
         images = samples["image"]
         with self.maybe_autocast():
             logits = self.encode(images)
-        probs = F.softmax(logits, dim=-1)
+        probs = F.softmax(logits, dim=-1).cpu()
         preds = self.postprocess(probs)
         return preds
 

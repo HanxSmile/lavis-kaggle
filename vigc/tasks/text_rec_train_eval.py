@@ -40,10 +40,12 @@ class TextRecTask(BaseTask):
         image_paths = samples["image_path"]
         preds = model.generate(samples)
         for id_, pred, gt, image_path in zip(ids, preds, gts, image_paths):
+            pred, score = pred
             results.append({
                 "id": id_,
                 "image": image_path,
                 "pred": pred,
+                "score": score,
                 "gt": gt,
             })
 
@@ -71,7 +73,7 @@ class TextRecTask(BaseTask):
 
         with open(eval_result_file) as f:
             results = json.load(f)
-        gts = [[_["gt"] for _ in results]]
+        gts = [_["gt"] for _ in results]
         preds = [_["pred"] for _ in results]
         self.metric.reset()
         metrics = self.metric(preds, gts)
