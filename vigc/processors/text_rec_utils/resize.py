@@ -16,10 +16,12 @@ class RecResizeAndNormImg:
             self,
             image_shape,
             eval_mode=False,
+            batch_mode=False,
             padding=True,
             **kwargs):
         self.image_shape = image_shape
         self.eval_mode = eval_mode
+        self.batch_mode = batch_mode
         self.padding = padding
 
     def __call__(self, img):
@@ -29,20 +31,21 @@ class RecResizeAndNormImg:
         -1~1 float32 [new_C, new_H, new_W]
         """
         if self.eval_mode:
-            norm_img, valid_ratio = resize_norm_img_chinese(img, self.image_shape)
+            norm_img, valid_ratio = resize_norm_img_chinese(img, self.image_shape, self.batch_mode)
         else:
             norm_img, valid_ratio = resize_norm_img(img, self.image_shape, self.padding)
         return norm_img
 
 
-def resize_norm_img_chinese(img, image_shape):
+def resize_norm_img_chinese(img, image_shape, batch_mode=False):
     imgC, imgH, imgW = image_shape
     # todo: change to 0 and modified image shape
     max_wh_ratio = imgW * 1.0 / imgH
     h, w = img.shape[0], img.shape[1]
     ratio = w * 1.0 / h
     max_wh_ratio = max(max_wh_ratio, ratio)
-    imgW = int(imgH * max_wh_ratio)
+    if not batch_mode:
+        imgW = int(imgH * max_wh_ratio)
     if math.ceil(imgH * ratio) > imgW:
         resized_w = imgW
     else:

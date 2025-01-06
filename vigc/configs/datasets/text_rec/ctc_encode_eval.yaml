@@ -11,4 +11,5 @@ datasets:
       eval:
         name: "text_rec_eval"
         image_shape: [3, 32, 320]
+        batch_mode: True
 

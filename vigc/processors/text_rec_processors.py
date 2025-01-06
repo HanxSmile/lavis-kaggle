@@ -74,12 +74,13 @@ class TextRecTrainProcessor(BaseProcessor):
 
 @registry.register_processor("text_rec_eval")
 class TextRecEvalProcessor(BaseProcessor):
-    def __init__(self, image_shape):
+    def __init__(self, image_shape, batch_mode=False):
         super().__init__()
 
         self.resize_transform = RecResizeAndNormImg(
             image_shape=image_shape,
             eval_mode=True,
+            batch_mode=batch_mode,
         )
 
     def __call__(self, img):
@@ -91,4 +92,5 @@ class TextRecEvalProcessor(BaseProcessor):
             cfg = OmegaConf.create()
         return cls(
             cfg.image_shape,
+            batch_mode=cfg.get('batch_mode', False),
         )
