@@ -26,6 +26,15 @@ class BaseModel(nn.Module):
     def device(self):
         return list(self.parameters())[0].device
 
+    def freeze_module(self, module, verbose=""):
+        for name, param in module.named_parameters():
+            param.requires_grad = False
+        module = module.eval()
+        module.train = disabled_train
+        if verbose:
+            logging.info(f"{verbose} has been frozen.")
+        return module
+
     def load_checkpoint(self, url_or_filename):
         """
         Load from a finetuned checkpoint.
@@ -249,3 +258,9 @@ def tile(x, dim, n_tile):
         np.concatenate([init_dim * np.arange(n_tile) + i for i in range(init_dim)])
     )
     return torch.index_select(x, dim, order_index.to(x.device))
+
+
+def disabled_train(self, mode=True):
+    """Overwrite model.train with this function to make sure train/eval mode
+    does not change anymore."""
+    return self
