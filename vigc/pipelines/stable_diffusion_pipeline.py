@@ -5,14 +5,13 @@ import contextlib
 import inspect
 
 
-class ControlNetPipeline:
+class StableDiffusionPipeline:
 
-    def __init__(self, unet, vae, text_encoder, controlnet, scheduler, tokenizer, compute_type):
+    def __init__(self, unet, vae, text_encoder, scheduler, tokenizer, compute_type):
         self.unet = unet
         self.text_encoder = text_encoder
         self.tokenizer = tokenizer
         self.vae = vae
-        self.controlnet = controlnet
         self.scheduler = scheduler
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
         self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor, do_convert_rgb=True)
@@ -141,15 +140,14 @@ class ControlNetPipeline:
     def generate(
             self,
             prompts,
-            images,
+            height,
+            width,
             num_inference_steps=50,
             guidance_scale=7.5,
             negative_prompt=None,
             generator=None,
-            controlnet_conditioning_scale=1.0,
-            control_guidance_start=0.0,
-            control_guidance_end=1.0,
             eta: float = 0.0,
+            cross_attention_kwargs=None,
     ):
         do_classifier_free_guidance = guidance_scale > 1.0
         # Prepare input prompts
@@ -165,14 +163,8 @@ class ControlNetPipeline:
         self.scheduler.set_timesteps(num_inference_steps, device=self.device)
         timesteps = self.scheduler.timesteps
 
-        # Prepare images
-        if do_classifier_free_guidance:
-            images = torch.cat([images] * 2)
-
-        # Prepare latent variable
-        height, width = images.shape[-2:]
         latents = self.prepare_latents(
-            batch_size=images.shape[0],
+            batch_size=len(prompts),
             num_channels_channels=self.unet.config.in_channels,
             height=height // self.vae_scale_factor,
             width=width // self.vae_scale_factor,
@@ -185,28 +177,14 @@ class ControlNetPipeline:
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
             latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-            control_model_input = latent_model_input
-            controlnet_prompt_embeds = prompt_embeds
-            control_flag = 1 - float(
-                i / len(timesteps) < control_guidance_start or (i + 1) / len(timesteps) > control_guidance_end)
-            control_scale = controlnet_conditioning_scale * control_flag
             with self.maybe_autocast(self.compute_type):
-                down_block_res_samples, mid_block_res_sample = self.controlnet(
-                    control_model_input,
-                    t,
-                    encoder_hidden_states=controlnet_prompt_embeds,
-                    controlnet_cond=images,
-                    conditioning_scale=control_scale,
-                    return_dict=False,
-                )
 
                 noise_pred = self.unet(
                     latent_model_input,
                     t,
                     encoder_hidden_states=prompt_embeds,
-                    down_block_additional_residuals=down_block_res_samples,
-                    mid_block_additional_residual=mid_block_res_sample,
                     return_dict=False,
+                    cross_attention_kwargs=cross_attention_kwargs
                 )[0]
 
             if do_classifier_free_guidance:

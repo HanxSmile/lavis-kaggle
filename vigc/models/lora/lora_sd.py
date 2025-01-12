@@ -3,34 +3,40 @@ import random
 import torch
 import torch.nn.functional as F
 
+from peft import LoraConfig
+from peft.utils import get_peft_model_state_dict
 from transformers import AutoTokenizer, CLIPTextModel
-from diffusers import AutoencoderKL, UNet2DConditionModel, ControlNetModel, DDPMScheduler, UniPCMultistepScheduler
-from vigc.pipelines import ControlNetPipeline
+from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler, \
+    StableDiffusionPipeline
+from diffusers.utils import convert_state_dict_to_diffusers
+from diffusers.training_utils import cast_training_params
+from vigc.pipelines import StableDiffusionPipeline as CustomStableDiffusionPipeline
 
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 import contextlib
-import os.path as osp
 
 
-@registry.register_model("controlnet_sd")
-class ControlNetStableDiffusion(BaseModel):
+@registry.register_model("lora_sd")
+class LoraStableDiffusion(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/controlnet/stable_diffusion.yaml",
+        "default": "configs/models/lora/stable_diffusion.yaml",
     }
 
     def __init__(
             self,
             *,
             pretrained_model_name_or_path,
-            controlnet_model_name_or_path=None,
+            lora_model_name_or_path=None,
             tokenizer_name=None,
             revision=None,
             variant=None,
             gradient_checkpointing=False,
             enable_xformers_memory_efficient_attention=False,
             compute_dtype="fp16",
-            proportion_empty_prompts=0
+            proportion_empty_prompts=0,
+            lora_rank=4,
+            lora_alpha=4,
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
@@ -68,18 +74,26 @@ class ControlNetStableDiffusion(BaseModel):
             revision=revision,
             variant=variant,
         )
-        if controlnet_model_name_or_path is not None:
-            self.controlnet = ControlNetModel.from_pretrained(controlnet_model_name_or_path)
-        else:
-            self.controlnet = ControlNetModel.from_unet(self.unet)
+        self.unet.load_adapter(lora_model_name_or_path)
         self.text_encoder = self.freeze_module(self.text_encoder, "text_encoder").to(self.compute_dtype)
         self.vae = self.freeze_module(self.vae, "vae").to(self.compute_dtype)
-        self.unet = self.freeze_module(self.unet, "unet").to(self.compute_dtype)
+        self.unet = self.freeze_module(self.unet, "unet", prevent_training_model=False).to(self.compute_dtype)
         self.noise_scheduler = DDPMScheduler.from_pretrained(pretrained_model_name_or_path, subfolder="scheduler")
         self.inference_noise_scheduler = UniPCMultistepScheduler.from_config(self.noise_scheduler.config)
+
+        if lora_model_name_or_path is None:
+            unet_lora_config = LoraConfig(
+                r=lora_rank,
+                lora_alpha=lora_alpha,
+                init_lora_weights="gaussian",
+                target_modules=["to_k", "to_q", "to_v", "to_out.0"],
+            )
+            self.unet.add_adapter(unet_lora_config)
+        else:
+            self.unet.load_lora_adapter(lora_model_name_or_path)
+        cast_training_params(self.unet, dtype=torch.float32)
         if enable_xformers_memory_efficient_attention:
             self.unet.enable_xformers_memory_efficient_attention()
-            self.controlnet.enable_xformers_memory_efficient_attention()
         if gradient_checkpointing:
             self.controlnet.enable_gradient_checkpointing()
 
@@ -101,7 +115,7 @@ class ControlNetStableDiffusion(BaseModel):
         return res.input_ids
 
     def forward(self, samples):
-        image, controlnet_image, caption = samples["image"], samples["controlnet_image"], samples["caption"]
+        image, caption = samples["image"], samples["caption"]
         # Convert images to latent space
         with self.maybe_autocast(self.compute_dtype):
             latents = self.vae.encode(image).latent_dist.sample()
@@ -119,20 +133,11 @@ class ControlNetStableDiffusion(BaseModel):
         # Get the text embedding for conditioning
         encoder_hidden_states = self.text_encoder(input_ids, return_dict=False)[0]
         with self.maybe_autocast(self.compute_dtype):
-            down_block_res_samples, mid_block_res_sample = self.controlnet(
-                noisy_latents,
-                timesteps,
-                encoder_hidden_states=encoder_hidden_states,
-                controlnet_cond=controlnet_image,
-                return_dict=False,
-            )
             # Predict the noise residual
             model_pred = self.unet(
                 noisy_latents,
                 timesteps,
                 encoder_hidden_states=encoder_hidden_states,
-                down_block_additional_residuals=down_block_res_samples,
-                mid_block_additional_residual=mid_block_res_sample,
                 return_dict=False,
             )[0]
         # Get the target for loss depending on the prediction type
@@ -165,32 +170,31 @@ class ControlNetStableDiffusion(BaseModel):
     def generate(
             self,
             samples,
+            height,
+            width,
             seed=None,
             num_inference_steps=50,
             guidance_scale=7.5,
             negative_prompt=None,
-            controlnet_conditioning_scale=1.0,
-            control_guidance_start=0.0,
-            control_guidance_end=1.0,
             eta: float = 0.0,
+            lora_scale: float = 1.0
     ):
-        images = samples["controlnet_image"]
         prompts = samples["caption"]
         negative_prompt = negative_prompt or samples.get("negative_prompt", None)
         generator = None if seed is None else torch.Generator(device=self.device).manual_seed(seed)
-        pipeline = ControlNetPipeline(self.unet, self.vae, self.text_encoder, self.controlnet,
-                                      self.inference_noise_scheduler, self.tokenizer, self.compute_dtype)
+        pipeline = CustomStableDiffusionPipeline(
+            self.unet, self.vae, self.text_encoder,
+            self.inference_noise_scheduler, self.tokenizer, self.compute_dtype)
         results = pipeline.generate(
             prompts=prompts,
-            images=images,
+            height=height,
+            width=width,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,
             generator=generator,
-            controlnet_conditioning_scale=controlnet_conditioning_scale,
-            control_guidance_start=control_guidance_start,
-            control_guidance_end=control_guidance_end,
             eta=eta,
+            cross_attention_kwargs={"scale": lora_scale}
         )
         return results
 
@@ -204,14 +208,20 @@ class ControlNetStableDiffusion(BaseModel):
             return contextlib.nullcontext()
 
     def save_checkpoint(self, checkpoint_path):
-        sub_dir = "controlnet"
-        self.controlnet.save_pretrained(osp.join(checkpoint_path, sub_dir))
+        unet_lora_state_dict = convert_state_dict_to_diffusers(
+            get_peft_model_state_dict(self.unet)
+        )
+        StableDiffusionPipeline.save_lora_weights(
+            save_directory=checkpoint_path,
+            unet_lora_layers=unet_lora_state_dict,
+            safe_serialization=True,
+        )
 
     @classmethod
     def from_config(cls, cfg):
         pretrained_model_name_or_path = cfg.get("pretrained_model_name_or_path",
                                                 "stable-diffusion-v1-5/stable-diffusion-v1-5")
-        controlnet_model_name_or_path = cfg.get("controlnet_model_name_or_path", None)
+        lora_model_name_or_path = cfg.get("lora_model_name_or_path", None)
         tokenizer_name = cfg.get("tokenizer_name", None)
         revision = cfg.get("revision", None)
         variant = cfg.get("variant", None)
@@ -219,10 +229,12 @@ class ControlNetStableDiffusion(BaseModel):
         enable_xformers_memory_efficient_attention = cfg.get("enable_xformers_memory_efficient_attention", False)
         compute_dtype = cfg.get("compute_dtype", "fp16")
         proportion_empty_prompts = cfg.get("proportion_empty_prompts", 0)
+        lora_rank = cfg.get("lora_rank", 4)
+        lora_alpha = cfg.get("lora_alpha", 4.0)
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
-            controlnet_model_name_or_path=controlnet_model_name_or_path,
+            lora_model_name_or_path=lora_model_name_or_path,
             tokenizer_name=tokenizer_name,
             revision=revision,
             variant=variant,
@@ -230,6 +242,8 @@ class ControlNetStableDiffusion(BaseModel):
             enable_xformers_memory_efficient_attention=enable_xformers_memory_efficient_attention,
             compute_dtype=compute_dtype,
             proportion_empty_prompts=proportion_empty_prompts,
+            lora_rank=lora_rank,
+            lora_alpha=lora_alpha,
         )
         model.load_checkpoint_from_config(cfg)
         return model

@@ -26,11 +26,12 @@ class BaseModel(nn.Module):
     def device(self):
         return list(self.parameters())[0].device
 
-    def freeze_module(self, module, verbose=""):
+    def freeze_module(self, module, verbose="", prevent_training_model=True):
         for name, param in module.named_parameters():
             param.requires_grad = False
         module = module.eval()
-        module.train = disabled_train
+        if prevent_training_model:
+            module.train = disabled_train
         if verbose:
             logging.info(f"{verbose} has been frozen.")
         else:
