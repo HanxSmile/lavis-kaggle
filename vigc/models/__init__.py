@@ -46,6 +46,8 @@ from vigc.models.gemma2.PerplexityPermutation import PerplexityCalculator
 
 from vigc.models.text_rec.crnn import MobilenetV1EnhanceModel
 
+from vigc.models.controlnet import ControlNetStableDiffusion
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -83,6 +85,8 @@ __all__ = [
     "PerplexityCalculator",
 
     "MobilenetV1EnhanceModel",
+
+    "ControlNetStableDiffusion",
 ]
 
 

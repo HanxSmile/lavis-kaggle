@@ -33,6 +33,8 @@ class BaseModel(nn.Module):
         module.train = disabled_train
         if verbose:
             logging.info(f"{verbose} has been frozen.")
+        else:
+            logging.info(f"{module.__class__.__name__} has been frozen.")
         return module
 
     def load_checkpoint(self, url_or_filename):
