@@ -4,6 +4,13 @@ from diffusers.image_processor import VaeImageProcessor
 import contextlib
 import inspect
 
+from vigc.models.ip_adapter.attn_processor.utils import is_torch2_available
+
+if is_torch2_available():
+    from vigc.models.ip_adapter.attn_processor.attention_processor import IPAttnProcessor2_0 as IPAttnProcessor
+else:
+    from vigc.models.ip_adapter.attn_processor.attention_processor import IPAttnProcessor
+
 
 class IPAdapterPipeline:
 
@@ -101,6 +108,11 @@ class IPAdapterPipeline:
         negative_prompt_embeds = negative_prompt_embeds[0]
 
         return prompt_embeds, negative_prompt_embeds
+
+    def set_scale(self, scale=1.0):
+        for attn_processor in self.unet.attn_processors.values():
+            if isinstance(attn_processor, IPAttnProcessor):
+                attn_processor.scale = scale
 
     def prepare_latents(self, batch_size, num_channels_channels, height, width, generator):
         shape = (
