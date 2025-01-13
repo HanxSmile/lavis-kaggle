@@ -3,12 +3,8 @@ import random
 import torch
 import torch.nn.functional as F
 
-from peft import LoraConfig
-from peft.utils import get_peft_model_state_dict
-from transformers import AutoTokenizer, CLIPTextModel
-from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler, \
-    StableDiffusionPipeline
-from diffusers.utils import convert_state_dict_to_diffusers
+from transformers import AutoTokenizer, CLIPTextModel, CLIPVisionModelWithProjection
+from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler
 from diffusers.training_utils import cast_training_params
 from vigc.pipelines import StableDiffusionPipeline as CustomStableDiffusionPipeline
 
@@ -16,18 +12,27 @@ from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
 import contextlib
 
+from vigc.models.ip_adapter.attn_processor.ip_adapter import ImageProjModel
+from vigc.models.ip_adapter.attn_processor.utils import is_torch2_available
 
-@registry.register_model("lora_sd")
-class LoraStableDiffusion(BaseModel):
+if is_torch2_available():
+    from vigc.models.ip_adapter.attn_processor.attention_processor import IPAttnProcessor2_0 as IPAttnProcessor, \
+        AttnProcessor2_0 as AttnProcessor
+else:
+    from vigc.models.ip_adapter.attn_processor.attention_processor import IPAttnProcessor, AttnProcessor
+
+
+@registry.register_model("ip_adapter_sd")
+class IPAdapterStableDiffusion(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/lora/stable_diffusion.yaml",
+        "default": "configs/models/ip_adapter/stable_diffusion.yaml",
     }
 
     def __init__(
             self,
             *,
             pretrained_model_name_or_path,
-            lora_model_name_or_path=None,
+            image_encoder_path,
             tokenizer_name=None,
             revision=None,
             variant=None,
@@ -35,8 +40,6 @@ class LoraStableDiffusion(BaseModel):
             enable_xformers_memory_efficient_attention=False,
             compute_dtype="fp16",
             proportion_empty_prompts=0,
-            lora_rank=4,
-            lora_alpha=4,
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
@@ -62,6 +65,7 @@ class LoraStableDiffusion(BaseModel):
             revision=revision,
             variant=variant,
         )
+        self.image_encoder = CLIPVisionModelWithProjection.from_pretrained(image_encoder_path)
         self.vae = AutoencoderKL.from_pretrained(
             pretrained_model_name_or_path,
             subfolder="vae",
@@ -74,52 +78,91 @@ class LoraStableDiffusion(BaseModel):
             revision=revision,
             variant=variant,
         )
+        self.image_proj_model = ImageProjModel(
+            cross_attention_dim=self.unet.config.cross_attention_dim,
+            clip_embeddings_dim=self.image_encoder.config.projection_dim,
+            clip_extra_context_tokens=4,
+        )
         self.text_encoder = self.freeze_module(self.text_encoder, "text_encoder").to(self.compute_dtype)
+        self.image_encoder = self.freeze_module(self.image_encoder, "image_encoder").to(self.compute_dtype)
         self.vae = self.freeze_module(self.vae, "vae").to(self.compute_dtype)
         self.unet = self.freeze_module(self.unet, "unet", prevent_training_model=False).to(self.compute_dtype)
+        self.adapter_modules = self.register_attn_processors(self.unet)
         self.noise_scheduler = DDPMScheduler.from_pretrained(pretrained_model_name_or_path, subfolder="scheduler")
         self.inference_noise_scheduler = UniPCMultistepScheduler.from_config(self.noise_scheduler.config)
 
-        if lora_model_name_or_path is None:
-            unet_lora_config = LoraConfig(
-                r=lora_rank,
-                lora_alpha=lora_alpha,
-                init_lora_weights="gaussian",
-                target_modules=["to_k", "to_q", "to_v", "to_out.0"],
-            )
-            self.unet.add_adapter(unet_lora_config)
-        else:
-            self.unet.load_lora_adapter(lora_model_name_or_path)
         cast_training_params(self.unet, dtype=torch.float32)
         if enable_xformers_memory_efficient_attention:
             self.unet.enable_xformers_memory_efficient_attention()
         if gradient_checkpointing:
             self.controlnet.enable_gradient_checkpointing()
 
-    def tokenize_captions(self, examples):
-        captions = []
-        for caption in examples:
-            if random.random() < self.proportion_empty_prompts:
-                captions.append("")
+    def register_attn_processors(self, unet):
+        attn_procs = {}
+        unet_sd = unet.state_dict()
+        for name in unet.attn_processors.keys():
+            cross_attention_dim = None if name.endswith("attn1.processor") else unet.config.cross_attention_dim
+            if name.startswith("mid_block"):
+                hidden_size = unet.config.block_out_channels[-1]
+            elif name.startswith("up_blocks"):
+                block_id = int(name[len("up_blocks.")])
+                hidden_size = list(reversed(unet.config.block_out_channels))[block_id]
+            elif name.startswith("down_blocks"):
+                block_id = int(name[len("down_blocks.")])
+                hidden_size = unet.config.block_out_channels[block_id]
+            if cross_attention_dim is None:
+                attn_procs[name] = AttnProcessor()
             else:
-                captions.append(caption)
+                layer_name = name.split(".processor")[0]
+                weights = {
+                    "to_k_ip.weight": unet_sd[layer_name + ".to_k.weight"],
+                    "to_v_ip.weight": unet_sd[layer_name + ".to_v.weight"],
+                }
+                attn_procs[name] = IPAttnProcessor(hidden_size=hidden_size, cross_attention_dim=cross_attention_dim)
+                attn_procs[name].load_state_dict(weights)
+        unet.set_attn_processor(attn_procs)
+        adapter_modules = torch.nn.ModuleList(unet.attn_processors.values())
+        return adapter_modules
 
-        res = self.tokenizer(
-            captions,
+    def get_encoding_embeddings(self, captions, clip_images):
+        image_embeds = self.image_encoder(clip_images).image_embeds
+        prompts = []
+        clip_encodings = []
+        for caption, image_embed in zip(captions, image_embeds):
+            random_num = random.random()
+            this_caption = caption
+            this_image_encoding = image_embed
+            if random_num < self.proportion_empty_prompts:
+                this_image_encoding = torch.zeros_like(image_embed)
+            elif random_num < 2 * self.proportion_empty_prompts:
+                this_caption = ""
+            elif random_num < 3 * self.proportion_empty_prompts:
+                this_caption = ""
+                this_image_encoding = torch.zeros_like(image_embed)
+            prompts.append(this_caption)
+            clip_encodings.append(this_image_encoding)
+        clip_encodings = torch.stack(clip_encodings, dim=0)
+        text_input_ids = self.tokenizer(
+            prompts,
             max_length=self.tokenizer.model_max_length,
             padding="max_length",
             truncation=True,
             return_tensors="pt"
-        ).to(self.device)
-        return res.input_ids
+        ).to(self.device).input_ids
+
+        text_encodings = self.text_encoder(text_input_ids, return_dict=False)[0]
+        ip_tokens = self.image_proj_model(clip_encodings)
+        encoder_hidden_states = torch.cat([text_encodings, ip_tokens], dim=1)
+        return encoder_hidden_states
 
     def forward(self, samples):
-        image, caption = samples["image"], samples["caption"]
+        image, clip_image, caption = samples["image"], samples["clip_image"], samples["caption"]
         # Convert images to latent space
         with self.maybe_autocast(self.compute_dtype):
             latents = self.vae.encode(image).latent_dist.sample()
             latents = latents * self.vae.config.scaling_factor
-        input_ids = self.tokenize_captions(caption)
+            encoder_hidden_states = self.get_encoding_embeddings(caption, clip_image)
+
         # Sample noise that we'll add to the latents
         noise = torch.randn_like(latents)
         bsz = latents.shape[0]
@@ -130,7 +173,7 @@ class LoraStableDiffusion(BaseModel):
         # (this is the forward diffusion process)
         noisy_latents = self.noise_scheduler.add_noise(latents.float(), noise.float(), timesteps)
         # Get the text embedding for conditioning
-        encoder_hidden_states = self.text_encoder(input_ids, return_dict=False)[0]
+
         with self.maybe_autocast(self.compute_dtype):
             # Predict the noise residual
             model_pred = self.unet(
@@ -162,7 +205,13 @@ class LoraStableDiffusion(BaseModel):
         if load_finetuned:
             finetune_path = cfg.get("finetuned", None)
             assert finetune_path is not None, "Found load_finetuned is True, but finetune_path is None."
-            self.load_checkpoint(url_or_filename=finetune_path)
+
+            state_dict = torch.load(finetune_path, map_location="cpu")
+
+            # Load state dict for image_proj_model and adapter_modules
+            self.image_proj_model.load_state_dict(state_dict["image_proj"], strict=True)
+            self.adapter_modules.load_state_dict(state_dict["ip_adapter"], strict=True)
+
             logging.info(f"Loaded finetuned model '{finetune_path}'.")
 
     @torch.no_grad()
@@ -207,20 +256,19 @@ class LoraStableDiffusion(BaseModel):
             return contextlib.nullcontext()
 
     def save_checkpoint(self, checkpoint_path):
-        unet_lora_state_dict = convert_state_dict_to_diffusers(
-            get_peft_model_state_dict(self.unet)
-        )
-        StableDiffusionPipeline.save_lora_weights(
-            save_directory=checkpoint_path,
-            unet_lora_layers=unet_lora_state_dict,
-            safe_serialization=True,
-        )
+        ckpt = {
+            "image_proj": self.image_proj_model.state_dict(),
+            "ip_adapter": self.adapter_modules.state_dict(),
+        }
+
+        torch.save(ckpt, checkpoint_path)
+        logging.info(f"Saved checkpoint to {checkpoint_path}")
 
     @classmethod
     def from_config(cls, cfg):
         pretrained_model_name_or_path = cfg.get("pretrained_model_name_or_path",
                                                 "stable-diffusion-v1-5/stable-diffusion-v1-5")
-        lora_model_name_or_path = cfg.get("lora_model_name_or_path", None)
+        image_encoder_path = cfg.get("image_encoder_path", None)
         tokenizer_name = cfg.get("tokenizer_name", None)
         revision = cfg.get("revision", None)
         variant = cfg.get("variant", None)
@@ -228,12 +276,10 @@ class LoraStableDiffusion(BaseModel):
         enable_xformers_memory_efficient_attention = cfg.get("enable_xformers_memory_efficient_attention", False)
         compute_dtype = cfg.get("compute_dtype", "fp16")
         proportion_empty_prompts = cfg.get("proportion_empty_prompts", 0)
-        lora_rank = cfg.get("lora_rank", 4)
-        lora_alpha = cfg.get("lora_alpha", 4.0)
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
-            lora_model_name_or_path=lora_model_name_or_path,
+            image_encoder_path=image_encoder_path,
             tokenizer_name=tokenizer_name,
             revision=revision,
             variant=variant,
@@ -241,8 +287,6 @@ class LoraStableDiffusion(BaseModel):
             enable_xformers_memory_efficient_attention=enable_xformers_memory_efficient_attention,
             compute_dtype=compute_dtype,
             proportion_empty_prompts=proportion_empty_prompts,
-            lora_rank=lora_rank,
-            lora_alpha=lora_alpha,
         )
         model.load_checkpoint_from_config(cfg)
         return model
