@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from transformers import AutoTokenizer, CLIPTextModel, CLIPVisionModelWithProjection
 from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler
 from diffusers.training_utils import cast_training_params
-from vigc.pipelines import StableDiffusionPipeline as CustomStableDiffusionPipeline
+from vigc.pipelines import IPAdapterPipeline
 
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
@@ -225,16 +225,17 @@ class IPAdapterStableDiffusion(BaseModel):
             guidance_scale=7.5,
             negative_prompt=None,
             eta: float = 0.0,
-            lora_scale: float = 1.0
+            ip_scale: float = 1.0
     ):
         prompts = samples["caption"]
         negative_prompt = negative_prompt or samples.get("negative_prompt", None)
         generator = None if seed is None else torch.Generator(device=self.device).manual_seed(seed)
-        pipeline = CustomStableDiffusionPipeline(
-            self.unet, self.vae, self.text_encoder,
+        pipeline = IPAdapterPipeline(
+            self.unet, self.vae, self.text_encoder, self.image_encoder, self.image_proj_model,
             self.inference_noise_scheduler, self.tokenizer, self.compute_dtype)
         results = pipeline.generate(
             prompts=prompts,
+            prompt_images=samples["clip_image"],
             height=height,
             width=width,
             num_inference_steps=num_inference_steps,
@@ -242,7 +243,7 @@ class IPAdapterStableDiffusion(BaseModel):
             negative_prompt=negative_prompt,
             generator=generator,
             eta=eta,
-            cross_attention_kwargs={"scale": lora_scale}
+            ip_scale=ip_scale
         )
         return results
 

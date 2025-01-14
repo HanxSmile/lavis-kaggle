@@ -148,6 +148,7 @@ class StableDiffusionPipeline:
             generator=None,
             eta: float = 0.0,
             cross_attention_kwargs=None,
+            *args, **kwargs
     ):
         do_classifier_free_guidance = guidance_scale > 1.0
         # Prepare input prompts
