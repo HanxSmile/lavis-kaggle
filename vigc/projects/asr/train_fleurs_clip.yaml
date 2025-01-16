@@ -1,0 +1,76 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  model_name: /mnt/data/hanxiao/models/audio/whisper-tiny
+  arch: whisper
+  model_type: medium
+  language: ru
+  freeze_encoder: False
+
+datasets:
+  whisper_clip_fleurs_train:
+    # sample_ratio: 2558
+    model_name: /mnt/data/hanxiao/models/audio/whisper-tiny
+    data_root: /mnt/data/xuyang/datasets/audio/fleurs-ru
+    augmentation: False
+    ann_path: /mnt/data/hanxiao/MyCode/Qwen2-VL/result.json
+    using_space_sep: True
+    clip_duration: 3.0
+    language: ru
+    split:
+      - train
+      - validation
+      - test
+
+
+  whisper_clip_fleurs_eval:
+    model_name: /mnt/data/hanxiao/models/audio/whisper-tiny
+    data_root: /mnt/data/xuyang/datasets/audio/fleurs-ru
+    ann_path: /mnt/data/hanxiao/MyCode/Qwen2-VL/result.json
+    using_space_sep: True
+    clip_duration: 3.0
+    language: ru
+    split:
+      - test
+
+run:
+  runner: runner_iter
+  task: whisper_asr_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 3.75e-5
+  # init_lr: 2.5e-5
+  min_lr: 1e-6
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 8
+  batch_size_eval: 16
+  accum_grad_iters: 2
+
+  num_workers: 4
+  warmup_steps: 200
+
+  iters_per_inner_epoch: 2000
+  max_iters: 50000
+
+  seed: 42
+  output_dir: "/mnt/data/wangyesong01/output/whisper_fleurs_ru_clip_tiny"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+  metric_key: wer
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True

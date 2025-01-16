@@ -1,0 +1,12 @@
+datasets:
+  whisper_clip_fleurs_train:
+    data_type: audios
+    ann_path: Null
+    clip_duration: 3.0
+    language: el
+    musan_dir: null
+    data_root: /mnt/data/hanxiao/dataset/nlp/opus-zh-en/fleurs-el
+    pre_normalize: False
+    using_space_sep: True
+    split:
+      - train
