@@ -49,6 +49,7 @@ from vigc.models.text_rec.crnn import MobilenetV1EnhanceModel
 from vigc.models.controlnet import ControlNetStableDiffusion
 from vigc.models.lora import LoraStableDiffusion
 from vigc.models.ip_adapter.ip_adapter_sd import IPAdapterStableDiffusion
+from vigc.models.t2i_adapter import T2IAdapterStableDiffusion
 
 __all__ = [
     "load_model",
@@ -91,6 +92,7 @@ __all__ = [
     "ControlNetStableDiffusion",
     "LoraStableDiffusion",
     "IPAdapterStableDiffusion",
+    "T2IAdapterStableDiffusion"
 ]
 
 

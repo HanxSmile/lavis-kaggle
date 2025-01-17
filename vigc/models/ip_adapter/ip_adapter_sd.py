@@ -156,7 +156,7 @@ class IPAdapterStableDiffusion(BaseModel):
         return encoder_hidden_states
 
     def forward(self, samples):
-        image, clip_image, caption = samples["image"], samples["clip_image"], samples["caption"]
+        image, clip_image, caption = samples["image"], samples["condition_image"], samples["caption"]
         # Convert images to latent space
         with self.maybe_autocast(self.compute_dtype):
             latents = self.vae.encode(image).latent_dist.sample()
@@ -235,7 +235,7 @@ class IPAdapterStableDiffusion(BaseModel):
             self.inference_noise_scheduler, self.tokenizer, self.compute_dtype)
         results = pipeline.generate(
             prompts=prompts,
-            prompt_images=samples["clip_image"],
+            prompt_images=samples["condition_image"],
             height=height,
             width=width,
             num_inference_steps=num_inference_steps,

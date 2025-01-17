@@ -4,8 +4,9 @@ import torch
 import torch.nn.functional as F
 
 from transformers import AutoTokenizer, CLIPTextModel
-from diffusers import AutoencoderKL, UNet2DConditionModel, ControlNetModel, DDPMScheduler, UniPCMultistepScheduler
-from vigc.pipelines import ControlNetPipeline
+from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler, \
+    T2IAdapter
+from vigc.pipelines import T2IAdapterPipeline
 
 from vigc.common.registry import registry
 from vigc.models.base_model import BaseModel
@@ -13,24 +14,24 @@ import contextlib
 import os.path as osp
 
 
-@registry.register_model("controlnet_sd")
-class ControlNetStableDiffusion(BaseModel):
+@registry.register_model("t2i_adapter_sd")
+class T2IAdapterStableDiffusion(BaseModel):
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/controlnet/stable_diffusion.yaml",
+        "default": "configs/models/t2i_adapter/stable_diffusion.yaml",
     }
 
     def __init__(
             self,
             *,
             pretrained_model_name_or_path,
-            controlnet_model_name_or_path=None,
+            adapter_model_name_or_path=None,
             tokenizer_name=None,
             revision=None,
             variant=None,
-            gradient_checkpointing=False,
             enable_xformers_memory_efficient_attention=False,
             compute_dtype="fp16",
-            proportion_empty_prompts=0
+            proportion_empty_prompts=0,
+            in_channels=3,
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
@@ -62,16 +63,24 @@ class ControlNetStableDiffusion(BaseModel):
             revision=revision,
             variant=variant,
         )
+        self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+
         self.unet = UNet2DConditionModel.from_pretrained(
             pretrained_model_name_or_path,
             subfolder="unet",
             revision=revision,
             variant=variant,
         )
-        if controlnet_model_name_or_path is not None:
-            self.controlnet = ControlNetModel.from_pretrained(controlnet_model_name_or_path)
+        if adapter_model_name_or_path is not None:
+            self.t2i_adapter = T2IAdapter.from_pretrained(adapter_model_name_or_path)
         else:
-            self.controlnet = ControlNetModel.from_unet(self.unet)
+            self.t2i_adapter = T2IAdapter(
+                in_channels=in_channels,
+                channels=self.unet.config.block_out_channels,
+                num_res_blocks=2,
+                downscale_factor=self.vae_scale_factor,
+                adapter_type="full_adapter",
+            )
         self.text_encoder = self.freeze_module(self.text_encoder, "text_encoder").to(self.compute_dtype)
         self.vae = self.freeze_module(self.vae, "vae").to(self.compute_dtype)
         self.unet = self.freeze_module(self.unet, "unet").to(self.compute_dtype)
@@ -79,9 +88,6 @@ class ControlNetStableDiffusion(BaseModel):
         self.inference_noise_scheduler = UniPCMultistepScheduler.from_config(self.noise_scheduler.config)
         if enable_xformers_memory_efficient_attention:
             self.unet.enable_xformers_memory_efficient_attention()
-            self.controlnet.enable_xformers_memory_efficient_attention()
-        if gradient_checkpointing:
-            self.controlnet.enable_gradient_checkpointing()
 
     def tokenize_captions(self, examples):
         captions = []
@@ -101,7 +107,7 @@ class ControlNetStableDiffusion(BaseModel):
         return res.input_ids
 
     def forward(self, samples):
-        image, controlnet_image, caption = samples["image"], samples["condition_image"], samples["caption"]
+        image, condition_image, caption = samples["image"], samples["condition_image"], samples["caption"]
         # Convert images to latent space
         with self.maybe_autocast(self.compute_dtype):
             latents = self.vae.encode(image).latent_dist.sample()
@@ -119,20 +125,13 @@ class ControlNetStableDiffusion(BaseModel):
         # Get the text embedding for conditioning
         encoder_hidden_states = self.text_encoder(input_ids, return_dict=False)[0]
         with self.maybe_autocast(self.compute_dtype):
-            down_block_res_samples, mid_block_res_sample = self.controlnet(
-                noisy_latents,
-                timesteps,
-                encoder_hidden_states=encoder_hidden_states,
-                controlnet_cond=controlnet_image,
-                return_dict=False,
-            )
+            down_block_additional_residuals = self.t2i_adapter(condition_image)
             # Predict the noise residual
             model_pred = self.unet(
                 noisy_latents,
                 timesteps,
                 encoder_hidden_states=encoder_hidden_states,
-                down_block_additional_residuals=down_block_res_samples,
-                mid_block_additional_residual=mid_block_res_sample,
+                down_block_additional_residuals=down_block_additional_residuals,
                 return_dict=False,
             )[0]
         # Get the target for loss depending on the prediction type
@@ -169,16 +168,16 @@ class ControlNetStableDiffusion(BaseModel):
             num_inference_steps=50,
             guidance_scale=7.5,
             negative_prompt=None,
-            controlnet_conditioning_scale=1.0,
-            control_guidance_start=0.0,
-            control_guidance_end=1.0,
+            adapter_conditioning_scale=1.0,
+            adapter_guidance_start=0.0,
+            adapter_guidance_end=1.0,
             eta: float = 0.0,
     ):
         images = samples["condition_image"]
         prompts = samples["caption"]
         negative_prompt = negative_prompt or samples.get("negative_prompt", None)
         generator = None if seed is None else torch.Generator(device=self.device).manual_seed(seed)
-        pipeline = ControlNetPipeline(self.unet, self.vae, self.text_encoder, self.controlnet,
+        pipeline = T2IAdapterPipeline(self.unet, self.vae, self.text_encoder, self.t2i_adapter,
                                       self.inference_noise_scheduler, self.tokenizer, self.compute_dtype)
         results = pipeline.generate(
             prompts=prompts,
@@ -187,9 +186,9 @@ class ControlNetStableDiffusion(BaseModel):
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,
             generator=generator,
-            controlnet_conditioning_scale=controlnet_conditioning_scale,
-            control_guidance_start=control_guidance_start,
-            control_guidance_end=control_guidance_end,
+            adapter_conditioning_scale=adapter_conditioning_scale,
+            adapter_guidance_start=adapter_guidance_start,
+            adapter_guidance_end=adapter_guidance_end,
             eta=eta,
         )
         return results
@@ -204,32 +203,33 @@ class ControlNetStableDiffusion(BaseModel):
             return contextlib.nullcontext()
 
     def save_checkpoint(self, checkpoint_path):
-        sub_dir = "controlnet"
-        self.controlnet.save_pretrained(osp.join(checkpoint_path, sub_dir))
+        sub_dir = "t2i_adapter"
+        self.t2i_adapter.save_pretrained(osp.join(checkpoint_path, sub_dir))
 
     @classmethod
     def from_config(cls, cfg):
-        pretrained_model_name_or_path = cfg.get("pretrained_model_name_or_path",
-                                                "stable-diffusion-v1-5/stable-diffusion-v1-5")
-        controlnet_model_name_or_path = cfg.get("controlnet_model_name_or_path", None)
+        pretrained_model_name_or_path = cfg.get(
+            "pretrained_model_name_or_path",
+            "stable-diffusion-v1-5/stable-diffusion-v1-5")
+        adapter_model_name_or_path = cfg.get("adapter_model_name_or_path", None)
         tokenizer_name = cfg.get("tokenizer_name", None)
         revision = cfg.get("revision", None)
         variant = cfg.get("variant", None)
-        gradient_checkpointing = cfg.get("gradient_checkpointing", False)
         enable_xformers_memory_efficient_attention = cfg.get("enable_xformers_memory_efficient_attention", False)
         compute_dtype = cfg.get("compute_dtype", "fp16")
         proportion_empty_prompts = cfg.get("proportion_empty_prompts", 0)
+        in_channels = cfg.get("in_channels", 3)
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
-            controlnet_model_name_or_path=controlnet_model_name_or_path,
+            adapter_model_name_or_path=adapter_model_name_or_path,
             tokenizer_name=tokenizer_name,
             revision=revision,
             variant=variant,
-            gradient_checkpointing=gradient_checkpointing,
             enable_xformers_memory_efficient_attention=enable_xformers_memory_efficient_attention,
             compute_dtype=compute_dtype,
             proportion_empty_prompts=proportion_empty_prompts,
+            in_channels=in_channels,
         )
         model.load_checkpoint_from_config(cfg)
         return model
