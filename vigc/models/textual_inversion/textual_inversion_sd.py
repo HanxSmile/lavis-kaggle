@@ -29,17 +29,21 @@ class TextualInversionStableDiffusion(BaseModel):
             gradient_checkpointing=False,
             compute_dtype="fp16",
             proportion_empty_prompts=0,
-            initializer_token=None,
-            placeholder_token=None,
+            initializer_tokens=None,
+            placeholder_tokens=None,
     ):
         super().__init__()
-        if isinstance(placeholder_token, str):
-            self.placeholder_tokens = [placeholder_token]
-        if isinstance(initializer_token, str):
-            self.initializer_tokens = [initializer_token]
-        if len(self.initializer_tokens) == 1:
-            self.initializer_tokens = self.initializer_tokens * len(self.placeholder_tokens)
-        assert len(self.initializer_tokens) == len(self.placeholder_tokens)
+        if isinstance(placeholder_tokens, str):
+            placeholder_tokens = [placeholder_tokens]
+        if isinstance(initializer_tokens, str):
+            initializer_tokens = [initializer_tokens]
+        if len(initializer_tokens) == 1:
+            initializer_tokens = initializer_tokens * len(placeholder_tokens)
+        assert len(initializer_tokens) == len(placeholder_tokens)
+        self.placeholder_tokens = []
+        self.initializer_tokens = []
+        self.orig_embeds_params = None
+        self.placeholder_token_ids = None
 
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         assert compute_dtype in ["fp16", "fp32", "bf16"]
@@ -79,30 +83,8 @@ class TextualInversionStableDiffusion(BaseModel):
             variant=variant,
         )
 
-        num_added_tokens = self.tokenizer.add_tokens(self.placeholder_tokens)
-        if num_added_tokens != len(self.placeholder_tokens):
-            raise ValueError(
-                f"The tokenizer already contains the token {self.placeholder_tokens}. Please pass a different"
-                " `placeholder_token` that is not already in the tokenizer."
-            )
-        # Convert the initializer_token, placeholder_token to ids
-        initializer_token_ids = []
-        for initializer_token in self.initializer_tokens:
-            token_ids = self.tokenizer.encode(initializer_token, add_special_tokens=False)
-            # Check if initializer_token is a single token or a sequence of tokens
-            if len(token_ids) > 1:
-                raise ValueError("The initializer token must be a single token.")
-            initializer_token_id = token_ids[0]
-            initializer_token_ids.append(initializer_token_id)
+        self.add_placeholder_tokens(placeholder_tokens, initializer_tokens)
 
-        self.placeholder_token_ids = self.tokenizer.convert_tokens_to_ids(self.placeholder_tokens)
-        # Resize the token embeddings as we are adding new special tokens to the tokenizer
-        self.text_encoder.resize_token_embeddings(len(self.tokenizer))
-        token_embeds = self.text_encoder.get_input_embeddings().weight.data
-        with torch.no_grad():
-            for token_id, initializer_token_id in zip(self.placeholder_token_ids, initializer_token_ids):
-                token_embeds[token_id] = token_embeds[initializer_token_id].clone()
-        self.orig_embeds_params = token_embeds.clone().detach()
         # Freeze all parameters except for the token embeddings in text encoder
         self.text_encoder.text_model.encoder.requires_grad_(False)
         self.text_encoder.text_model.final_layer_norm.requires_grad_(False)
@@ -118,6 +100,44 @@ class TextualInversionStableDiffusion(BaseModel):
         if gradient_checkpointing:
             self.unet.enable_gradient_checkpointing()
             self.text_encoder.gradient_checkpointing_enable()
+
+    def add_placeholder_tokens(self, placeholder_tokens, initializer_tokens):
+
+        if isinstance(placeholder_tokens, str):
+            placeholder_tokens = [placeholder_tokens]
+        if isinstance(initializer_tokens, str):
+            initializer_tokens = [initializer_tokens]
+        if len(initializer_tokens) == 1:
+            initializer_tokens = initializer_tokens * len(placeholder_tokens)
+        assert len(initializer_tokens) == len(placeholder_tokens)
+
+        num_added_tokens = self.tokenizer.add_tokens(placeholder_tokens)
+        if num_added_tokens != len(placeholder_tokens):
+            raise ValueError(
+                f"The tokenizer already contains the token {placeholder_tokens}. Please pass a different"
+                " `placeholder_token` that is not already in the tokenizer."
+            )
+        # Convert the initializer_token, placeholder_token to ids
+        initializer_token_ids = []
+        for initializer_token in initializer_tokens:
+            token_ids = self.tokenizer.encode(initializer_token, add_special_tokens=False)
+            # Check if initializer_token is a single token or a sequence of tokens
+            if len(token_ids) > 1:
+                raise ValueError("The initializer token must be a single token.")
+            initializer_token_id = token_ids[0]
+            initializer_token_ids.append(initializer_token_id)
+
+        placeholder_token_ids = self.tokenizer.convert_tokens_to_ids(placeholder_tokens)
+        # Resize the token embeddings as we are adding new special tokens to the tokenizer
+        self.text_encoder.resize_token_embeddings(len(self.tokenizer))
+        token_embeds = self.text_encoder.get_input_embeddings().weight.data
+        with torch.no_grad():
+            for token_id, initializer_token_id in zip(placeholder_token_ids, initializer_token_ids):
+                token_embeds[token_id] = token_embeds[initializer_token_id].clone()
+        self.orig_embeds_params = token_embeds.clone().detach()
+        self.placeholder_tokens = self.placeholder_tokens + placeholder_tokens
+        self.initializer_tokens = self.initializer_tokens + initializer_tokens
+        self.placeholder_token_ids = self.tokenizer.convert_tokens_to_ids(self.placeholder_tokens)
 
     def tokenize_captions(self, examples):
         captions = []
@@ -272,8 +292,8 @@ class TextualInversionStableDiffusion(BaseModel):
         enable_xformers_memory_efficient_attention = cfg.get("enable_xformers_memory_efficient_attention", False)
         compute_dtype = cfg.get("compute_dtype", "fp16")
         proportion_empty_prompts = cfg.get("proportion_empty_prompts", 0)
-        initializer_token = cfg.get("initializer_token", None)
-        placeholder_token = cfg.get("placeholder_token", None)
+        initializer_tokens = cfg.get("initializer_tokens", None)
+        placeholder_tokens = cfg.get("placeholder_tokens", None)
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -283,8 +303,8 @@ class TextualInversionStableDiffusion(BaseModel):
             enable_xformers_memory_efficient_attention=enable_xformers_memory_efficient_attention,
             compute_dtype=compute_dtype,
             proportion_empty_prompts=proportion_empty_prompts,
-            initializer_token=initializer_token,
-            placeholder_token=placeholder_token,
+            initializer_tokens=initializer_tokens,
+            placeholder_tokens=placeholder_tokens,
         )
         model.load_checkpoint_from_config(cfg)
         return model
