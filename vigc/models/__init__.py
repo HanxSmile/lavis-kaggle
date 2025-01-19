@@ -50,6 +50,7 @@ from vigc.models.controlnet import ControlNetStableDiffusion
 from vigc.models.lora import LoraStableDiffusion
 from vigc.models.ip_adapter.ip_adapter_sd import IPAdapterStableDiffusion
 from vigc.models.t2i_adapter import T2IAdapterStableDiffusion
+from vigc.models.textual_inversion import TextualInversionStableDiffusion
 
 __all__ = [
     "load_model",
@@ -92,7 +93,8 @@ __all__ = [
     "ControlNetStableDiffusion",
     "LoraStableDiffusion",
     "IPAdapterStableDiffusion",
-    "T2IAdapterStableDiffusion"
+    "T2IAdapterStableDiffusion",
+    "TextualInversionStableDiffusion",
 ]
 
 
