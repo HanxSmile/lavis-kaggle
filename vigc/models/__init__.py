@@ -51,6 +51,7 @@ from vigc.models.lora import LoraStableDiffusion
 from vigc.models.ip_adapter.ip_adapter_sd import IPAdapterStableDiffusion
 from vigc.models.t2i_adapter import T2IAdapterStableDiffusion
 from vigc.models.textual_inversion import TextualInversionStableDiffusion
+from vigc.models.ootd.ootd_viton import OOTDVitonNet
 
 __all__ = [
     "load_model",
@@ -95,6 +96,8 @@ __all__ = [
     "IPAdapterStableDiffusion",
     "T2IAdapterStableDiffusion",
     "TextualInversionStableDiffusion",
+
+    "OOTDVitonNet",
 ]
 
 
