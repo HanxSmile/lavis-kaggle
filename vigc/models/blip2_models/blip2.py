@@ -32,8 +32,11 @@ tf_logging.set_verbosity_error()
 
 class Blip2Base(BaseModel):
     @classmethod
-    def init_tokenizer(cls, truncation_side="right"):
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", truncation_side=truncation_side)
+    def init_tokenizer(cls, truncation_side="right", tokenizer_name=None):
+        if tokenizer_name is None:
+            tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", truncation_side=truncation_side)
+        else:
+            tokenizer = BertTokenizer.from_pretrained(tokenizer_name, truncation_side=truncation_side)
         tokenizer.add_special_tokens({"bos_token": "[DEC]"})
         return tokenizer
 
