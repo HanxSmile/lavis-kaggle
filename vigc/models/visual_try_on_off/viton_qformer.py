@@ -7,10 +7,8 @@ import torch.nn.functional as F
 from peft import LoraConfig, get_peft_model
 from transformers import AutoTokenizer
 from vigc.models.visual_try_on_off.modules.clip_text_model import CLIPTextModel
-from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler, \
-    StableDiffusionPipeline
-from diffusers.utils import convert_state_dict_to_diffusers
-from vigc.pipelines import StableDiffusionPipeline as CustomStableDiffusionPipeline
+from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler
+from vigc.pipelines import VitonQformerPipeline
 from vigc.common.registry import registry
 from vigc.models.blip2_models.blip2 import Blip2Base
 import contextlib
@@ -55,6 +53,7 @@ class VitonQformer(Blip2Base):
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
+        assert (not freeze_qformer) and (not freeze_text_encoder)
         assert compute_dtype in ["fp16", "fp32", "bf16"]
         self.compute_dtype = torch.float32
         self.proportion_empty_prompts = proportion_empty_prompts
@@ -71,7 +70,11 @@ class VitonQformer(Blip2Base):
                 use_fast=False
             )
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, revision=revision, use_fast=False)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                tokenizer_name,
+                revision=revision,
+                use_fast=False
+            )
         self.text_encoder = CLIPTextModel.from_pretrained(
             pretrained_model_name_or_path,
             subfolder="text_encoder",
@@ -85,6 +88,8 @@ class VitonQformer(Blip2Base):
             revision=revision,
             variant=variant,
         )
+        self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+
         self.unet = UNet2DConditionModel.from_pretrained(
             pretrained_model_name_or_path,
             subfolder="unet",
@@ -138,6 +143,12 @@ class VitonQformer(Blip2Base):
         self.text_encoder.print_trainable_parameters()
         logging.info("Loading Lora done.")
 
+        if freeze_qformer:
+            self.Qformer = self.freeze(self.Qformer, "Qformer")
+            self.query_tokens.requires_grad_(False)
+        if freeze_text_encoder:
+            self.text_encoder = self.freeze(self.text_encoder, "text_encoder")
+
     def q_former_embeds(self, image, text):
         with self.maybe_autocast(self.compute_dtype):
             image_embeds = self.ln_vision(self.visual_encoder(image))
@@ -165,24 +176,37 @@ class VitonQformer(Blip2Base):
             image_embedding = self.llm_proj(query_output.last_hidden_state[:, :query_tokens.size(1), :])
         return image_embedding
 
-    def get_multi_modal_embeds(self, caption, instruction, image):
+    def get_multi_modal_embeds(self, caption, instruction, image, training=True, negative_flag=False,
+                               negative_prompt=None):
+        if training:
+            assert not negative_flag
         with self.maybe_autocast(self.compute_dtype):
             image_embed = self.ln_vision(self.visual_encoder(image))
         captions = []
         instructions = []
         image_embeds = []
+        if negative_prompt is not None:
+            if isinstance(negative_prompt, str):
+                negative_prompt = [negative_prompt] * len(caption)
+        else:
+            negative_prompt = [""] * len(caption)
         for i, (c, ins) in enumerate(zip(caption, instruction)):
             random_num = random.random()
             this_caption = c
             this_ins = ins
             this_image_embed = image_embed[i]
-            if random_num < self.proportion_empty_prompts:
-                this_caption = ""
-            elif random_num < 2 * self.proportion_empty_prompts:
-                this_ins = ""
-                this_image_embed = torch.zeros_like(this_image_embed)
-            elif random_num < 3 * self.proportion_empty_prompts:
-                this_caption = ""
+            if training:
+                if random_num < self.proportion_empty_prompts:
+                    this_caption = ""
+                elif random_num < 2 * self.proportion_empty_prompts:
+                    this_ins = ""
+                    this_image_embed = torch.zeros_like(this_image_embed)
+                elif random_num < 3 * self.proportion_empty_prompts:
+                    this_caption = ""
+                    this_ins = ""
+                    this_image_embed = torch.zeros_like(this_image_embed)
+            elif negative_flag:
+                this_caption = negative_prompt[i]
                 this_ins = ""
                 this_image_embed = torch.zeros_like(this_image_embed)
             captions.append(this_caption)
@@ -242,7 +266,6 @@ class VitonQformer(Blip2Base):
         with self.maybe_autocast(self.compute_dtype):
             latents = self.vae.encode(image).latent_dist.sample()
             latents = latents * self.vae.config.scaling_factor
-        input_ids = self.tokenize_captions(caption)
         # Sample noise that we'll add to the latents
         noise = torch.randn_like(latents)
         bsz = latents.shape[0]
@@ -253,7 +276,7 @@ class VitonQformer(Blip2Base):
         # (this is the forward diffusion process)
         noisy_latents = self.noise_scheduler.add_noise(latents.float(), noise.float(), timesteps)
         # Get the text embedding for conditioning
-        encoder_hidden_states = self.text_encoder(input_ids, return_dict=False)[0]
+        encoder_hidden_states = self.get_multi_modal_embeds(caption, instruction, condition_image, training=True)
         with self.maybe_autocast(self.compute_dtype):
             # Predict the noise residual
             model_pred = self.unet(
@@ -299,24 +322,24 @@ class VitonQformer(Blip2Base):
             guidance_scale=7.5,
             negative_prompt=None,
             eta: float = 0.0,
-            lora_scale: float = 1.0
     ):
         prompts = samples["caption"]
+        instructions = samples["instruction"]
+        condition_image = samples["condition_image"]
         negative_prompt = negative_prompt or samples.get("negative_prompt", None)
         generator = None if seed is None else torch.Generator(device=self.device).manual_seed(seed)
-        pipeline = CustomStableDiffusionPipeline(
-            self.unet, self.vae, self.text_encoder,
-            self.inference_noise_scheduler, self.tokenizer, self.compute_dtype)
+        pipeline = VitonQformerPipeline(self)
         results = pipeline.generate(
             prompts=prompts,
+            instructions=instructions,
+            condition_images=condition_image,
             height=height,
             width=width,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,
             generator=generator,
-            eta=eta,
-            cross_attention_kwargs={"scale": lora_scale}
+            eta=eta
         )
         return results
 
@@ -329,21 +352,11 @@ class VitonQformer(Blip2Base):
         else:
             return contextlib.nullcontext()
 
-    def save_checkpoint(self, checkpoint_path):
-        unet_lora_state_dict = convert_state_dict_to_diffusers(
-            get_peft_model_state_dict(self.unet)
-        )
-        StableDiffusionPipeline.save_lora_weights(
-            save_directory=checkpoint_path,
-            unet_lora_layers=unet_lora_state_dict,
-            safe_serialization=True,
-        )
-
     @classmethod
     def from_config(cls, cfg):
+
         pretrained_model_name_or_path = cfg.get("pretrained_model_name_or_path",
                                                 "stable-diffusion-v1-5/stable-diffusion-v1-5")
-        lora_model_name_or_path = cfg.get("lora_model_name_or_path", None)
         tokenizer_name = cfg.get("tokenizer_name", None)
         revision = cfg.get("revision", None)
         variant = cfg.get("variant", None)
@@ -351,12 +364,24 @@ class VitonQformer(Blip2Base):
         enable_xformers_memory_efficient_attention = cfg.get("enable_xformers_memory_efficient_attention", False)
         compute_dtype = cfg.get("compute_dtype", "fp16")
         proportion_empty_prompts = cfg.get("proportion_empty_prompts", 0)
-        lora_rank = cfg.get("lora_rank", 4)
-        lora_alpha = cfg.get("lora_alpha", 4.0)
+        lora_config = cfg.get("lora_config", None)
+        # q-former
+        num_query_token = cfg.get("num_query_token", 32)
+        max_txt_len = cfg.get("max_txt_len", 128)
+        qformer_tokenizer_name = cfg.get("qformer_tokenizer_name", None)
+        # q-former visual encoder
+        vit_model = cfg.get("vit_model", "eva_clip_g")
+        img_size = cfg.get("img_size", 224)
+        drop_path_rate = cfg.get("drop_path_rate", 0)
+        use_grad_checkpoint = cfg.get("use_grad_checkpoint", False)
+        vit_precision = cfg.get("vit_precision", "fp16")
+        freeze_qformer = cfg.get("freeze_qformer", False)
+        freeze_text_encoder = cfg.get("freeze_text_encoder", False)
+        freeze_vit = cfg.get("freeze_vit", True)
+        freeze_vit_ln = cfg.get("freeze_vit_ln", False)
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
-            lora_model_name_or_path=lora_model_name_or_path,
             tokenizer_name=tokenizer_name,
             revision=revision,
             variant=variant,
@@ -364,8 +389,19 @@ class VitonQformer(Blip2Base):
             enable_xformers_memory_efficient_attention=enable_xformers_memory_efficient_attention,
             compute_dtype=compute_dtype,
             proportion_empty_prompts=proportion_empty_prompts,
-            lora_rank=lora_rank,
-            lora_alpha=lora_alpha,
+            lora_config=lora_config,
+            num_query_token=num_query_token,
+            max_txt_len=max_txt_len,
+            qformer_tokenizer_name=qformer_tokenizer_name,
+            vit_model=vit_model,
+            img_size=img_size,
+            drop_path_rate=drop_path_rate,
+            use_grad_checkpoint=use_grad_checkpoint,
+            vit_precision=vit_precision,
+            freeze_qformer=freeze_qformer,
+            freeze_text_encoder=freeze_text_encoder,
+            freeze_vit=freeze_vit,
+            freeze_vit_ln=freeze_vit_ln,
         )
         model.load_checkpoint_from_config(cfg)
         return model
