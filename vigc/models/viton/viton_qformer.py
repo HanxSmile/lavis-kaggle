@@ -462,6 +462,8 @@ class VitonQformer(Blip2Base):
         freeze_text_encoder = cfg.get("freeze_text_encoder", False)
         freeze_vit = cfg.get("freeze_vit", True)
         freeze_vit_ln = cfg.get("freeze_vit_ln", False)
+        condition_image = cfg.get("condition_image", "random")
+        target_image = cfg.get("target_image", "random")
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -486,6 +488,8 @@ class VitonQformer(Blip2Base):
             freeze_text_encoder=freeze_text_encoder,
             freeze_vit=freeze_vit,
             freeze_vit_ln=freeze_vit_ln,
+            condition_image=condition_image,
+            target_image=target_image,
         )
         model.load_checkpoint_from_config(cfg)
         return model
