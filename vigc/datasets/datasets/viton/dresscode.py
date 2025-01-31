@@ -100,10 +100,12 @@ class DressCodeDataset(data.Dataset):
             vton_vit_image=image_vit[None],
             vton_mask_image=agnostic_mask[None, None],
             vton_caption=image_caption,
+            vton_instruction="Describe the garment the model is wearing in the photo.",
             garm_image=cloth[None],
             garm_vit_image=cloth_vit[None],
             garm_mask=cloth_mask[None, None],
             garment_caption=garment_caption,
+            garment_instruction="Describe the garment in the photo.",
             category=ann["category"],
             image_path=ann["image"],
             image_name=ann["image_name"],
@@ -125,10 +127,12 @@ class DressCodeDataset(data.Dataset):
         vton_vit_images = [_["vton_vit_image"] for _ in samples]
         vton_mask_images = [_["vton_mask_image"] for _ in samples]
         vton_captions = [_["vton_caption"] for _ in samples]
+        vton_instructions = [_["vton_instruction"] for _ in samples]
         garm_images = [_["garm_image"] for _ in samples]
         garm_vit_images = [_["garm_vit_image"] for _ in samples]
         garm_mask_images = [_["garm_mask_image"] for _ in samples]
         garm_captions = [_["garm_caption"] for _ in samples]
+        garm_instructions = [_["garm_instruction"] for _ in samples]
         categories = [_["category"] for _ in samples]
         image_paths = [_["image_path"] for _ in samples]
         image_names = [_["image_name"] for _ in samples]
@@ -141,10 +145,12 @@ class DressCodeDataset(data.Dataset):
             "vton_vit_image": torch.cat(vton_vit_images),
             "vton_mask_image": torch.cat(vton_mask_images),
             "vton_caption": vton_captions,
+            "vton_instruction": vton_instructions,
             "garm_image": torch.cat(garm_images),
             "garm_vit_image": torch.cat(garm_vit_images),
             "garm_mask_image": torch.cat(garm_mask_images),
             "garm_caption": garm_captions,
+            "garm_instruction": garm_instructions,
             "category": categories,
             "image_path": image_paths,
             "image_name": image_names,

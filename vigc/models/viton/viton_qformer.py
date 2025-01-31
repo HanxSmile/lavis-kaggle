@@ -5,8 +5,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from peft import LoraConfig, get_peft_model
+from typing import Literal
 from transformers import AutoTokenizer
-from vigc.models.visual_try_on_off.modules.clip_text_model import CLIPTextModel
+from vigc.models.viton.modules.clip_text_model import CLIPTextModel
 from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler
 from vigc.pipelines import VitonQformerPipeline
 from vigc.common.registry import registry
@@ -39,9 +40,10 @@ class VitonQformer(Blip2Base):
             # q-former
             num_query_token=32,
             max_txt_len=128,
-            qformer_tokenizer_name=None,
+            qformer_model_name_or_path="bert-base-uncased",
             # q-former visual encoder
             vit_model="eva_clip_g",
+            vit_model_ckpt=None,
             img_size=224,
             drop_path_rate=0,
             use_grad_checkpoint=False,
@@ -50,12 +52,16 @@ class VitonQformer(Blip2Base):
             freeze_text_encoder=False,
             freeze_vit=True,
             freeze_vit_ln=False,
+            condition_image: Literal['garm', 'viton', 'random'] = "random",
+            target_image: Literal['garm', 'viton', 'random'] = "random",
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         assert (not freeze_qformer) and (not freeze_text_encoder)
         assert compute_dtype in ["fp16", "fp32", "bf16"]
         self.compute_dtype = torch.float32
+        self.condition_image = condition_image
+        self.target_image = target_image
         self.proportion_empty_prompts = proportion_empty_prompts
         self.max_txt_len = max_txt_len
         if compute_dtype == "fp16":
@@ -111,9 +117,9 @@ class VitonQformer(Blip2Base):
             self.unet.enable_gradient_checkpointing()
 
         # Q-former
-        self.qformer_tokenizer = self.init_tokenizer(truncation_side="left", tokenizer_name=qformer_tokenizer_name)
+        self.qformer_tokenizer = self.init_tokenizer(truncation_side="left", tokenizer_name=qformer_model_name_or_path)
         self.visual_encoder, self.ln_vision = self.init_vision_encoder(
-            vit_model, img_size, drop_path_rate, use_grad_checkpoint, vit_precision
+            vit_model, img_size, drop_path_rate, use_grad_checkpoint, vit_precision, cached_file=vit_model_ckpt
         )
         if freeze_vit:
             self.visual_encoder = self.freeze_module(self.visual_encoder, "visual_encoder").to(self.compute_dtype)
@@ -121,7 +127,7 @@ class VitonQformer(Blip2Base):
             self.ln_vision = self.freeze_module(self.ln_vision, "ln_vision").to(self.compute_dtype)
 
         self.Qformer, self.query_tokens = self.init_Qformer(
-            num_query_token, self.visual_encoder.num_features
+            num_query_token, self.visual_encoder.num_features, model_name_or_path=qformer_model_name_or_path
         )
         self.Qformer.resize_token_embeddings(len(self.qformer_tokenizer))
         self.Qformer.cls = None
@@ -260,6 +266,7 @@ class VitonQformer(Blip2Base):
         return res.input_ids
 
     def forward(self, samples):
+        samples = self.prepare_sample(samples)
         image, condition_image, caption, instruction = (samples["image"], samples["condition_image"],
                                                         samples["caption"], samples["instruction"])
         # Convert images to latent space
@@ -315,26 +322,28 @@ class VitonQformer(Blip2Base):
     def generate(
             self,
             samples,
-            height,
-            width,
+            condition_image="garm",
+            target_image="viton",
             seed=None,
             num_inference_steps=50,
             guidance_scale=7.5,
             negative_prompt=None,
             eta: float = 0.0,
     ):
+        samples = self.prepare_sample(samples, condition_image=condition_image, target_image=target_image)
         prompts = samples["caption"]
+        images = samples["image"]
+        masks = samples["mask"]
         instructions = samples["instruction"]
         condition_image = samples["condition_image"]
-        negative_prompt = negative_prompt or samples.get("negative_prompt", None)
         generator = None if seed is None else torch.Generator(device=self.device).manual_seed(seed)
         pipeline = VitonQformerPipeline(self)
         results = pipeline.generate(
+            images=images,
+            masks=masks,
             prompts=prompts,
             instructions=instructions,
             condition_images=condition_image,
-            height=height,
-            width=width,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,
@@ -342,6 +351,79 @@ class VitonQformer(Blip2Base):
             eta=eta
         )
         return results
+
+    def prepare_inputs(self, samples, condition_image=None, target_image=None):
+        condition_image = condition_image or self.condition_image
+        target_image = target_image or self.target_image
+        bz = len(samples["garm_instruction"])
+        result = dict()
+        if condition_image == "garm":
+            result.update(
+                {
+                    "condition_image": samples["garm_vit_image"],
+                    "instruction": samples["garm_instruction"]
+                }
+            )
+        elif condition_image == "viton":
+            result.update(
+                {
+                    "condition_image": samples["vton_vit_image"],
+                    "instruction": samples["viton_instruction"]
+                }
+            )
+        else:  # random
+            condition_images = []
+            instructions = []
+            for i in range(bz):
+                if random.random() < 0.5:
+                    condition_images.append(samples["garm_vit_image"][i])
+                    instructions.append(samples["garm_instruction"][i])
+                else:
+                    condition_images.append(samples["vton_vit_image"][i])
+                    instructions.append(samples["viton_instruction"][i])
+            result.update(
+                {
+                    "condition_image": torch.stack(condition_images).contiguous(),
+                    "instruction": instructions
+                }
+            )
+        if target_image == "garm":
+            result.update(
+                {
+                    "image": samples["garm_image"],
+                    "caption": samples["garm_caption"],
+                    "mask": samples["garm_mask_image"]
+                }
+            )
+        elif target_image == "viton":
+            result.update(
+                {
+                    "image": samples["vton_image"],
+                    "caption": samples["vton_caption"],
+                    "mask": samples["vton_mask_image"]
+                }
+            )
+        else:  # random
+            images, captions, masks = [], [], []
+            for i in range(bz):
+                if random.random() < 0.5:
+                    images.append(samples["garm_image"][i])
+                    captions.append(samples["garm_caption"][i])
+                    masks.append(samples["garm_mask_image"][i])
+                else:
+                    images.append(samples["vton_image"][i])
+                    captions.append(samples["vton_caption"][i])
+                    masks.append(samples["vton_mask_image"][i])
+            result.update(
+                {
+
+                    "image": torch.stack(images).contiguous(),
+                    "caption": captions,
+                    "mask": torch.stack(masks).contiguous()
+                }
+            )
+
+        return result
 
     def maybe_autocast(self, dtype=torch.float16):
         # if on cpu, don't use autocast
@@ -368,9 +450,10 @@ class VitonQformer(Blip2Base):
         # q-former
         num_query_token = cfg.get("num_query_token", 32)
         max_txt_len = cfg.get("max_txt_len", 128)
-        qformer_tokenizer_name = cfg.get("qformer_tokenizer_name", None)
+        qformer_model_name_or_path = cfg.get("qformer_model_name_or_path", None)
         # q-former visual encoder
         vit_model = cfg.get("vit_model", "eva_clip_g")
+        vit_model_ckpt = cfg.get("vit_model_ckpt", None)
         img_size = cfg.get("img_size", 224)
         drop_path_rate = cfg.get("drop_path_rate", 0)
         use_grad_checkpoint = cfg.get("use_grad_checkpoint", False)
@@ -392,8 +475,9 @@ class VitonQformer(Blip2Base):
             lora_config=lora_config,
             num_query_token=num_query_token,
             max_txt_len=max_txt_len,
-            qformer_tokenizer_name=qformer_tokenizer_name,
+            qformer_model_name_or_path=qformer_model_name_or_path,
             vit_model=vit_model,
+            vit_model_ckpt=vit_model_ckpt,
             img_size=img_size,
             drop_path_rate=drop_path_rate,
             use_grad_checkpoint=use_grad_checkpoint,

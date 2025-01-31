@@ -88,6 +88,7 @@ from vigc.datasets.builders.rag import (
 from vigc.datasets.builders.perplexity_permutation import PerplexityPermutationBuilder
 from vigc.datasets.builders.text_rec.ctc_encode_builder import CTCTextRecTrainBuilder, CTCTextRecEvalBuilder
 from vigc.datasets.builders.asr_data.fleurs_clip_builder import FleursClipTrainBuilder, FleursClipEvalBuilder
+from vigc.datasets.builders.viton import DressCodeTrainBuilder, DressCodeEvalBuilder
 
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
@@ -143,6 +144,9 @@ __all__ = [
 
     "FleursClipTrainBuilder",
     "FleursClipEvalBuilder",
+
+    "DressCodeTrainBuilder",
+    "DressCodeEvalBuilder",
 ]
 
 

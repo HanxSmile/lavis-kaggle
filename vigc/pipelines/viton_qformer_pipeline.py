@@ -68,11 +68,11 @@ class VitonQformerPipeline:
 
     def generate(
             self,
+            images,
+            masks,
             prompts,
             instructions,
             condition_images,
-            height,
-            width,
             num_inference_steps=50,
             guidance_scale=7.5,
             negative_prompt=None,
@@ -96,13 +96,19 @@ class VitonQformerPipeline:
         self.scheduler.set_timesteps(num_inference_steps, device=self.viton_model.device)
         timesteps = self.scheduler.timesteps
 
+        ori_latents = self.viton_model.vae.encode(images).latent_dist.mode()
+        _, _, height, width = ori_latents.shape
+        masks = torch.nn.functional.interpolate(
+            masks, size=(height, width)
+        )
         latents = self.prepare_latents(
             batch_size=len(prompts),
             num_channels_channels=self.viton_model.unet.config.in_channels,
-            height=height // self.viton_model.vae_scale_factor,
-            width=width // self.viton_model.vae_scale_factor,
+            height=height,
+            width=width,
             generator=generator
         )
+        noise = latents.clone()
 
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
 
@@ -125,6 +131,13 @@ class VitonQformerPipeline:
                 noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
             latents = self.scheduler.step(noise_pred, t, latents, return_dict=False, **extra_step_kwargs)[0]
+            init_latents_proper = ori_latents * self.viton_model.vae.config.scaling_factor
+
+            if i < len(timesteps) - 1:
+                init_latents_proper = self.scheduler.add_noise(
+                    init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
+                )
+            latents = (1 - masks) * init_latents_proper + masks * latents
         image = self.viton_model.vae.decode(latents / self.viton_model.vae.config.scaling_factor, return_dict=False,
                                             generator=generator)[0]
         image = self.viton_model.image_processor.postprocess(image, do_denormalize=[True] * image.shape[0])
