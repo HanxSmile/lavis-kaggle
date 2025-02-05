@@ -57,7 +57,7 @@ class VitonQformer(Blip2Base):
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
-        assert (not freeze_qformer) and (not freeze_text_encoder)
+        # assert (not freeze_qformer) and (not freeze_text_encoder)
         assert compute_dtype in ["fp16", "fp32", "bf16"]
         self.compute_dtype = torch.float32
         self.condition_image = condition_image
