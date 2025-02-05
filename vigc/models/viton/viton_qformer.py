@@ -150,10 +150,10 @@ class VitonQformer(Blip2Base):
         logging.info("Loading Lora done.")
 
         if freeze_qformer:
-            self.Qformer = self.freeze(self.Qformer, "Qformer")
+            self.Qformer = self.freeze_module(self.Qformer, "Qformer")
             self.query_tokens.requires_grad_(False)
         if freeze_text_encoder:
-            self.text_encoder = self.freeze(self.text_encoder, "text_encoder")
+            self.text_encoder = self.freeze_module(self.text_encoder, "text_encoder")
 
     def q_former_embeds(self, image, text):
         with self.maybe_autocast(self.compute_dtype):
