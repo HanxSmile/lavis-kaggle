@@ -336,7 +336,7 @@ class VitonQformer(Blip2Base):
         masks = samples["mask"]
         instructions = samples["instruction"]
         condition_image = samples["condition_image"]
-        generator = None if seed is None else torch.Generator(device=self.device).manual_seed(seed)
+        generator = None if seed is None else torch.Generator().manual_seed(seed)
         pipeline = VitonQformerPipeline(self)
         results = pipeline.generate(
             images=images,

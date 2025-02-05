@@ -1,5 +1,6 @@
 import torch
 import inspect
+from tqdm.auto import tqdm
 from diffusers.image_processor import VaeImageProcessor
 
 
@@ -82,22 +83,23 @@ class VitonQformerPipeline:
     ):
         do_classifier_free_guidance = guidance_scale > 1.0
         # Prepare input prompts
-        prompt_embeds, negative_prompt_embeds = self.encode_prompt(
-            prompts,
-            instructions,
-            condition_images,
-            negative_prompt=negative_prompt,
-            do_classifier_free_guidance=do_classifier_free_guidance,
-        )
-        if do_classifier_free_guidance:
-            prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
+        with self.viton_model.maybe_autocast(self.viton_model.compute_dtype):
+            prompt_embeds, negative_prompt_embeds = self.encode_prompt(
+                prompts,
+                instructions,
+                condition_images,
+                negative_prompt=negative_prompt,
+                do_classifier_free_guidance=do_classifier_free_guidance,
+            )
+            if do_classifier_free_guidance:
+                prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
+            ori_latents = self.viton_model.vae.encode(images).latent_dist.mode()
+            _, _, height, width = ori_latents.shape
 
         # Prepare timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=self.viton_model.device)
         timesteps = self.scheduler.timesteps
 
-        ori_latents = self.viton_model.vae.encode(images).latent_dist.mode()
-        _, _, height, width = ori_latents.shape
         masks = torch.nn.functional.interpolate(
             masks, size=(height, width)
         )
@@ -112,11 +114,11 @@ class VitonQformerPipeline:
 
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
 
-        for i, t in enumerate(timesteps):
+        for i, t in tqdm(enumerate(timesteps), total=len(timesteps)):
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
             latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-            with self.viton_model.maybe_autocast(self.viton_model.compute_type):
+            with self.viton_model.maybe_autocast(self.viton_model.compute_dtype):
 
                 noise_pred = self.viton_model.unet(
                     latent_model_input,
@@ -138,7 +140,8 @@ class VitonQformerPipeline:
                     init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
                 )
             latents = (1 - masks) * init_latents_proper + masks * latents
-        image = self.viton_model.vae.decode(latents / self.viton_model.vae.config.scaling_factor, return_dict=False,
-                                            generator=generator)[0]
-        image = self.viton_model.image_processor.postprocess(image, do_denormalize=[True] * image.shape[0])
+        with self.viton_model.maybe_autocast(self.viton_model.compute_dtype):
+            image = self.viton_model.vae.decode(latents / self.viton_model.vae.config.scaling_factor, return_dict=False,
+                                                generator=generator)[0]
+        image = self.image_processor.postprocess(image, do_denormalize=[True] * image.shape[0])
         return image

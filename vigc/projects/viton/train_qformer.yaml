@@ -85,7 +85,7 @@ run:
   save_opt_ckpt: False
 
   generate_cfg:
-    num_inference_steps: 50
+    num_inference_steps: 20
     guidance_scale: 7.5
     condition_image: garm
     target_image: viton
