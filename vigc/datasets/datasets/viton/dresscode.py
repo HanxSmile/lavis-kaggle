@@ -54,7 +54,7 @@ class DressCodeDataset(data.Dataset):
                     im_caption_name = im_name.replace(".jpg", ".txt")
                     c_caption_name = c_name.replace(".jpg", ".txt")
                     c_mask_name = c_name.replace("_1.jpg", "_6.jpg")
-                    agnostic_mask_name = im_name
+                    agnostic_mask_name = im_name.replace(".jpg", ".png")
                     item = {
                         "image_name": im_name,
                         "image": osp.join(image_dir, im_name),
@@ -97,15 +97,15 @@ class DressCodeDataset(data.Dataset):
 
         result = dict(
             vton_image=image[None],
-            vton_vit_image=image_vit[None],
+            vton_vit_image=image_vit,
             vton_mask_image=agnostic_mask[None, None],
             vton_caption=image_caption,
             vton_instruction="Describe the garment the model is wearing in the photo.",
             garm_image=cloth[None],
-            garm_vit_image=cloth_vit[None],
-            garm_mask=cloth_mask[None, None],
-            garment_caption=garment_caption,
-            garment_instruction="Describe the garment in the photo.",
+            garm_vit_image=cloth_vit,
+            garm_mask_image=cloth_mask[None, None],
+            garm_caption=garment_caption,
+            garm_instruction="Describe the garment in the photo.",
             category=ann["category"],
             image_path=ann["image"],
             image_name=ann["image_name"],

@@ -143,7 +143,7 @@ class VitonQformer(Blip2Base):
             lora_dropout=lora_config.lora_dropout,
             bias="none",  # won't use bias currently
             modules_to_save=[],  # TODO: might be helpful if save partial model
-            task_type="FEATURE_EXTRACTION",
+            # task_type="FEATURE_EXTRACTION",
         )
         self.text_encoder = get_peft_model(self.text_encoder, peft_config=lora_config)
         self.text_encoder.print_trainable_parameters()
@@ -266,7 +266,7 @@ class VitonQformer(Blip2Base):
         return res.input_ids
 
     def forward(self, samples):
-        samples = self.prepare_sample(samples)
+        samples = self.prepare_inputs(samples)
         image, condition_image, caption, instruction = (samples["image"], samples["condition_image"],
                                                         samples["caption"], samples["instruction"])
         # Convert images to latent space
@@ -330,7 +330,7 @@ class VitonQformer(Blip2Base):
             negative_prompt=None,
             eta: float = 0.0,
     ):
-        samples = self.prepare_sample(samples, condition_image=condition_image, target_image=target_image)
+        samples = self.prepare_inputs(samples, condition_image=condition_image, target_image=target_image)
         prompts = samples["caption"]
         images = samples["image"]
         masks = samples["mask"]
@@ -368,7 +368,7 @@ class VitonQformer(Blip2Base):
             result.update(
                 {
                     "condition_image": samples["vton_vit_image"],
-                    "instruction": samples["viton_instruction"]
+                    "instruction": samples["vton_instruction"]
                 }
             )
         else:  # random
@@ -380,7 +380,7 @@ class VitonQformer(Blip2Base):
                     instructions.append(samples["garm_instruction"][i])
                 else:
                     condition_images.append(samples["vton_vit_image"][i])
-                    instructions.append(samples["viton_instruction"][i])
+                    instructions.append(samples["vton_instruction"][i])
             result.update(
                 {
                     "condition_image": torch.stack(condition_images).contiguous(),
