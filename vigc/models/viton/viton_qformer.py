@@ -22,7 +22,7 @@ class VitonQformer(Blip2Base):
     Qformer is finetuned using this model.
     """
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/viton_try_on_off/viton_qformer.yaml",
+        "default": "configs/models/viton/viton_qformer.yaml",
     }
 
     def __init__(

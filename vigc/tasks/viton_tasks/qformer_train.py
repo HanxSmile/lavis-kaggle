@@ -47,7 +47,7 @@ class QFormerTrain(BaseTask):
         condition_image = generate_cfg.get("condition_image", "garm")
         target_image = generate_cfg.get("target_image", "viton")
         save_dir = generate_cfg.get("save_dir", "generated_images")
-        seed = generate_cfg.get("seed", None)
+        seed = generate_cfg.get("seed", run_cfg.get("seed", None))
         eta = generate_cfg.get("eta", 0.0)
         use_png = generate_cfg.get("use_png", True)
 

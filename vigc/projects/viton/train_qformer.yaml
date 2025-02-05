@@ -1,0 +1,107 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  load_finetuned: True
+  finetuned: "instruct_blip_vicuna7b_trimmed.pth"
+  arch: viton_qformer
+  model_type: default
+
+  pretrained_model_name_or_path: "stable-diffusion-v1-5/stable-diffusion-v1-5"
+  tokenizer_name: Null
+  revision: Null
+  variant: Null
+  gradient_checkpointing: False
+  enable_xformers_memory_efficient_attention: False
+  compute_dtype: fp16
+  proportion_empty_prompts: 0
+  lora_config:
+    lora_r: 8
+    lora_alpha: 16
+    lora_dropout: 0.1
+    target_modules: [ "q_proj", "k_proj", "v_proj", "out_proj", "mlp.fc1", "mlp.fc2" ]
+  # q-former
+  num_query_token: 32
+  max_txt_len: 128
+  qformer_model_name_or_path: "bert-base-uncased"
+  # q-former visual encoder
+  vit_model: eva_clip_g
+  vit_model_ckpt: "eva_vit_g.pth"
+  img_size: 224
+  drop_path_rate: 0
+  use_grad_checkpoint: False
+  vit_precision: fp16
+  freeze_qformer: False
+  freeze_text_encoder: False
+  freeze_vit: True
+  freeze_vit_ln: False
+  condition_image: random
+  target_image: random
+
+
+datasets:
+  # train
+  dresscode_train:
+    dataroot_path: Null
+    category: [ "dresses", "upper_body", "lower_body" ]
+    size: [ 1024, 768 ]
+    clip_vit_path: openai/clip-vit-large-patch14
+    offset: Null
+
+  # eval
+  dresscode_eval:
+    dataroot_path: Null
+    category: [ "dresses", "upper_body", "lower_body" ]
+    size: [ 1024, 768 ]
+    clip_vit_path: openai/clip-vit-large-patch14
+    offset: Null
+    order: paired
+
+run:
+  runner: runner_iter
+  task: qformer_train
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-5
+
+  weight_decay: 0.05
+
+  batch_size_train: 16
+  batch_size_eval: 32
+  accum_grad_iters: 4
+
+  num_workers: 4
+  warmup_steps: 1000
+
+  iters_per_inner_epoch: 1000
+  max_iters: 600000
+
+  seed: 42
+  output_dir: "/mnt/data/wangyesong01/output/viton/qformer"
+  save_opt_ckpt: False
+
+  generate_cfg:
+    num_inference_steps: 50
+    guidance_scale: 7.5
+    condition_image: garm
+    target_image: viton
+    save_dir: generated_images
+    seed: 42
+    eta: 0.0
+    use_png: True
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
