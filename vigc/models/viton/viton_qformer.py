@@ -315,8 +315,11 @@ class VitonQformer(Blip2Base):
         if load_finetuned:
             finetune_path = cfg.get("finetuned", None)
             assert finetune_path is not None, "Found load_finetuned is True, but finetune_path is None."
-            self.load_checkpoint(url_or_filename=finetune_path)
-            logging.info(f"Loaded finetuned model '{finetune_path}'.")
+            if isinstance(finetune_path, str):
+                finetune_path = [finetune_path]
+            for p in finetune_path:
+                self.load_checkpoint(url_or_filename=p)
+                logging.info(f"Loaded finetuned model '{p}'.")
 
     @torch.no_grad()
     def generate(

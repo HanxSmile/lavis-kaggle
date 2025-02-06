@@ -19,6 +19,7 @@ class QFormerTrain(BaseTask):
             seed=None,
             use_png=True,
             eta=0.0,
+            save_imgs_per_epoch=False,
     ):
         super().__init__()
         self.save_dir = save_dir
@@ -33,6 +34,7 @@ class QFormerTrain(BaseTask):
         self.eta = eta
         self.epoch = 0
         self.use_png = use_png
+        self.save_imgs_per_epoch = save_imgs_per_epoch
 
     @classmethod
     def setup_task(cls, cfg):
@@ -50,6 +52,7 @@ class QFormerTrain(BaseTask):
         seed = generate_cfg.get("seed", run_cfg.get("seed", None))
         eta = generate_cfg.get("eta", 0.0)
         use_png = generate_cfg.get("use_png", True)
+        save_imgs_per_epoch = generate_cfg.get("save_imgs_per_epoch", False)
 
         return cls(
             save_dir=save_dir,
@@ -62,6 +65,7 @@ class QFormerTrain(BaseTask):
             seed=seed,
             eta=eta,
             use_png=use_png,
+            save_imgs_per_epoch=save_imgs_per_epoch,
         )
 
     def valid_step(self, model, samples):
@@ -92,7 +96,10 @@ class QFormerTrain(BaseTask):
                                                                                      dataset_names,
                                                                                      image_names,
                                                                                      image_paths):
-            save_dir = osp.join(save_root, f"{self.save_dir}-epoch-{self.epoch}", order, dataset_name, category)
+            if self.save_imgs_per_epoch:
+                save_dir = osp.join(save_root, f"{self.save_dir}-epoch-{self.epoch}", order, dataset_name, category)
+            else:
+                save_dir = osp.join(save_root, f"{self.save_dir}", order, dataset_name, category)
 
             if not osp.exists(save_dir):
                 os.makedirs(save_dir, exist_ok=True)

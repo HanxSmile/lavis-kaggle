@@ -5,7 +5,9 @@
 
 model:
   load_finetuned: True
-  finetuned: "/mnt/data/wangyesong01/models/blip/q_former_pretrained.pth"
+  finetuned:
+    - "/mnt/data/wangyesong01/models/blip/q_former_pretrained.pth"
+    - "/mnt/data/wangyesong01/models/blip/llm_proj.pth"
   arch: viton_qformer
   model_type: default
 
@@ -34,7 +36,7 @@ model:
   use_grad_checkpoint: False
   vit_precision: fp16
   freeze_qformer: False
-  freeze_text_encoder: False
+  freeze_text_encoder: True
   freeze_vit: True
   freeze_vit_ln: False
   condition_image: random
@@ -71,7 +73,7 @@ run:
   weight_decay: 0.05
 
   batch_size_train: 16
-  batch_size_eval: 32
+  batch_size_eval: 16
   accum_grad_iters: 4
 
   num_workers: 4
@@ -93,6 +95,7 @@ run:
     seed: 42
     eta: 0.0
     use_png: True
+    save_imgs_per_epoch: False
 
   amp: True
   resume_ckpt_path: null
