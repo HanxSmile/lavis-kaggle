@@ -7,22 +7,22 @@ import torch.nn.functional as F
 from peft import LoraConfig, get_peft_model
 from typing import Literal
 from transformers import AutoTokenizer
-from vigc.models.viton.modules import CLIPTextModel
-from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler, UniPCMultistepScheduler
+from vigc.models.viton.modules import CLIPTextModel, UNetVton2DConditionModel
+from diffusers import AutoencoderKL, DDPMScheduler, UniPCMultistepScheduler
 from vigc.pipelines import VitonQformerPipeline
 from vigc.common.registry import registry
 from vigc.models.blip2_models.blip2 import Blip2Base
 import contextlib
 
 
-@registry.register_model("viton_qformer")
-class VitonQformer(Blip2Base):
+@registry.register_model("viton_qformer_dual_unet")
+class VitonQformerDualUnet(Blip2Base):
     """
-    Viton Qformer model
+    Viton Qformer Dual Unet model
     Qformer is finetuned using this model.
     """
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/viton/viton_qformer.yaml",
+        "default": "configs/models/viton/viton_qformer_dual_unet.yaml",
     }
 
     def __init__(
@@ -96,7 +96,13 @@ class VitonQformer(Blip2Base):
         )
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
 
-        self.unet = UNet2DConditionModel.from_pretrained(
+        self.vton_unet = UNetVton2DConditionModel.from_pretrained(
+            pretrained_model_name_or_path,
+            subfolder="unet",
+            revision=revision,
+            variant=variant,
+        )
+        self.garm_unet = UNetVton2DConditionModel.from_pretrained(
             pretrained_model_name_or_path,
             subfolder="unet",
             revision=revision,
@@ -106,15 +112,16 @@ class VitonQformer(Blip2Base):
             self.compute_dtype)
 
         self.vae = self.freeze_module(self.vae, "vae").to(self.compute_dtype)
-        self.unet = self.freeze_module(self.unet, "unet", prevent_training_model=False).to(self.compute_dtype)
 
         self.noise_scheduler = DDPMScheduler.from_pretrained(pretrained_model_name_or_path, subfolder="scheduler")
         self.inference_noise_scheduler = UniPCMultistepScheduler.from_config(self.noise_scheduler.config)
 
         if enable_xformers_memory_efficient_attention:
-            self.unet.enable_xformers_memory_efficient_attention()
+            self.vton_unet.enable_xformers_memory_efficient_attention()
+            self.garm_unet.enable_xformers_memory_efficient_attention()
         if gradient_checkpointing:
-            self.unet.enable_gradient_checkpointing()
+            self.vton_unet.enable_gradient_checkpointing()
+            self.garm_unet.enable_gradient_checkpointing()
 
         # Q-former
         self.qformer_tokenizer = self.init_tokenizer(truncation_side="left", tokenizer_name=qformer_model_name_or_path)
