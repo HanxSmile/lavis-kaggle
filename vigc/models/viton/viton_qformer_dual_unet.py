@@ -102,6 +102,7 @@ class VitonQformerDualUnet(Blip2Base):
             revision=revision,
             variant=variant,
         )
+        self.vton_unet.replace_first_conv_layer(8)
         self.garm_unet = UNetVton2DConditionModel.from_pretrained(
             pretrained_model_name_or_path,
             subfolder="unet",
