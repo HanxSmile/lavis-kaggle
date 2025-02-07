@@ -274,41 +274,86 @@ class VitonQformerDualUnet(Blip2Base):
         return res.input_ids
 
     def forward(self, samples):
-        samples = self.prepare_inputs(samples)
-        image, condition_image, caption, instruction = (samples["image"], samples["condition_image"],
-                                                        samples["caption"], samples["instruction"])
+        vton_samples = self.prepare_inputs(samples, condition_image="garm", target_image="viton")
+        garm_samples = self.prepare_inputs(samples, condition_image="viton", target_image="garm")
+
+        # Get the text embedding for conditioning
+        vton_encoder_hidden_states = self.get_multi_modal_embeds(vton_samples["caption"], vton_samples["instruction"],
+                                                                 vton_samples["condition_image"])
+        garm_encoder_hidden_states = self.get_multi_modal_embeds(garm_samples["caption"], garm_samples["instruction"],
+                                                                 garm_samples["condition_image"])
+
         # Convert images to latent space
         with self.maybe_autocast(self.compute_dtype):
-            latents = self.vae.encode(image).latent_dist.sample()
-            latents = latents * self.vae.config.scaling_factor
+            vton_condition_latents = self.vae.encode(samples["agnostic_vton_image"]).latent_dist.mode()
+            vton_latents = self.vae.encode(vton_samples["image"]).latent_dist.sample()
+            vton_latents = vton_latents * self.vae.config.scaling_factor
+            garm_latents = self.vae.encode(garm_samples["image"]).latent_dist.sample()
+            garm_latents = garm_latents * self.vae.config.scaling_factor
+
         # Sample noise that we'll add to the latents
-        noise = torch.randn_like(latents)
-        bsz = latents.shape[0]
+        vton_noise = torch.randn_like(vton_latents)
+        garm_noise = torch.randn_like(garm_latents)
+        bsz = vton_latents.shape[0]
         # Sample a random timestep for each image
-        timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bsz,), device=self.device)
-        timesteps = timesteps.long()
+        vton_timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bsz,),
+                                       device=self.device).long()
+        garm_timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bsz,),
+                                       device=self.device).long()
+        zero_timesteps = torch.zeros_like(vton_timesteps).long()
+
         # Add noise to the latents according to the noise magnitude at each timestep
         # (this is the forward diffusion process)
-        noisy_latents = self.noise_scheduler.add_noise(latents.float(), noise.float(), timesteps)
-        # Get the text embedding for conditioning
-        encoder_hidden_states = self.get_multi_modal_embeds(caption, instruction, condition_image, training=True)
+        noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), vton_noise.float(), vton_timesteps)
+        no_noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), vton_noise.float(), zero_timesteps)
+        noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), garm_noise.float(), garm_timesteps)
+        no_noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), garm_noise.float(), zero_timesteps)
+
         with self.maybe_autocast(self.compute_dtype):
-            # Predict the noise residual
-            model_pred = self.unet(
-                noisy_latents,
-                timesteps,
-                encoder_hidden_states=encoder_hidden_states,
+            _, garm_spatial_attn_outputs = self.garm_unet(
+                no_noisy_garm_latents,
+                [],
+                0,
+                encoder_hidden_states=garm_encoder_hidden_states,
                 return_dict=False,
-            )[0]
+            )
+            vton_model_pred, _ = self.vton_unet(
+                torch.cat([noisy_vton_latents, vton_condition_latents], dim=1),
+                garm_spatial_attn_outputs,
+                vton_timesteps,
+                encoder_hidden_states=vton_encoder_hidden_states,
+                return_dict=False,
+            )
+            vton_model_pred = vton_model_pred[0]
+
+        with self.maybe_autocast(self.compute_dtype):
+            _, vton_spatial_attn_outputs = self.vton_unet(
+                torch.cat([no_noisy_vton_latents, vton_condition_latents], dim=1),
+                [],
+                0,
+                encoder_hidden_states=vton_encoder_hidden_states,
+                return_dict=False,
+            )
+            garm_model_pred, _ = self.garm_unet(
+                noisy_garm_latents,
+                vton_spatial_attn_outputs,
+                garm_timesteps,
+                encoder_hidden_states=garm_encoder_hidden_states,
+                return_dict=False,
+            )
+            garm_model_pred = garm_model_pred[0]
         # Get the target for loss depending on the prediction type
         if self.noise_scheduler.config.prediction_type == "epsilon":
-            target = noise
+            garm_target = garm_noise
+            vton_target = vton_noise
         elif self.noise_scheduler.config.prediction_type == "v_prediction":
-            target = self.noise_scheduler.get_velocity(latents, noise, timesteps)
+            garm_target = self.noise_scheduler.get_velocity(garm_latents, garm_noise, garm_timesteps)
+            vton_target = self.noise_scheduler.get_velocity(vton_latents, vton_noise, vton_timesteps)
         else:
             raise ValueError(f"Unknown prediction type {self.noise_scheduler.config.prediction_type}")
-        loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
-        return {"loss": loss}
+        garm_loss = F.mse_loss(garm_model_pred.float(), garm_target.float(), reduction="mean")
+        vton_loss = F.mse_loss(vton_model_pred.float(), vton_target.float(), reduction="mean")
+        return {"loss": garm_loss + vton_loss}
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -427,7 +472,6 @@ class VitonQformerDualUnet(Blip2Base):
                     masks.append(samples["vton_mask_image"][i])
             result.update(
                 {
-
                     "image": torch.stack(images).contiguous(),
                     "caption": captions,
                     "mask": torch.stack(masks).contiguous()
@@ -473,8 +517,6 @@ class VitonQformerDualUnet(Blip2Base):
         freeze_text_encoder = cfg.get("freeze_text_encoder", False)
         freeze_vit = cfg.get("freeze_vit", True)
         freeze_vit_ln = cfg.get("freeze_vit_ln", False)
-        condition_image = cfg.get("condition_image", "random")
-        target_image = cfg.get("target_image", "random")
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -499,8 +541,6 @@ class VitonQformerDualUnet(Blip2Base):
             freeze_text_encoder=freeze_text_encoder,
             freeze_vit=freeze_vit,
             freeze_vit_ln=freeze_vit_ln,
-            condition_image=condition_image,
-            target_image=target_image,
         )
         model.load_checkpoint_from_config(cfg)
         return model

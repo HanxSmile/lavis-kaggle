@@ -1319,9 +1319,9 @@ class UNetVton2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMi
             unscale_lora_layers(self, lora_scale)
 
         if not return_dict:
-            return (sample,)
+            return (sample,), spatial_attn_inputs
 
-        return UNet2DConditionOutput(sample=sample)
+        return UNet2DConditionOutput(sample=sample), spatial_attn_inputs
 
     def replace_first_conv_layer(self, new_in_channels):
         # Access the first convolutional layer

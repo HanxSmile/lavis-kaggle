@@ -89,6 +89,7 @@ class DressCodeDataset(data.Dataset):
         agnostic_mask = torch.from_numpy((np.array(agnostic_mask) > 127).astype(np.float32))
         image_vit = self.vit_image_processor(images=image, return_tensors="pt").pixel_values
         image = self.transform(image)
+        agnostic_vton_image = image * (1 - agnostic_mask[None])
 
         with open(ann["image_caption"], 'r') as f:
             image_caption = f.read().strip()
@@ -96,6 +97,7 @@ class DressCodeDataset(data.Dataset):
             garment_caption = f.read().strip()
 
         result = dict(
+            agnostic_vton_image=agnostic_vton_image[None],
             vton_image=image[None],
             vton_vit_image=image_vit,
             vton_mask_image=agnostic_mask[None, None],
@@ -123,6 +125,7 @@ class DressCodeDataset(data.Dataset):
             return min(self.offset, len(self.inner_dataset))
 
     def collater(self, samples):
+        agnostic_vton_image = [_["agnostic_vton_image"] for _ in samples]
         vton_images = [_["vton_image"] for _ in samples]
         vton_vit_images = [_["vton_vit_image"] for _ in samples]
         vton_mask_images = [_["vton_mask_image"] for _ in samples]
@@ -141,6 +144,7 @@ class DressCodeDataset(data.Dataset):
         ids = [_["id"] for _ in samples]
 
         result = {
+            "agnostic_vton_image": torch.cat(agnostic_vton_image),
             "vton_image": torch.cat(vton_images),
             "vton_vit_image": torch.cat(vton_vit_images),
             "vton_mask_image": torch.cat(vton_mask_images),
