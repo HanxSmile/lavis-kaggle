@@ -93,7 +93,7 @@ class VitonQformerPipeline:
             )
             if do_classifier_free_guidance:
                 prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
-            ori_latents = self.viton_model.vae.encode(images).latent_dist.mode()
+            ori_latents = self.viton_model.vae.encode(images).latent_dist.sample()  # TODO: sample() or model() ?
             _, _, height, width = ori_latents.shape
 
         # Prepare timesteps

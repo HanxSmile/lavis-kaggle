@@ -9,7 +9,7 @@ from typing import Literal
 from transformers import AutoTokenizer
 from vigc.models.viton.modules import CLIPTextModel, UNetVton2DConditionModel
 from diffusers import AutoencoderKL, DDPMScheduler, UniPCMultistepScheduler
-from vigc.pipelines import VitonQformerPipeline
+from vigc.pipelines import VitonQformerDualUnetPipeline
 from vigc.common.registry import registry
 from vigc.models.blip2_models.blip2 import Blip2Base
 import contextlib
@@ -190,8 +190,9 @@ class VitonQformerDualUnet(Blip2Base):
             image_embedding = self.llm_proj(query_output.last_hidden_state[:, :query_tokens.size(1), :])
         return image_embedding
 
-    def get_multi_modal_embeds(self, caption, instruction, image, training=True, negative_flag=False,
-                               negative_prompt=None):
+    def get_multi_modal_embeds(
+            self, caption, instruction, image,
+            training=True, negative_flag=False, negative_prompt=None):
         if training:
             assert not negative_flag
         with self.maybe_autocast(self.compute_dtype):
@@ -274,21 +275,31 @@ class VitonQformerDualUnet(Blip2Base):
         return res.input_ids
 
     def forward(self, samples):
-        vton_samples = self.prepare_inputs(samples, condition_image="garm", target_image="viton")
-        garm_samples = self.prepare_inputs(samples, condition_image="viton", target_image="garm")
+        vton_samples_0 = self.prepare_inputs(samples, condition_image="viton", target_image="viton")
+        vton_samples_1 = self.prepare_inputs(samples, condition_image="garm", target_image="viton")
+        garm_samples_0 = self.prepare_inputs(samples, condition_image="garm", target_image="garm")
+        garm_samples_1 = self.prepare_inputs(samples, condition_image="viton", target_image="garm")
 
         # Get the text embedding for conditioning
-        vton_encoder_hidden_states = self.get_multi_modal_embeds(vton_samples["caption"], vton_samples["instruction"],
-                                                                 vton_samples["condition_image"])
-        garm_encoder_hidden_states = self.get_multi_modal_embeds(garm_samples["caption"], garm_samples["instruction"],
-                                                                 garm_samples["condition_image"])
+        vton_encoder_hidden_states_0 = self.get_multi_modal_embeds(vton_samples_0["caption"],
+                                                                   vton_samples_0["instruction"],
+                                                                   vton_samples_0["condition_image"])
+        vton_encoder_hidden_states_1 = self.get_multi_modal_embeds(vton_samples_1["caption"],
+                                                                   vton_samples_1["instruction"],
+                                                                   vton_samples_1["condition_image"])
+        garm_encoder_hidden_states_0 = self.get_multi_modal_embeds(garm_samples_0["caption"],
+                                                                   garm_samples_0["instruction"],
+                                                                   garm_samples_0["condition_image"])
+        garm_encoder_hidden_states_1 = self.get_multi_modal_embeds(garm_samples_1["caption"],
+                                                                   garm_samples_1["instruction"],
+                                                                   garm_samples_1["condition_image"])
 
         # Convert images to latent space
         with self.maybe_autocast(self.compute_dtype):
             vton_condition_latents = self.vae.encode(samples["agnostic_vton_image"]).latent_dist.mode()
-            vton_latents = self.vae.encode(vton_samples["image"]).latent_dist.sample()
+            vton_latents = self.vae.encode(vton_samples_0["image"]).latent_dist.sample()
             vton_latents = vton_latents * self.vae.config.scaling_factor
-            garm_latents = self.vae.encode(garm_samples["image"]).latent_dist.sample()
+            garm_latents = self.vae.encode(garm_samples_0["image"]).latent_dist.sample()
             garm_latents = garm_latents * self.vae.config.scaling_factor
 
         # Sample noise that we'll add to the latents
@@ -298,8 +309,7 @@ class VitonQformerDualUnet(Blip2Base):
         # Sample a random timestep for each image
         vton_timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bsz,),
                                        device=self.device).long()
-        garm_timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bsz,),
-                                       device=self.device).long()
+        garm_timesteps = vton_timesteps
         zero_timesteps = torch.zeros_like(vton_timesteps).long()
 
         # Add noise to the latents according to the noise magnitude at each timestep
@@ -314,14 +324,14 @@ class VitonQformerDualUnet(Blip2Base):
                 no_noisy_garm_latents,
                 [],
                 0,
-                encoder_hidden_states=garm_encoder_hidden_states,
+                encoder_hidden_states=garm_encoder_hidden_states_0,
                 return_dict=False,
             )
             vton_model_pred, _ = self.vton_unet(
                 torch.cat([noisy_vton_latents, vton_condition_latents], dim=1),
                 garm_spatial_attn_outputs,
                 vton_timesteps,
-                encoder_hidden_states=vton_encoder_hidden_states,
+                encoder_hidden_states=vton_encoder_hidden_states_1,
                 return_dict=False,
             )
             vton_model_pred = vton_model_pred[0]
@@ -331,14 +341,14 @@ class VitonQformerDualUnet(Blip2Base):
                 torch.cat([no_noisy_vton_latents, vton_condition_latents], dim=1),
                 [],
                 0,
-                encoder_hidden_states=vton_encoder_hidden_states,
+                encoder_hidden_states=vton_encoder_hidden_states_0,
                 return_dict=False,
             )
             garm_model_pred, _ = self.garm_unet(
                 noisy_garm_latents,
                 vton_spatial_attn_outputs,
                 garm_timesteps,
-                encoder_hidden_states=garm_encoder_hidden_states,
+                encoder_hidden_states=garm_encoder_hidden_states_1,
                 return_dict=False,
             )
             garm_model_pred = garm_model_pred[0]
@@ -386,20 +396,17 @@ class VitonQformerDualUnet(Blip2Base):
             negative_prompt=None,
             eta: float = 0.0,
     ):
-        samples = self.prepare_inputs(samples, condition_image=condition_image, target_image=target_image)
-        prompts = samples["caption"]
-        images = samples["image"]
-        masks = samples["mask"]
-        instructions = samples["instruction"]
-        condition_image = samples["condition_image"]
+        agnostic_vton_images = samples["agnostic_vton_image"]
+        target_samples = self.prepare_inputs(samples, condition_image=condition_image, target_image=target_image)
+        condition_samples = self.prepare_inputs(samples, condition_image=condition_image, target_image=condition_image)
+
         generator = None if seed is None else torch.Generator().manual_seed(seed)
-        pipeline = VitonQformerPipeline(self)
+        pipeline = VitonQformerDualUnetPipeline(self)
         results = pipeline.generate(
-            images=images,
-            masks=masks,
-            prompts=prompts,
-            instructions=instructions,
-            condition_images=condition_image,
+            agnostic_vton_images=agnostic_vton_images,
+            target_inputs=target_samples,
+            condition_inputs=condition_samples,
+            target_type=target_image,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,

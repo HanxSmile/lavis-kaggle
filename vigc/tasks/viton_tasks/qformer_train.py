@@ -20,6 +20,7 @@ class QFormerTrain(BaseTask):
             use_png=True,
             eta=0.0,
             save_imgs_per_epoch=False,
+            switch_generate=False,
     ):
         super().__init__()
         self.save_dir = save_dir
@@ -35,6 +36,7 @@ class QFormerTrain(BaseTask):
         self.epoch = 0
         self.use_png = use_png
         self.save_imgs_per_epoch = save_imgs_per_epoch
+        self.switch_generate = switch_generate
 
     @classmethod
     def setup_task(cls, cfg):
@@ -53,6 +55,7 @@ class QFormerTrain(BaseTask):
         eta = generate_cfg.get("eta", 0.0)
         use_png = generate_cfg.get("use_png", True)
         save_imgs_per_epoch = generate_cfg.get("save_imgs_per_epoch", False)
+        switch_generate = generate_cfg.get("switch_generate", False)
 
         return cls(
             save_dir=save_dir,
@@ -66,6 +69,7 @@ class QFormerTrain(BaseTask):
             eta=eta,
             use_png=use_png,
             save_imgs_per_epoch=save_imgs_per_epoch,
+            switch_generate=switch_generate
         )
 
     def valid_step(self, model, samples):
@@ -82,6 +86,20 @@ class QFormerTrain(BaseTask):
             eta=self.eta,
         )
 
+        if self.switch_generate:
+            switch_generate_images = model.generate(
+                samples,
+                condition_image=self.target_image,
+                target_image=self.condition_image,
+                seed=self.seed,
+                num_inference_steps=self.num_inference_steps,
+                guidance_scale=self.guidance_scale,
+                negative_prompt=None,
+                eta=self.eta,
+            )
+        else:
+            switch_generate_images = [None] * len(generate_images)
+
         ids = samples["id"]
         orders = samples["order"]
         categories = samples["category"]
@@ -89,26 +107,34 @@ class QFormerTrain(BaseTask):
         image_names = samples["image_name"]
         image_paths = samples["image_path"]
         save_root = registry.get_path("result_dir")
-        for image, id_, order, category, dataset_name, image_name, image_path in zip(generate_images,
-                                                                                     ids,
-                                                                                     orders,
-                                                                                     categories,
-                                                                                     dataset_names,
-                                                                                     image_names,
-                                                                                     image_paths):
+        for image, switch_image, id_, order, category, dataset_name, image_name, image_path in zip(
+                generate_images,
+                switch_generate_images,
+                ids,
+                orders,
+                categories,
+                dataset_names,
+                image_names,
+                image_paths):
             if self.save_imgs_per_epoch:
                 save_dir = osp.join(save_root, f"{self.save_dir}-epoch-{self.epoch}", order, dataset_name, category)
             else:
                 save_dir = osp.join(save_root, f"{self.save_dir}", order, dataset_name, category)
 
-            if not osp.exists(save_dir):
+            if not osp.isdir(save_dir):
                 os.makedirs(save_dir, exist_ok=True)
 
             if self.use_png:
                 image_name = image_name.replace(".jpg", ".png")
                 image.save(osp.join(save_dir, image_name))
+                if switch_image is not None:
+                    switch_image_name = image_name.replace(".png", "_switch.png")
+                    switch_image.save(osp.join(save_dir, switch_image_name))
             else:
                 image.save(osp.join(save_dir, image_name), quality=95)
+                if switch_image is not None:
+                    switch_image_name = image_name.replace(".jpg", "_switch.jpg")
+                    switch_image.save(osp.join(save_dir, switch_image_name))
 
             this_item = {
                 "image_name": image_name,
@@ -119,6 +145,9 @@ class QFormerTrain(BaseTask):
                 "dataset_name": dataset_name,
                 "id": id_
             }
+            if switch_image is not None:
+                this_item["switch_image_name"] = switch_image_name
+                this_item["switch_image_path"] = osp.join(save_dir, switch_image_name)
             results.append(this_item)
         return results
 

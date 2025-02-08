@@ -52,7 +52,7 @@ from vigc.models.ip_adapter.ip_adapter_sd import IPAdapterStableDiffusion
 from vigc.models.t2i_adapter import T2IAdapterStableDiffusion
 from vigc.models.textual_inversion import TextualInversionStableDiffusion
 from vigc.models.ootd.ootd_viton import OOTDVitonNet
-from vigc.models.viton import VitonQformer
+from vigc.models.viton import VitonQformer, VitonQformerDualUnet
 
 __all__ = [
     "load_model",
@@ -100,6 +100,7 @@ __all__ = [
 
     "OOTDVitonNet",
     "VitonQformer",
+    "VitonQformerDualUnet",
 ]
 
 
