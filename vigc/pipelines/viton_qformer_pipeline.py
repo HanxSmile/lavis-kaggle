@@ -80,6 +80,7 @@ class VitonQformerPipeline:
             generator=None,
             eta: float = 0.0,
             cross_attention_kwargs=None,
+            vae_encode_method="mode",
     ):
         do_classifier_free_guidance = guidance_scale > 1.0
         # Prepare input prompts
@@ -93,7 +94,10 @@ class VitonQformerPipeline:
             )
             if do_classifier_free_guidance:
                 prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
-            ori_latents = self.viton_model.vae.encode(images).latent_dist.sample()  # TODO: sample() or model() ?
+            if vae_encode_method == "mode":
+                ori_latents = self.viton_model.vae.encode(images).latent_dist.mode()  # TODO: sample() or model() ?
+            else:
+                ori_latents = self.viton_model.vae.encode(images).latent_dist.sample()
             _, _, height, width = ori_latents.shape
 
         # Prepare timesteps

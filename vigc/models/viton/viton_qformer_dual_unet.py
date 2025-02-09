@@ -52,15 +52,14 @@ class VitonQformerDualUnet(Blip2Base):
             freeze_text_encoder=False,
             freeze_vit=True,
             freeze_vit_ln=False,
-            condition_image: Literal['garm', 'viton', 'random'] = "random",
-            target_image: Literal['garm', 'viton', 'random'] = "random",
+            target_image: Literal['viton', 'garm', 'both'] = "both"
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         # assert (not freeze_qformer) and (not freeze_text_encoder)
         assert compute_dtype in ["fp16", "fp32", "bf16"]
         self.compute_dtype = torch.float32
-        self.condition_image = condition_image
+        assert target_image in ["viton", "garm", "both"]
         self.target_image = target_image
         self.proportion_empty_prompts = proportion_empty_prompts
         self.max_txt_len = max_txt_len
@@ -274,50 +273,35 @@ class VitonQformerDualUnet(Blip2Base):
         ).to(self.device)
         return res.input_ids
 
-    def forward(self, samples):
-        vton_samples_0 = self.prepare_inputs(samples, condition_image="viton", target_image="viton")
+    def forward_vton(self, samples):
         vton_samples_1 = self.prepare_inputs(samples, condition_image="garm", target_image="viton")
         garm_samples_0 = self.prepare_inputs(samples, condition_image="garm", target_image="garm")
-        garm_samples_1 = self.prepare_inputs(samples, condition_image="viton", target_image="garm")
-
-        # Get the text embedding for conditioning
-        vton_encoder_hidden_states_0 = self.get_multi_modal_embeds(vton_samples_0["caption"],
-                                                                   vton_samples_0["instruction"],
-                                                                   vton_samples_0["condition_image"])
-        vton_encoder_hidden_states_1 = self.get_multi_modal_embeds(vton_samples_1["caption"],
-                                                                   vton_samples_1["instruction"],
-                                                                   vton_samples_1["condition_image"])
-        garm_encoder_hidden_states_0 = self.get_multi_modal_embeds(garm_samples_0["caption"],
-                                                                   garm_samples_0["instruction"],
-                                                                   garm_samples_0["condition_image"])
-        garm_encoder_hidden_states_1 = self.get_multi_modal_embeds(garm_samples_1["caption"],
-                                                                   garm_samples_1["instruction"],
-                                                                   garm_samples_1["condition_image"])
-
+        vton_encoder_hidden_states_1 = self.get_multi_modal_embeds(
+            vton_samples_1["caption"],
+            vton_samples_1["instruction"],
+            vton_samples_1["condition_image"])
+        garm_encoder_hidden_states_0 = self.get_multi_modal_embeds(
+            garm_samples_0["caption"],
+            garm_samples_0["instruction"],
+            garm_samples_0["condition_image"])
         # Convert images to latent space
         with self.maybe_autocast(self.compute_dtype):
             vton_condition_latents = self.vae.encode(samples["agnostic_vton_image"]).latent_dist.mode()
-            vton_latents = self.vae.encode(vton_samples_0["image"]).latent_dist.sample()
-            vton_latents = vton_latents * self.vae.config.scaling_factor
-            garm_latents = self.vae.encode(garm_samples_0["image"]).latent_dist.sample()
-            garm_latents = garm_latents * self.vae.config.scaling_factor
+            vton_latents = self.vae.encode(
+                vton_samples_1["image"]).latent_dist.sample() * self.vae.config.scaling_factor
+            garm_latents = self.vae.encode(
+                garm_samples_0["image"]).latent_dist.sample() * self.vae.config.scaling_factor
 
         # Sample noise that we'll add to the latents
         vton_noise = torch.randn_like(vton_latents)
-        garm_noise = torch.randn_like(garm_latents)
         bsz = vton_latents.shape[0]
         # Sample a random timestep for each image
         vton_timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bsz,),
                                        device=self.device).long()
-        garm_timesteps = vton_timesteps
         zero_timesteps = torch.zeros_like(vton_timesteps).long()
 
-        # Add noise to the latents according to the noise magnitude at each timestep
-        # (this is the forward diffusion process)
         noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), vton_noise.float(), vton_timesteps)
-        no_noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), vton_noise.float(), zero_timesteps)
-        noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), garm_noise.float(), garm_timesteps)
-        no_noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), garm_noise.float(), zero_timesteps)
+        no_noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), vton_noise.float(), zero_timesteps)
 
         with self.maybe_autocast(self.compute_dtype):
             _, garm_spatial_attn_outputs = self.garm_unet(
@@ -336,6 +320,42 @@ class VitonQformerDualUnet(Blip2Base):
             )
             vton_model_pred = vton_model_pred[0]
 
+        if self.noise_scheduler.config.prediction_type == "epsilon":
+            vton_target = vton_noise
+        elif self.noise_scheduler.config.prediction_type == "v_prediction":
+            vton_target = self.noise_scheduler.get_velocity(vton_latents, vton_noise, vton_timesteps)
+        else:
+            raise ValueError(f"Unknown prediction type {self.noise_scheduler.config.prediction_type}")
+        vton_loss = F.mse_loss(vton_model_pred.float(), vton_target.float(), reduction="mean")
+        return vton_loss
+
+    def forward_garm(self, samples):
+        vton_samples_0 = self.prepare_inputs(samples, condition_image="viton", target_image="viton")
+        garm_samples_1 = self.prepare_inputs(samples, condition_image="viton", target_image="garm")
+        vton_encoder_hidden_states_0 = self.get_multi_modal_embeds(vton_samples_0["caption"],
+                                                                   vton_samples_0["instruction"],
+                                                                   vton_samples_0["condition_image"])
+        garm_encoder_hidden_states_1 = self.get_multi_modal_embeds(garm_samples_1["caption"],
+                                                                   garm_samples_1["instruction"],
+                                                                   garm_samples_1["condition_image"])
+        # Convert images to latent space
+        with self.maybe_autocast(self.compute_dtype):
+            vton_condition_latents = self.vae.encode(samples["agnostic_vton_image"]).latent_dist.mode()
+            vton_latents = self.vae.encode(
+                vton_samples_0["image"]).latent_dist.sample() * self.vae.config.scaling_factor
+            garm_latents = self.vae.encode(
+                garm_samples_1["image"]).latent_dist.sample() * self.vae.config.scaling_factor
+
+        garm_noise = torch.randn_like(garm_latents)
+        bsz = vton_latents.shape[0]
+        # Sample a random timestep for each image
+        garm_timesteps = torch.randint(0, self.noise_scheduler.config.num_train_timesteps, (bsz,),
+                                       device=self.device).long()
+        zero_timesteps = torch.zeros_like(garm_timesteps).long()
+        # Add noise to the latents according to the noise magnitude at each timestep
+        # (this is the forward diffusion process)
+        no_noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), garm_noise.float(), zero_timesteps)
+        noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), garm_noise.float(), garm_timesteps)
         with self.maybe_autocast(self.compute_dtype):
             _, vton_spatial_attn_outputs = self.vton_unet(
                 torch.cat([no_noisy_vton_latents, vton_condition_latents], dim=1),
@@ -355,15 +375,24 @@ class VitonQformerDualUnet(Blip2Base):
         # Get the target for loss depending on the prediction type
         if self.noise_scheduler.config.prediction_type == "epsilon":
             garm_target = garm_noise
-            vton_target = vton_noise
         elif self.noise_scheduler.config.prediction_type == "v_prediction":
             garm_target = self.noise_scheduler.get_velocity(garm_latents, garm_noise, garm_timesteps)
-            vton_target = self.noise_scheduler.get_velocity(vton_latents, vton_noise, vton_timesteps)
         else:
             raise ValueError(f"Unknown prediction type {self.noise_scheduler.config.prediction_type}")
         garm_loss = F.mse_loss(garm_model_pred.float(), garm_target.float(), reduction="mean")
-        vton_loss = F.mse_loss(vton_model_pred.float(), vton_target.float(), reduction="mean")
-        return {"loss": garm_loss + vton_loss}
+        return garm_loss
+
+    def forward(self, samples):
+        if self.target_image == "viton":
+            loss = self.forward_viton(samples)
+        elif self.target_image == "garm":
+            loss = self.forward_garm(samples)
+        else:
+            if random.random() < 0.5:
+                loss = self.forward_garm(samples)
+            else:
+                loss = self.forward_vton(samples)
+        return {"loss": loss}
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
@@ -395,6 +424,7 @@ class VitonQformerDualUnet(Blip2Base):
             guidance_scale=7.5,
             negative_prompt=None,
             eta: float = 0.0,
+            vae_encode_method: str = "mode"
     ):
         agnostic_vton_images = samples["agnostic_vton_image"]
         target_samples = self.prepare_inputs(samples, condition_image=condition_image, target_image=target_image)
@@ -411,13 +441,12 @@ class VitonQformerDualUnet(Blip2Base):
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,
             generator=generator,
-            eta=eta
+            eta=eta,
+            vae_encode_method=vae_encode_method
         )
         return results
 
     def prepare_inputs(self, samples, condition_image=None, target_image=None):
-        condition_image = condition_image or self.condition_image
-        target_image = target_image or self.target_image
         bz = len(samples["garm_instruction"])
         result = dict()
         if condition_image == "garm":
@@ -524,6 +553,7 @@ class VitonQformerDualUnet(Blip2Base):
         freeze_text_encoder = cfg.get("freeze_text_encoder", False)
         freeze_vit = cfg.get("freeze_vit", True)
         freeze_vit_ln = cfg.get("freeze_vit_ln", False)
+        target_image = cfg.get("target_image", "both")
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -548,6 +578,7 @@ class VitonQformerDualUnet(Blip2Base):
             freeze_text_encoder=freeze_text_encoder,
             freeze_vit=freeze_vit,
             freeze_vit_ln=freeze_vit_ln,
+            target_image=target_image,
         )
         model.load_checkpoint_from_config(cfg)
         return model

@@ -21,6 +21,7 @@ class QFormerTrain(BaseTask):
             eta=0.0,
             save_imgs_per_epoch=False,
             switch_generate=False,
+            vae_encode_method="mode"
     ):
         super().__init__()
         self.save_dir = save_dir
@@ -37,6 +38,7 @@ class QFormerTrain(BaseTask):
         self.use_png = use_png
         self.save_imgs_per_epoch = save_imgs_per_epoch
         self.switch_generate = switch_generate
+        self.vae_encode_method = vae_encode_method
 
     @classmethod
     def setup_task(cls, cfg):
@@ -56,6 +58,7 @@ class QFormerTrain(BaseTask):
         use_png = generate_cfg.get("use_png", True)
         save_imgs_per_epoch = generate_cfg.get("save_imgs_per_epoch", False)
         switch_generate = generate_cfg.get("switch_generate", False)
+        vae_encode_method = generate_cfg.get("vae_encode_method", "mode")
 
         return cls(
             save_dir=save_dir,
@@ -69,7 +72,8 @@ class QFormerTrain(BaseTask):
             eta=eta,
             use_png=use_png,
             save_imgs_per_epoch=save_imgs_per_epoch,
-            switch_generate=switch_generate
+            switch_generate=switch_generate,
+            vae_encode_method=vae_encode_method
         )
 
     def valid_step(self, model, samples):
@@ -84,6 +88,7 @@ class QFormerTrain(BaseTask):
             guidance_scale=self.guidance_scale,
             negative_prompt=None,
             eta=self.eta,
+            vae_encode_method=self.vae_encode_method
         )
 
         if self.switch_generate:
@@ -96,6 +101,7 @@ class QFormerTrain(BaseTask):
                 guidance_scale=self.guidance_scale,
                 negative_prompt=None,
                 eta=self.eta,
+                vae_encode_method=self.vae_encode_method
             )
         else:
             switch_generate_images = [None] * len(generate_images)

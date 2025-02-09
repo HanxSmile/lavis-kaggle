@@ -61,8 +61,7 @@ class VitonQformerDualUnetPipeline:
 
     def get_spatial_attn_outputs(
             self, condition_inputs, target_type, agnostic_vton_latents, do_classifier_free_guidance,
-            negative_prompt):
-        bz = len(condition_inputs["caption"])
+            negative_prompt, vae_encode_method="mode"):
         with self.viton_model.maybe_autocast(self.compute_dtype):
             condition_prompt_embeds, condition_negative_prompt_embeds = self.encode_prompt(
                 condition_inputs["caption"],
@@ -73,9 +72,23 @@ class VitonQformerDualUnetPipeline:
             )
             if do_classifier_free_guidance:
                 condition_prompt_embeds = torch.cat([condition_negative_prompt_embeds, condition_prompt_embeds])
-
-            condition_latents = self.viton_model.vae.encode(condition_inputs["image"]).latent_dist.sample()
+            if vae_encode_method == "mode":
+                condition_latents = self.viton_model.vae.encode(condition_inputs["image"]).latent_dist.mode()
+            else:
+                condition_latents = self.viton_model.vae.encode(condition_inputs["image"]).latent_dist.sample()
+            condition_latents = condition_latents * self.viton_model.vae.config.scaling_factor
             _, _, height, width = condition_latents.shape
+
+        condition_noise = torch.randn_like(condition_latents)
+        bsz = condition_latents.shape[0]
+        # Sample a random timestep for each image
+        garm_timesteps = torch.randint(0, self.viton_model.noise_scheduler.config.num_train_timesteps, (bsz,),
+                                       device=self.device).long()
+        zero_timesteps = torch.zeros_like(garm_timesteps).long()
+        # Add noise to the latents according to the noise magnitude at each timestep
+        # (this is the forward diffusion process)
+        condition_latents = self.viton_model.noise_scheduler.add_noise(condition_latents.float(),
+                                                                       condition_noise.float(), zero_timesteps)
 
         if target_type == "garm":
             condition_latents = torch.cat([condition_latents, agnostic_vton_latents], dim=1)
@@ -132,6 +145,7 @@ class VitonQformerDualUnetPipeline:
             generator=None,
             eta: float = 0.0,
             cross_attention_kwargs=None,
+            vae_encode_method="mode"
     ):
         do_classifier_free_guidance = guidance_scale > 1.0
         # Prepare input prompts
@@ -145,8 +159,10 @@ class VitonQformerDualUnetPipeline:
             )
             if do_classifier_free_guidance:
                 target_prompt_embeds = torch.cat([target_negative_prompt_embeds, target_prompt_embeds])
-
-            target_latents = self.viton_model.vae.encode(target_inputs["image"]).latent_dist.sample()
+            if vae_encode_method == "mode":
+                target_latents = self.viton_model.vae.encode(target_inputs["image"]).latent_dist.mode()
+            else:
+                target_latents = self.viton_model.vae.encode(target_inputs["image"]).latent_dist.sample()
             agnostic_vton_latents = self.viton_model.vae.encode(agnostic_vton_images).latent_dist.mode()
             _, _, height, width = target_latents.shape
 
@@ -170,7 +186,8 @@ class VitonQformerDualUnetPipeline:
         noise = latents.clone()
 
         spatial_attn_outputs = self.get_spatial_attn_outputs(condition_inputs, target_type, agnostic_vton_latents,
-                                                             do_classifier_free_guidance, negative_prompt)
+                                                             do_classifier_free_guidance, negative_prompt,
+                                                             vae_encode_method=vae_encode_method)
 
         if do_classifier_free_guidance:
             agnostic_vton_latents = torch.cat([agnostic_vton_latents, agnostic_vton_latents])
@@ -182,14 +199,24 @@ class VitonQformerDualUnetPipeline:
                 latent_model_input = torch.cat([latent_model_input, agnostic_vton_latents], dim=1)
             spatial_attn_inputs = spatial_attn_outputs.copy()
             with self.viton_model.maybe_autocast(self.compute_dtype):
-                noise_pred, _ = self.viton_model.unet(
-                    latent_model_input,
-                    spatial_attn_inputs,
-                    t,
-                    encoder_hidden_states=target_prompt_embeds,
-                    return_dict=False,
-                    cross_attention_kwargs=cross_attention_kwargs
-                )
+                if target_type == "viton":
+                    noise_pred, _ = self.viton_model.vton_unet(
+                        latent_model_input,
+                        spatial_attn_inputs,
+                        t,
+                        encoder_hidden_states=target_prompt_embeds,
+                        return_dict=False,
+                        cross_attention_kwargs=cross_attention_kwargs
+                    )
+                else:
+                    noise_pred, _ = self.viton_model.garm_unet(
+                        latent_model_input,
+                        spatial_attn_inputs,
+                        t,
+                        encoder_hidden_states=target_prompt_embeds,
+                        return_dict=False,
+                        cross_attention_kwargs=cross_attention_kwargs
+                    )
                 noise_pred = noise_pred[0]
 
             if do_classifier_free_guidance:

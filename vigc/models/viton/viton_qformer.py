@@ -332,6 +332,7 @@ class VitonQformer(Blip2Base):
             guidance_scale=7.5,
             negative_prompt=None,
             eta: float = 0.0,
+            vae_encode_method: str = "mode"
     ):
         samples = self.prepare_inputs(samples, condition_image=condition_image, target_image=target_image)
         prompts = samples["caption"]
@@ -351,7 +352,8 @@ class VitonQformer(Blip2Base):
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,
             generator=generator,
-            eta=eta
+            eta=eta,
+            vae_encode_method=vae_encode_method
         )
         return results
 

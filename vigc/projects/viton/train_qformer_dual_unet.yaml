@@ -8,7 +8,9 @@ model:
   finetuned:
     - "/mnt/data/wangyesong01/models/blip/q_former_pretrained.pth"
     - "/mnt/data/wangyesong01/models/blip/llm_proj.pth"
-  arch: viton_qformer
+    - "/mnt/data/wangyesong01/models/blip/q_former_solo_finetued.pth"
+    - "/mnt/data/wangyesong01/models/blip/stage1.pth"
+  arch: viton_qformer_dual_unet
   model_type: default
 
   pretrained_model_name_or_path: "/mnt/data/wangyesong01/models/stable-diffusion-v1-5"
@@ -35,12 +37,11 @@ model:
   drop_path_rate: 0
   use_grad_checkpoint: False
   vit_precision: fp16
-  freeze_qformer: False
+  freeze_qformer: True
   freeze_text_encoder: True
   freeze_vit: True
-  freeze_vit_ln: False
-  condition_image: random
-  target_image: random
+  freeze_vit_ln: True
+  target_image: both
 
 
 datasets:
@@ -96,6 +97,7 @@ run:
     eta: 0.0
     use_png: True
     save_imgs_per_epoch: False
+    switch_generate: True
     vae_encode_method: mode
 
   amp: True
