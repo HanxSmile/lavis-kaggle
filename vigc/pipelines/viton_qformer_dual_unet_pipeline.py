@@ -42,10 +42,10 @@ class VitonQformerDualUnetPipeline:
         )
         return prompt_embeds, negative_prompt_embeds
 
-    def prepare_latents(self, batch_size, num_channels_channels, height, width, generator):
+    def prepare_latents(self, batch_size, num_channels, height, width, generator):
         shape = (
             batch_size,
-            num_channels_channels,
+            num_channels,
             int(height),
             int(width))
         latents = torch.randn(shape, generator=generator).to(self.device)
@@ -166,7 +166,7 @@ class VitonQformerDualUnetPipeline:
             else:
                 target_latents = self.viton_model.vae.encode(target_inputs["image"]).latent_dist.sample()
             agnostic_vton_latents = self.viton_model.vae.encode(agnostic_vton_images).latent_dist.mode()
-            _, _, height, width = target_latents.shape
+            _, channels, height, width = target_latents.shape
 
         # Prepare timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=self.device)
@@ -185,7 +185,8 @@ class VitonQformerDualUnetPipeline:
 
         latents = self.prepare_latents(
             batch_size=len(target_inputs["caption"]),
-            num_channels_channels=self.viton_model.garm_unet.config.in_channels,
+            # num_channels=self.viton_model.garm_unet.config.in_channels,
+            num_channels=channels,
             height=height,
             width=width,
             generator=generator
