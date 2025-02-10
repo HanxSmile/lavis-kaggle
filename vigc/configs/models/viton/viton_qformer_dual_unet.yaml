@@ -32,3 +32,4 @@ model:
   freeze_text_encoder: True
   freeze_vit: True
   freeze_vit_ln: True
+  cat_garm_mask: False

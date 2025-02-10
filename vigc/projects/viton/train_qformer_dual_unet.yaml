@@ -42,7 +42,7 @@ model:
   freeze_vit: True
   freeze_vit_ln: True
   target_image: both
-
+  cat_garm_mask: True  # in_channels = 5
 
 datasets:
   # train
@@ -52,6 +52,8 @@ datasets:
     size: [ 1024, 768 ]
     clip_vit_path: /mnt/data/wangyesong01/models/clip-vit-large-patch14
     offset: Null
+    cloth_background_whitening: True
+    cloth_mask_augmentation_ratio: 1.2
 
   # eval
   dresscode_eval:
@@ -61,6 +63,8 @@ datasets:
     clip_vit_path: /mnt/data/wangyesong01/models/clip-vit-large-patch14
     offset: Null
     order: paired
+    cloth_background_whitening: True
+    cloth_mask_augmentation_ratio: 1.0
 
 run:
   runner: runner_iter
@@ -73,9 +77,9 @@ run:
 
   weight_decay: 0.05
 
-  batch_size_train: 16
-  batch_size_eval: 16
-  accum_grad_iters: 4
+  batch_size_train: 2
+  batch_size_eval: 4
+  accum_grad_iters: 8
 
   num_workers: 4
   warmup_steps: 1000
@@ -90,15 +94,15 @@ run:
   generate_cfg:
     num_inference_steps: 20
     guidance_scale: 7.5
-    condition_image: garm
-    target_image: viton
+    condition_image: viton
+    target_image: garm
     save_dir: generated_images
     seed: 42
     eta: 0.0
     use_png: True
     save_imgs_per_epoch: False
-    switch_generate: True
     vae_encode_method: mode
+    switch_generate: True
 
   amp: True
   resume_ckpt_path: null

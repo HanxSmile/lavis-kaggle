@@ -61,7 +61,7 @@ class VitonQformerDualUnetPipeline:
 
     def get_spatial_attn_outputs(
             self, condition_inputs, target_type, agnostic_vton_latents, do_classifier_free_guidance,
-            negative_prompt, vae_encode_method="mode"):
+            negative_prompt, garm_masks, vae_encode_method="mode"):
         with self.viton_model.maybe_autocast(self.compute_dtype):
             condition_prompt_embeds, condition_negative_prompt_embeds = self.encode_prompt(
                 condition_inputs["caption"],
@@ -92,6 +92,8 @@ class VitonQformerDualUnetPipeline:
 
         if target_type == "garm":
             condition_latents = torch.cat([condition_latents, agnostic_vton_latents], dim=1)
+        elif self.viton_model.cat_garm_mask:
+            condition_latents = torch.cat([condition_latents, garm_masks], dim=1)
 
         if do_classifier_free_guidance:
             condition_model_inputs = torch.cat([condition_latents, condition_latents])
@@ -170,12 +172,17 @@ class VitonQformerDualUnetPipeline:
         self.scheduler.set_timesteps(num_inference_steps, device=self.device)
         timesteps = self.scheduler.timesteps
         extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
-        if target_type == "viton":
-            masks = torch.nn.functional.interpolate(
-                target_inputs["mask"], size=(height, width)
-            )
+
+        masks = torch.nn.functional.interpolate(
+            target_inputs["mask"], size=(height, width)
+        )
+        if target_type == "garm":
+            garm_masks = masks.clone()
         else:
-            masks = None
+            garm_masks = torch.nn.functional.interpolate(
+                condition_inputs["mask"], size=(height, width)
+            )
+
         latents = self.prepare_latents(
             batch_size=len(target_inputs["caption"]),
             num_channels_channels=self.viton_model.garm_unet.config.in_channels,
@@ -185,18 +192,23 @@ class VitonQformerDualUnetPipeline:
         )
         noise = latents.clone()
 
-        spatial_attn_outputs = self.get_spatial_attn_outputs(condition_inputs, target_type, agnostic_vton_latents,
-                                                             do_classifier_free_guidance, negative_prompt,
-                                                             vae_encode_method=vae_encode_method)
+        spatial_attn_outputs = self.get_spatial_attn_outputs(
+            condition_inputs, target_type, agnostic_vton_latents,
+            do_classifier_free_guidance, negative_prompt,
+            vae_encode_method=vae_encode_method, garm_masks=garm_masks
+        )
 
         if do_classifier_free_guidance:
             agnostic_vton_latents = torch.cat([agnostic_vton_latents, agnostic_vton_latents])
+            garm_masks = torch.cat([garm_masks, garm_masks])
 
         for i, t in tqdm(enumerate(timesteps), total=len(timesteps)):
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
             latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
             if target_type == "viton":
                 latent_model_input = torch.cat([latent_model_input, agnostic_vton_latents], dim=1)
+            elif self.viton_model.cat_garm_mask:
+                latent_model_input = torch.cat([latent_model_input, garm_masks], dim=1)
             spatial_attn_inputs = spatial_attn_outputs.copy()
             with self.viton_model.maybe_autocast(self.compute_dtype):
                 if target_type == "viton":
@@ -224,14 +236,13 @@ class VitonQformerDualUnetPipeline:
                 noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
             latents = self.scheduler.step(noise_pred, t, latents, return_dict=False, **extra_step_kwargs)[0]
-            if target_type == "viton":
-                init_latents_proper = target_latents * self.viton_model.vae.config.scaling_factor
-
-                if i < len(timesteps) - 1:
-                    init_latents_proper = self.scheduler.add_noise(
-                        init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
-                    )
-                latents = (1 - masks) * init_latents_proper + masks * latents
+            # mask
+            init_latents_proper = target_latents * self.viton_model.vae.config.scaling_factor
+            if i < len(timesteps) - 1:
+                init_latents_proper = self.scheduler.add_noise(
+                    init_latents_proper, noise, torch.tensor([timesteps[i + 1]])
+                )
+            latents = (1 - masks) * init_latents_proper + masks * latents
         with self.viton_model.maybe_autocast(self.compute_dtype):
             image = self.viton_model.vae.decode(
                 latents / self.viton_model.vae.config.scaling_factor,

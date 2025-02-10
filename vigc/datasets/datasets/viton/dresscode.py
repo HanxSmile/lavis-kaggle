@@ -1,3 +1,4 @@
+import random
 import os.path as osp
 from typing import Tuple, Literal
 import numpy as np
@@ -5,7 +6,7 @@ import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from transformers import AutoProcessor
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 class DressCodeDataset(data.Dataset):
@@ -17,7 +18,9 @@ class DressCodeDataset(data.Dataset):
             category: Tuple[str] = ('dresses', 'upper_body', 'lower_body'),
             size: Tuple[int, int] = (512, 384),
             clip_vit_path: str = "openai/clip-vit-large-patch14",
+            cloth_background_whitening: bool = False,
             offset=None,
+            cloth_mask_augmentation_ratio: float = 1.0,
     ):
 
         super().__init__()
@@ -33,7 +36,10 @@ class DressCodeDataset(data.Dataset):
         self.order = order
         self.inner_dataset = self.prepare_data()
         self.vit_image_processor = AutoProcessor.from_pretrained(clip_vit_path)
+        self.cloth_background_whitening = cloth_background_whitening
         self.offset = offset
+        assert cloth_mask_augmentation_ratio >= 1.0
+        self.cloth_mask_augmentation_ratio = cloth_mask_augmentation_ratio if phase == "train" else 1.0
 
     def prepare_data(self):
         results = []
@@ -68,20 +74,71 @@ class DressCodeDataset(data.Dataset):
                     results.append(item)
             return results
 
+    @staticmethod
+    def get_bounding_box(mask_image):
+        mask_array = np.array(mask_image)
+        horizontal_sum = np.sum(mask_array != 0, axis=0)
+
+        vertical_sum = np.sum(mask_array != 0, axis=1)
+
+        left = np.argmax(horizontal_sum > 0)
+        right = np.argmax(horizontal_sum[::-1] > 0)
+        right = mask_array.shape[1] - right - 1  # 翻转后重新计算右边界
+
+        top = np.argmax(vertical_sum > 0)
+        bottom = np.argmax(vertical_sum[::-1] > 0)
+        bottom = mask_array.shape[0] - bottom - 1  # 翻转后重新计算下边界
+        return left, right, top, bottom  # x1, x2, y1, y2
+
+    def get_coarse_mask(self, mask_image):
+        mask_array = np.array(mask_image)
+        left, right, top, bottom = self.get_bounding_box(mask_image)
+        scale_x = random.uniform(1, self.cloth_mask_augmentation_ratio)
+        scale_y = random.uniform(1, self.cloth_mask_augmentation_ratio)
+
+        center_x = (left + right) / 2
+        center_y = (top + bottom) / 2
+
+        new_width = (right - left) * scale_x
+        new_height = (bottom - top) * scale_y
+
+        new_left = int(center_x - new_width / 2)
+        new_right = int(center_x + new_width / 2)
+        new_top = int(center_y - new_height / 2)
+        new_bottom = int(center_y + new_height / 2)
+
+        new_left = max(0, new_left)
+        new_right = min(mask_array.shape[1], new_right)
+        new_top = max(0, new_top)
+        new_bottom = min(mask_array.shape[0], new_bottom)
+
+        new_mask = np.zeros_like(mask_array)
+        new_mask[new_top:new_bottom, new_left:new_right] = 255
+        new_mask_image = Image.fromarray(new_mask)
+        return new_mask_image
+
     def __getitem__(self, index):
         ann = self.inner_dataset[index]
 
         # Clothing image
         cloth = Image.open(ann["cloth"]).convert("RGB")
-        cloth_mask = Image.open(ann["cloth_mask"]).convert("L")
-        # # Mask out the background
-        # cloth = Image.composite(ImageOps.invert(mask.convert('L')), cloth, ImageOps.invert(mask.convert('L')))
-        cloth = cloth.resize((self.width, self.height))
-        cloth_mask = cloth_mask.resize((self.width, self.height))
-        cloth_mask = torch.from_numpy((np.array(cloth_mask) > 127).astype(np.float32))
         cloth_vit = self.vit_image_processor(images=cloth, return_tensors="pt").pixel_values
-        cloth = self.transform(cloth)  # [-1,1]
+        cloth_mask_fine = Image.open(ann["cloth_mask"]).convert("L")
+        if self.cloth_background_whitening:
+            # Mask out the background
+            cloth = Image.composite(
+                ImageOps.invert(cloth_mask_fine), cloth,
+                ImageOps.invert(cloth_mask_fine.convert('L'))
+            )
+        # TODO：process garment cloth
+        cloth = cloth.resize((self.width, self.height))
+        cloth_mask_fine = cloth_mask_fine.resize((self.width, self.height))
+        cloth_mask_coarse = self.get_coarse_mask(cloth_mask_fine)
 
+        cloth_mask_fine = torch.from_numpy((np.array(cloth_mask_fine) > 127).astype(np.float32))
+        cloth_mask_coarse = torch.from_numpy((np.array(cloth_mask_coarse) > 127).astype(np.float32))
+        cloth = self.transform(cloth)  # [-1,1]
+        # Model Image
         image = Image.open(ann["image"]).convert("RGB")
         agnostic_mask = Image.open(ann["agnostic_mask"]).convert("L")
         agnostic_mask = agnostic_mask.resize((self.width, self.height))
@@ -105,7 +162,8 @@ class DressCodeDataset(data.Dataset):
             vton_instruction="Describe the garment the model is wearing in the photo.",
             garm_image=cloth[None],
             garm_vit_image=cloth_vit,
-            garm_mask_image=cloth_mask[None, None],
+            garm_mask_image=cloth_mask_coarse[None, None],
+            garm_fine_mask_image=cloth_mask_fine[None, None],
             garm_caption=garment_caption,
             garm_instruction="Describe the garment in the photo.",
             category=ann["category"],
@@ -134,6 +192,7 @@ class DressCodeDataset(data.Dataset):
         garm_images = [_["garm_image"] for _ in samples]
         garm_vit_images = [_["garm_vit_image"] for _ in samples]
         garm_mask_images = [_["garm_mask_image"] for _ in samples]
+        garm_fine_mask_images = [_["garm_fine_mask_image"] for _ in samples]
         garm_captions = [_["garm_caption"] for _ in samples]
         garm_instructions = [_["garm_instruction"] for _ in samples]
         categories = [_["category"] for _ in samples]
@@ -153,6 +212,7 @@ class DressCodeDataset(data.Dataset):
             "garm_image": torch.cat(garm_images),
             "garm_vit_image": torch.cat(garm_vit_images),
             "garm_mask_image": torch.cat(garm_mask_images),
+            "garm_fine_mask_image": torch.cat(garm_fine_mask_images),
             "garm_caption": garm_captions,
             "garm_instruction": garm_instructions,
             "category": categories,

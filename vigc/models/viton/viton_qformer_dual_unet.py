@@ -52,7 +52,8 @@ class VitonQformerDualUnet(Blip2Base):
             freeze_text_encoder=False,
             freeze_vit=True,
             freeze_vit_ln=False,
-            target_image: Literal['viton', 'garm', 'both'] = "both"
+            target_image: Literal['viton', 'garm', 'both'] = "both",
+            cat_garm_mask: bool = False,
     ):
         super().__init__()
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
@@ -61,6 +62,7 @@ class VitonQformerDualUnet(Blip2Base):
         self.compute_dtype = torch.float32
         assert target_image in ["viton", "garm", "both"]
         self.target_image = target_image
+        self.cat_garm_mask = cat_garm_mask
         self.proportion_empty_prompts = proportion_empty_prompts
         self.max_txt_len = max_txt_len
         if compute_dtype == "fp16":
@@ -101,13 +103,15 @@ class VitonQformerDualUnet(Blip2Base):
             revision=revision,
             variant=variant,
         )
-        self.vton_unet.replace_first_conv_layer(8)
+        self.vton_unet.replace_first_conv_layer(4 + 4)
         self.garm_unet = UNetVton2DConditionModel.from_pretrained(
             pretrained_model_name_or_path,
             subfolder="unet",
             revision=revision,
             variant=variant,
         )
+        if self.cat_garm_mask:
+            self.garm_unet.replace_first_conv_layer(4 + 1)
         self.text_encoder = self.freeze_module(self.text_encoder, "text_encoder", prevent_training_model=False).to(
             self.compute_dtype)
 
@@ -291,7 +295,10 @@ class VitonQformerDualUnet(Blip2Base):
                 vton_samples_1["image"]).latent_dist.sample() * self.vae.config.scaling_factor
             garm_latents = self.vae.encode(
                 garm_samples_0["image"]).latent_dist.sample() * self.vae.config.scaling_factor
-
+            _, _, height, width = garm_latents.shape
+        garm_mask = torch.nn.functional.interpolate(
+            garm_samples_0["mask"], size=(height, width)
+        )
         # Sample noise that we'll add to the latents
         vton_noise = torch.randn_like(vton_latents)
         bsz = vton_latents.shape[0]
@@ -302,7 +309,8 @@ class VitonQformerDualUnet(Blip2Base):
 
         noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), vton_noise.float(), vton_timesteps)
         no_noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), vton_noise.float(), zero_timesteps)
-
+        if self.cat_garm_mask:
+            no_noisy_garm_latents = torch.cat([no_noisy_garm_latents, garm_mask], dim=1)
         with self.maybe_autocast(self.compute_dtype):
             _, garm_spatial_attn_outputs = self.garm_unet(
                 no_noisy_garm_latents,
@@ -345,7 +353,11 @@ class VitonQformerDualUnet(Blip2Base):
                 vton_samples_0["image"]).latent_dist.sample() * self.vae.config.scaling_factor
             garm_latents = self.vae.encode(
                 garm_samples_1["image"]).latent_dist.sample() * self.vae.config.scaling_factor
+            _, _, height, width = garm_latents.shape
 
+        garm_mask = torch.nn.functional.interpolate(
+            garm_samples_1["mask"], size=(height, width)
+        )
         garm_noise = torch.randn_like(garm_latents)
         bsz = vton_latents.shape[0]
         # Sample a random timestep for each image
@@ -356,6 +368,8 @@ class VitonQformerDualUnet(Blip2Base):
         # (this is the forward diffusion process)
         no_noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), garm_noise.float(), zero_timesteps)
         noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), garm_noise.float(), garm_timesteps)
+        if self.cat_garm_mask:
+            noisy_garm_latents = torch.cat([noisy_garm_latents, garm_mask], dim=1)
         with self.maybe_autocast(self.compute_dtype):
             _, vton_spatial_attn_outputs = self.vton_unet(
                 torch.cat([no_noisy_vton_latents, vton_condition_latents], dim=1),
@@ -554,6 +568,7 @@ class VitonQformerDualUnet(Blip2Base):
         freeze_vit = cfg.get("freeze_vit", True)
         freeze_vit_ln = cfg.get("freeze_vit_ln", False)
         target_image = cfg.get("target_image", "both")
+        cat_garm_mask = cfg.get("cat_garm_mask", False)
 
         model = cls(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
@@ -579,6 +594,7 @@ class VitonQformerDualUnet(Blip2Base):
             freeze_vit=freeze_vit,
             freeze_vit_ln=freeze_vit_ln,
             target_image=target_image,
+            cat_garm_mask=cat_garm_mask,
         )
         model.load_checkpoint_from_config(cfg)
         return model

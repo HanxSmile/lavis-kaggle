@@ -24,6 +24,8 @@ class DressCodeTrainBuilder(BaseDatasetBuilder):
             size=cfg.get("size", (512, 384)),
             clip_vit_path=cfg.get("clip_vit_path", "openai/clip-vit-large-patch14"),
             offset=cfg.get("offset", None),
+            cloth_background_whitening=cfg.get("cloth_background_whitening", False),
+            cloth_mask_augmentation_ratio=cfg.get("cloth_mask_augmentation_ratio", 1.0),
         )
         _ = datasets["train"][0]
         return datasets
@@ -49,6 +51,7 @@ class DressCodeEvalBuilder(BaseDatasetBuilder):
             size=cfg.get("size", (512, 384)),
             clip_vit_path=cfg.get("clip_vit_path", "openai/clip-vit-large-patch14"),
             offset=cfg.get("offset", None),
+            cloth_background_whitening=cfg.get("cloth_background_whitening", False),
         )
         _ = datasets["eval"][0]
         return datasets
