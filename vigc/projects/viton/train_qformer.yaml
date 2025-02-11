@@ -4,10 +4,8 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 model:
-  load_finetuned: True
-  finetuned:
-    - "/mnt/data/wangyesong01/models/blip/q_former_pretrained.pth"
-    - "/mnt/data/wangyesong01/models/blip/llm_proj.pth"
+  load_finetuned: False
+  finetuned: ""
   arch: viton_qformer
   model_type: default
 
@@ -35,7 +33,7 @@ model:
   drop_path_rate: 0
   use_grad_checkpoint: False
   vit_precision: fp16
-  freeze_qformer: False
+  freeze_qformer: True
   freeze_text_encoder: True
   freeze_vit: True
   freeze_vit_ln: False
@@ -51,6 +49,7 @@ datasets:
     size: [ 1024, 768 ]
     clip_vit_path: /mnt/data/wangyesong01/models/clip-vit-large-patch14
     offset: Null
+    cloth_background_whitening: True
 
   # eval
   dresscode_eval:
@@ -58,8 +57,9 @@ datasets:
     category: [ "dresses", "upper_body", "lower_body" ]
     size: [ 1024, 768 ]
     clip_vit_path: /mnt/data/wangyesong01/models/clip-vit-large-patch14
-    offset: Null
+    offset: 600
     order: paired
+    cloth_background_whitening: True
 
 run:
   runner: runner_iter
@@ -83,7 +83,7 @@ run:
   max_iters: 600000
 
   seed: 42
-  output_dir: "/mnt/data/wangyesong01/output/viton/qformer"
+  output_dir: "/mnt/data/wangyesong01/output/viton/qformer_stage1"
   save_opt_ckpt: False
 
   generate_cfg:
