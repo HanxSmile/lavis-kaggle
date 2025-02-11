@@ -34,15 +34,20 @@ class DressCodeDataset(data.Dataset):
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
         self.order = order
+        self.offset = offset
         self.inner_dataset = self.prepare_data()
         self.vit_image_processor = AutoProcessor.from_pretrained(clip_vit_path)
         self.cloth_background_whitening = cloth_background_whitening
-        self.offset = offset
+
         assert cloth_mask_augmentation_ratio >= 1.0
         self.cloth_mask_augmentation_ratio = cloth_mask_augmentation_ratio if phase == "train" else 1.0
 
     def prepare_data(self):
         results = []
+        if self.offset is None:
+            offset = None
+        else:
+            offset = self.offset // len(self.category)
         for c in self.category:
             assert c in ['dresses', 'upper_body', 'lower_body']
             dataroot = osp.join(self.dataroot, c)
@@ -55,7 +60,7 @@ class DressCodeDataset(data.Dataset):
             cloth_mask_dir = osp.join(dataroot, "cloth_mask")
             caption_dir = osp.join(dataroot, "captions")
             with open(filename, 'r') as f:
-                for line in f.readlines():
+                for line in f.readlines()[:offset]:
                     im_name, c_name = line.strip().split()
                     im_caption_name = im_name.replace(".jpg", ".txt")
                     c_caption_name = c_name.replace(".jpg", ".txt")
@@ -177,10 +182,7 @@ class DressCodeDataset(data.Dataset):
         return result
 
     def __len__(self):
-        if self.offset is None:
-            return len(self.inner_dataset)
-        else:
-            return min(self.offset, len(self.inner_dataset))
+        return len(self.inner_dataset)
 
     def collater(self, samples):
         agnostic_vton_image = [_["agnostic_vton_image"] for _ in samples]
