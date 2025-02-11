@@ -72,7 +72,7 @@ class DressCodeDataset(data.Dataset):
                         "category": c,
                     }
                     results.append(item)
-            return results
+        return results
 
     @staticmethod
     def get_bounding_box(mask_image):
