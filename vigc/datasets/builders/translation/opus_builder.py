@@ -20,7 +20,7 @@ class OpusTrainBuilder(BaseDatasetBuilder):
             data_root=cfg.get("data_root"),
             source_key=cfg.get("source_key"),
             target_key=cfg.get("target_key"),
-            split="train",
+            split=cfg.get("split", None),
             switch_lang_flag=cfg.get("switch_lang_flag", False),
         )
         _ = datasets["train"][0]

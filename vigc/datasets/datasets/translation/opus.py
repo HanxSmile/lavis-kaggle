@@ -6,17 +6,24 @@ from vigc.datasets.datasets.translation.utils import preproc
 
 class OpusDataset(torch_Dataset):
     def __init__(self, data_root, source_key, target_key, split="train", switch_lang_flag=False):
-        assert split in ["train", "test"]
+        assert split in ["train", "test", None]
         self.source_key = source_key
         self.target_key = target_key
-        self.inner_dataset = load_from_disk(data_root)[split]
+        inner_dataset = load_from_disk(data_root)
+        if split:
+            self.inner_dataset = inner_dataset[split]
+        else:
+            self.inner_dataset = inner_dataset
+
         self.switch_lang_flag = switch_lang_flag
 
     def __len__(self):
         return len(self.inner_dataset)
 
     def __getitem__(self, index):
-        ann = self.inner_dataset[index]["translation"]
+        ann = self.inner_dataset[index]
+        if "translation" in ann:
+            ann = ann["translation"]
         source_text, target_text = ann[self.source_key], ann[self.target_key]
         source_text = preproc(source_text)
         target_text = preproc(target_text)
