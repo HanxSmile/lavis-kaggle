@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union, Tuple
 
 import torch
 from torch import nn
@@ -19,7 +19,7 @@ from torch import nn
 from diffusers.utils import deprecate, logging
 from diffusers.utils.torch_utils import maybe_allow_in_graph
 from diffusers.models.activations import GEGLU, GELU, ApproximateGELU
-from diffusers.models.attention_processor import Attention
+from diffusers.models.attention_processor import Attention as HF_Attention
 from diffusers.models.embeddings import SinusoidalPositionalEmbedding
 from diffusers.models.normalization import AdaLayerNorm, AdaLayerNormContinuous, AdaLayerNormZero
 
@@ -39,6 +39,58 @@ def _chunked_feed_forward(ff: nn.Module, hidden_states: torch.Tensor, chunk_dim:
         dim=chunk_dim,
     )
     return ff_output
+
+
+class Attention(HF_Attention):
+    def get_attention_scores(
+            self,
+            query: torch.Tensor,
+            key: torch.Tensor,
+            attention_mask: torch.Tensor = None,
+            return_attention_scores: bool = False
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        r"""
+        Compute the attention scores.
+
+        Args:
+            query (`torch.Tensor`): The query tensor.
+            key (`torch.Tensor`): The key tensor.
+            attention_mask (`torch.Tensor`, *optional*): The attention mask to use. If `None`, no mask is applied.
+
+        Returns:
+            `torch.Tensor`: The attention probabilities/scores.
+        """
+        dtype = query.dtype
+        if self.upcast_attention:
+            query = query.float()
+            key = key.float()
+
+        if attention_mask is None:
+            baddbmm_input = torch.empty(
+                query.shape[0], query.shape[1], key.shape[1], dtype=query.dtype, device=query.device
+            )
+            beta = 0
+        else:
+            baddbmm_input = attention_mask
+            beta = 1
+
+        attention_scores = torch.baddbmm(
+            baddbmm_input,
+            query,
+            key.transpose(-1, -2),
+            beta=beta,
+            alpha=self.scale,
+        )
+        del baddbmm_input
+
+        if self.upcast_softmax:
+            attention_scores = attention_scores.float()
+        attention_probs = attention_scores.softmax(dim=-1)
+        attention_probs = attention_probs.to(dtype)
+        if return_attention_scores:
+            return attention_probs, attention_scores
+        del attention_scores
+        return attention_probs
 
 
 @maybe_allow_in_graph
