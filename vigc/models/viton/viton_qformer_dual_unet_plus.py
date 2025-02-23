@@ -13,15 +13,22 @@ from vigc.pipelines import VitonQformerDualUnetPipeline
 from vigc.common.registry import registry
 from vigc.models.blip2_models.blip2 import Blip2Base
 import contextlib
+from vigc.models.viton.modules.attn_processors import VitonAttnProcessor
+from vigc.models.viton.modules.attn_processors.utils import is_torch2_available
+
+if is_torch2_available():
+    from vigc.models.viton.modules.attn_processors import AttnProcessor2_0 as AttnProcessor
+else:
+    from vigc.models.viton.modules.attn_processors import AttnProcessor
 
 
-@registry.register_model("viton_qformer_dual_unet_attn_sup")
-class VitonQformerDualUnetAttentionSupervise(Blip2Base):
+@registry.register_model("viton_qformer_dual_unet_plus")
+class VitonQformerDualUnetPlus(Blip2Base):
     """
-    Viton Qformer Dual Unet Attention Supervise model
+    Viton Qformer Dual Unet Attention Plus model
     """
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/viton/viton_qformer_dual_unet_attn_sup.yaml",
+        "default": "configs/models/viton/viton_qformer_dual_unet_plus.yaml",
     }
 
     def __init__(
@@ -111,6 +118,10 @@ class VitonQformerDualUnetAttentionSupervise(Blip2Base):
         )
         if self.cat_garm_mask:
             self.garm_unet.replace_first_conv_layer(4 + 1)
+
+        self.vton_adapters = self.register_attn_processors(self.vton_unet)
+        self.garm_adapters = self.register_attn_processors(self.garm_unet)
+
         self.text_encoder = self.freeze_module(self.text_encoder, "text_encoder", prevent_training_model=False).to(
             self.compute_dtype)
 
@@ -164,6 +175,40 @@ class VitonQformerDualUnetAttentionSupervise(Blip2Base):
             self.query_tokens.requires_grad_(False)
         if freeze_text_encoder:
             self.text_encoder = self.freeze_module(self.text_encoder, "text_encoder")
+
+    def register_attn_processors(self, unet):
+        attn_procs = {}
+        unet_sd = unet.state_dict()
+        for name in unet.attn_processors.keys():
+            cross_attention_dim = None if name.endswith("attn1.processor") else unet.config.cross_attention_dim
+            if name.startswith("mid_block"):
+                hidden_size = unet.config.block_out_channels[-1]
+            elif name.startswith("up_blocks"):
+                block_id = int(name[len("up_blocks.")])
+                hidden_size = list(reversed(unet.config.block_out_channels))[block_id]
+            elif name.startswith("down_blocks"):
+                block_id = int(name[len("down_blocks.")])
+                hidden_size = unet.config.block_out_channels[block_id]
+            if cross_attention_dim is not None:  # cross attention
+                attn_procs[name] = AttnProcessor()
+            else:  # self attention
+                layer_name = name.split(".processor")[0]
+                weights = {
+                    "to_k.weight": unet_sd[layer_name + ".to_k.weight"],
+                    "to_v.weight": unet_sd[layer_name + ".to_v.weight"],
+                    "to_q.weight": unet_sd[layer_name + ".to_q.weight"],
+                }
+                attn_procs[name] = VitonAttnProcessor(hidden_size=hidden_size, cross_attention_dim=cross_attention_dim)
+                attn_procs[name].load_state_dict(weights)
+        unet.set_attn_processor(attn_procs)
+        adapter_modules = torch.nn.ModuleList(unet.attn_processors.values())
+        return adapter_modules
+
+    @staticmethod
+    def setup_mask(adapters, mask, condition_flag):
+        for adapter in adapters:
+            adapter.setup_mask(mask)
+            adapter.setup_condition_flag(condition_flag)
 
     def q_former_embeds(self, image, text):
         with self.maybe_autocast(self.compute_dtype):
@@ -308,6 +353,8 @@ class VitonQformerDualUnetAttentionSupervise(Blip2Base):
 
         noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), vton_noise.float(), vton_timesteps)
         no_noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), vton_noise.float(), zero_timesteps)
+        self.setup_mask(self.vton_adapters, vton_samples_1["mask"], condition_flag=False)
+        self.setup_mask(self.garm_adapters, garm_samples_0["mask"], condition_flag=True)
         if self.cat_garm_mask:
             no_noisy_garm_latents = torch.cat([no_noisy_garm_latents, garm_mask], dim=1)
         with self.maybe_autocast(self.compute_dtype):
@@ -367,6 +414,8 @@ class VitonQformerDualUnetAttentionSupervise(Blip2Base):
         # (this is the forward diffusion process)
         no_noisy_vton_latents = self.noise_scheduler.add_noise(vton_latents.float(), garm_noise.float(), zero_timesteps)
         noisy_garm_latents = self.noise_scheduler.add_noise(garm_latents.float(), garm_noise.float(), garm_timesteps)
+        self.setup_mask(self.vton_adapters, vton_samples_0["mask"], condition_flag=True)
+        self.setup_mask(self.garm_adapters, garm_samples_1["mask"], condition_flag=False)
         if self.cat_garm_mask:
             noisy_garm_latents = torch.cat([noisy_garm_latents, garm_mask], dim=1)
         with self.maybe_autocast(self.compute_dtype):
