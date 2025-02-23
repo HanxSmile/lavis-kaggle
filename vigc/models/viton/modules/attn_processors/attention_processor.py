@@ -54,7 +54,12 @@ class VitonAttnProcessor(nn.Module):
             self.src_mask, size=(height // resize_ratio, width // resize_ratio)
         )
         dst_mask = rearrange(dst_mask, "b c h w -> b (h w) c")
-        assert dst_mask.shape[1] == seq_len
+
+        if not self.condition_flag:
+            dst_mask = torch.cat([dst_mask] * 2, dim=1)
+
+        assert dst_mask.shape[1] == hidden_states.shape[
+            1], f"dst mask: {dst_mask.shape}\nhidden states: {hidden_states.shape}"
         return dst_mask
 
     def __call__(
@@ -87,8 +92,6 @@ class VitonAttnProcessor(nn.Module):
             hidden_states = attn.group_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
 
         mask = self.reshape_mask(hidden_states)
-        if not self.condition_flag:
-            mask = torch.cat([mask, mask], dim=1)
 
         weight_net_input = torch.cat([hidden_states, mask], dim=-1)
         weight = torch.sigmoid(self.to_w(weight_net_input))

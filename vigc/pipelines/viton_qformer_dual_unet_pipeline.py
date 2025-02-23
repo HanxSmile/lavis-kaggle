@@ -193,6 +193,30 @@ class VitonQformerDualUnetPipeline:
         )
         noise = latents.clone()
 
+        if hasattr(self.viton_model, "setup_mask"):
+            if target_type == "viton":
+                self.viton_model.setup_mask(
+                    self.viton_model.vton_adapters,
+                    torch.cat([target_inputs["mask"]] * 2) if do_classifier_free_guidance else target_inputs["mask"],
+                    condition_flag=False
+                )
+                self.viton_model.setup_mask(
+                    self.viton_model.garm_adapters,
+                    torch.cat(
+                        [condition_inputs["mask"]] * 2 if do_classifier_free_guidance else condition_inputs["mask"]),
+                    condition_flag=True)
+            else:  # garm
+                self.viton_model.setup_mask(
+                    self.viton_model.garm_adapters,
+                    torch.cat([target_inputs["mask"]] * 2) if do_classifier_free_guidance else target_inputs["mask"],
+                    condition_flag=False
+                )
+                self.viton_model.setup_mask(
+                    self.viton_model.vton_adapters,
+                    torch.cat(
+                        [condition_inputs["mask"]] * 2 if do_classifier_free_guidance else condition_inputs["mask"]),
+                    condition_flag=True)
+
         spatial_attn_outputs = self.get_spatial_attn_outputs(
             condition_inputs, target_type, agnostic_vton_latents,
             do_classifier_free_guidance, negative_prompt,
@@ -202,15 +226,6 @@ class VitonQformerDualUnetPipeline:
         if do_classifier_free_guidance:
             agnostic_vton_latents = torch.cat([agnostic_vton_latents, agnostic_vton_latents])
             garm_masks = torch.cat([garm_masks, garm_masks])
-        if hasattr(self.viton_model, "setup_mask"):
-            if target_type == "viton":
-                self.viton_model.setup_mask(self.viton_model.vton_adapters, target_inputs["mask"], condition_flag=False)
-                self.viton_model.setup_mask(self.viton_model.garm_adapters, condition_inputs["mask"],
-                                            condition_flag=True)
-            else:  # garm
-                self.viton_model.setup_mask(self.viton_model.garm_adapters, target_inputs["mask"], condition_flag=False)
-                self.viton_model.setup_mask(self.viton_model.vton_adapters, condition_inputs["mask"],
-                                            condition_flag=True)
 
         for i, t in tqdm(enumerate(timesteps), total=len(timesteps)):
             latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
