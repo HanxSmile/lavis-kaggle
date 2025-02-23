@@ -1,7 +1,9 @@
 # modified from https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention_processor.py
 import torch
 import torch.nn as nn
+import numpy as np
 from einops import rearrange
+import torch.nn.functional as F
 
 
 class VitonAttnProcessor(nn.Module):
@@ -45,11 +47,11 @@ class VitonAttnProcessor(nn.Module):
         temp_mask = rearrange(self.src_mask, "b c h w -> b (h w) c").squeeze(-1)
 
         mask_seq_len = temp_mask.shape[1]
-        resize_ratio = torch.sqrt(seq_len / mask_seq_len).item()
+        resize_ratio = int(np.sqrt(mask_seq_len / seq_len))
         _, _, height, width = self.src_mask.shape
 
         dst_mask = torch.nn.functional.interpolate(
-            self.src_mask, size=(height // resize_ratio, width // resize_ratio), mode="linear"
+            self.src_mask, size=(height // resize_ratio, width // resize_ratio)
         )
         dst_mask = rearrange(dst_mask, "b c h w -> b (h w) c")
         assert dst_mask.shape[1] == seq_len
@@ -84,7 +86,11 @@ class VitonAttnProcessor(nn.Module):
         if attn.group_norm is not None:
             hidden_states = attn.group_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
 
-        weight_net_input = torch.cat([hidden_states, self.reshape_mask(hidden_states)], dim=-1)
+        mask = self.reshape_mask(hidden_states)
+        if not self.condition_flag:
+            mask = torch.cat([mask, mask], dim=1)
+
+        weight_net_input = torch.cat([hidden_states, mask], dim=-1)
         weight = torch.sigmoid(self.to_w(weight_net_input))
 
         query1 = attn.to_q(hidden_states)

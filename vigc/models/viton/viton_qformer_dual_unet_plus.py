@@ -179,6 +179,7 @@ class VitonQformerDualUnetPlus(Blip2Base):
     def register_attn_processors(self, unet):
         attn_procs = {}
         unet_sd = unet.state_dict()
+        adapters = []
         for name in unet.attn_processors.keys():
             cross_attention_dim = None if name.endswith("attn1.processor") else unet.config.cross_attention_dim
             if name.startswith("mid_block"):
@@ -199,16 +200,18 @@ class VitonQformerDualUnetPlus(Blip2Base):
                     "to_q.weight": unet_sd[layer_name + ".to_q.weight"],
                 }
                 attn_procs[name] = VitonAttnProcessor(hidden_size=hidden_size, cross_attention_dim=cross_attention_dim)
-                attn_procs[name].load_state_dict(weights)
+                attn_procs[name].load_state_dict(weights, strict=False)
+                adapters.append(attn_procs[name])
         unet.set_attn_processor(attn_procs)
-        adapter_modules = torch.nn.ModuleList(unet.attn_processors.values())
+        adapter_modules = torch.nn.ModuleList(adapters)
         return adapter_modules
 
     @staticmethod
     def setup_mask(adapters, mask, condition_flag):
         for adapter in adapters:
-            adapter.setup_mask(mask)
-            adapter.setup_condition_flag(condition_flag)
+            if isinstance(adapter, VitonAttnProcessor):
+                adapter.setup_mask(mask)
+                adapter.setup_condition_flag(condition_flag)
 
     def q_former_embeds(self, image, text):
         with self.maybe_autocast(self.compute_dtype):
