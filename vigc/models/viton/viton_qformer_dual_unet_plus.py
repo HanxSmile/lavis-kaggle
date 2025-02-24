@@ -13,13 +13,13 @@ from vigc.pipelines import VitonQformerDualUnetPipeline
 from vigc.common.registry import registry
 from vigc.models.blip2_models.blip2 import Blip2Base
 import contextlib
-from vigc.models.viton.modules.attn_processors import VitonAttnProcessor
 from vigc.models.viton.modules.attn_processors.utils import is_torch2_available
 
 if is_torch2_available():
-    from vigc.models.viton.modules.attn_processors import AttnProcessor2_0 as AttnProcessor
+    from vigc.models.viton.modules.attn_processors import AttnProcessor2_0 as AttnProcessor, \
+        VitonAttnProcessor2_0 as VitonAttnProcessor
 else:
-    from vigc.models.viton.modules.attn_processors import AttnProcessor
+    from vigc.models.viton.modules.attn_processors import AttnProcessor, VitonAttnProcessor
 
 
 @registry.register_model("viton_qformer_dual_unet_plus")
