@@ -88,6 +88,7 @@ class Attention(HF_Attention):
         attention_probs = attention_scores.softmax(dim=-1)
         attention_probs = attention_probs.to(dtype)
         if return_attention_scores:
+            attention_scores = attention_scores.to(dtype)
             return attention_probs, attention_scores
         del attention_scores
         return attention_probs
