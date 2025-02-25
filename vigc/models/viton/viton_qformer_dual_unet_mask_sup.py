@@ -215,23 +215,19 @@ class VitonQformerMaskSupUnet(Blip2Base):
                 adapter.setup_mask(mask)
                 adapter.setup_condition_flag(condition_flag)
 
-    def extract_attn_scores(self):
-        vton_attn_scores = []
-        garm_attn_scores = []
-        for adapter in self.vton_adapters:
-            # [b, h, l, l]
+    def extract_attn_scores(self, adapters):
+
+        attn_scores = []
+        for adapter in adapters:
             for attn_score in adapter.attn_probs:
-                vton_attn_scores.append(attn_score)
-        for adapter in self.garm_adapters:
-            # [b, h, l, l]
-            for attn_score in adapter.attn_scores:
-                garm_attn_scores.append(attn_score)
-        return vton_attn_scores, garm_attn_scores
+                attn_scores.append(attn_score)
+
+        return attn_scores
 
     def calculate_attn_loss(self, vton_attn_scores, garm_attn_scores):
         total_loss = 0
         for vton_attn_score, garm_attn_score in zip(vton_attn_scores, garm_attn_scores):
-            garm_attn_score = garm_attn_score.permute(0, 1, 3, 2)
+            garm_attn_score = garm_attn_score.permute(0, 2, 1)
             this_loss = torch.nn.functional.mse_loss(garm_attn_score, vton_attn_score)
             total_loss = total_loss + this_loss
 
@@ -473,13 +469,14 @@ class VitonQformerMaskSupUnet(Blip2Base):
 
     def forward(self, samples):
         if self.target_image == "viton":
-            loss = self.forward_viton(samples)
+            loss = self.forward_vton(samples)
         elif self.target_image == "garm":
             loss = self.forward_garm(samples)
         else:
             garm_loss = self.forward_garm(samples)
+            garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
             vton_loss = self.forward_vton(samples)
-            vton_attn_scores, garm_attn_scores = self.extract_attn_scores()
+            vton_attn_scores = self.extract_attn_scores(self.vton_adapters)
             attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
             loss = garm_loss * 0.5 + vton_loss * 0.5 + attn_loss * 0.1
             return {"loss": loss, "garm_loss": garm_loss, "vton_loss": vton_loss, "attn_loss": attn_loss}

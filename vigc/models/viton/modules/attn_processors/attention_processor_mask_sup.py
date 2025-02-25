@@ -119,18 +119,16 @@ class VitonMaskSupAttnProcessor(nn.Module):
             key = attn.to_k(encoder_hidden_states)
             value = attn.to_v(encoder_hidden_states)
 
-        query = attn.head_to_batch_dim(query)  # [b, h, l, d]
+        query = attn.head_to_batch_dim(query)  # [bh, l, d]
         key = attn.head_to_batch_dim(key)
         value = attn.head_to_batch_dim(value)
 
-        # attention_scores.shape = [b, h, l, l]
-        if self.training:
+        # attention_scores.shape = [bh, l, l]
+        if self.training and (not self.condition_flag):
             attention_probs, attention_scores = attn.get_attention_scores(query, key, attention_mask,
                                                                           return_attention_scores=True)
-
-            if not self.condition_flag:
-                seq_len = sequence_length // 2
-                attention_scores = attention_scores[:, :, :seq_len, -seq_len:]
+            seq_len = sequence_length // 2
+            attention_scores = attention_scores[:, :seq_len, -seq_len:]
             self.attn_probs.append(attention_scores)
         else:
             attention_probs = attn.get_attention_scores(query, key, attention_mask, return_attention_scores=False)
