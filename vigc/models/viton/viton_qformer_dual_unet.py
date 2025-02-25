@@ -398,7 +398,7 @@ class VitonQformerDualUnet(Blip2Base):
 
     def forward(self, samples):
         if self.target_image == "viton":
-            loss = self.forward_viton(samples)
+            loss = self.forward_vton(samples)
         elif self.target_image == "garm":
             loss = self.forward_garm(samples)
         else:

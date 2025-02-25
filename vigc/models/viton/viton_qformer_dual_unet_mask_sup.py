@@ -478,7 +478,7 @@ class VitonQformerMaskSupUnet(Blip2Base):
             vton_loss = self.forward_vton(samples)
             vton_attn_scores = self.extract_attn_scores(self.vton_adapters)
             attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
-            loss = garm_loss * 0.5 + vton_loss * 0.5 + attn_loss * 0.1
+            loss = garm_loss * 0.5 + vton_loss * 0.5 + attn_loss * 1e-3
             return {"loss": loss, "garm_loss": garm_loss, "vton_loss": vton_loss, "attn_loss": attn_loss}
         return {"loss": loss}
 
