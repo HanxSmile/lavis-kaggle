@@ -16,7 +16,8 @@ import contextlib
 from vigc.models.viton.modules.attn_processors.utils import is_torch2_available
 
 if is_torch2_available():
-    from vigc.models.viton.modules.attn_processors import AttnProcessor2_0 as AttnProcessor, VitonMaskSupAttnProcessor
+    from vigc.models.viton.modules.attn_processors import AttnProcessor2_0 as AttnProcessor, \
+        VitonMaskSupAttnProcessor2_0 as VitonMaskSupAttnProcessor
 else:
     from vigc.models.viton.modules.attn_processors import AttnProcessor, VitonMaskSupAttnProcessor
 
@@ -469,18 +470,37 @@ class VitonQformerMaskSupUnet(Blip2Base):
 
     def forward(self, samples):
         if self.target_image == "viton":
-            loss = self.forward_vton(samples)
-        elif self.target_image == "garm":
-            loss = self.forward_garm(samples)
-        else:
-            garm_loss = self.forward_garm(samples)
-            garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
+            with torch.no_grad():
+                garm_loss = self.forward_garm(samples)
+                garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
             vton_loss = self.forward_vton(samples)
             vton_attn_scores = self.extract_attn_scores(self.vton_adapters)
             attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
-            loss = garm_loss * 0.5 + vton_loss * 0.5 + attn_loss * 5e-3
-            return {"loss": loss, "garm_loss": garm_loss, "vton_loss": vton_loss, "attn_loss": attn_loss}
-        return {"loss": loss}
+        elif self.target_image == "garm":
+            with torch.no_grad():
+                vton_loss = self.forward_vton(samples)
+                vton_attn_scores = self.extract_attn_scores(self.vton_adapters)
+            garm_loss = self.forward_garm(samples)
+            garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
+            attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
+        else:
+            if random.random() < 0.5:
+                with torch.no_grad():
+                    garm_loss = self.forward_garm(samples)
+                    garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
+                vton_loss = self.forward_vton(samples)
+                vton_attn_scores = self.extract_attn_scores(self.vton_adapters)
+                attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
+            else:
+                with torch.no_grad():
+                    vton_loss = self.forward_vton(samples)
+                    vton_attn_scores = self.extract_attn_scores(self.vton_adapters)
+                garm_loss = self.forward_garm(samples)
+                garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
+                attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
+
+        loss = garm_loss * 0.5 + vton_loss * 0.5 + attn_loss * 0.1
+        return {"loss": loss, "garm_loss": garm_loss, "vton_loss": vton_loss, "attn_loss": attn_loss}
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
         """
