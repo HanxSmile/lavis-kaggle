@@ -212,31 +212,6 @@ class VitonMaskSupAttnProcessor2_0(nn.Module):
             1], f"dst mask: {dst_mask.shape}\nhidden states: {hidden_states.shape}"
         return dst_mask
 
-    def get_attention_scores_(
-            self,
-            query: torch.Tensor,
-            key: torch.Tensor,
-            attention_mask: torch.Tensor = None,
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        r"""
-        Compute the attention scores.
-
-        Args:
-            query (`torch.Tensor`): The query tensor.
-            key (`torch.Tensor`): The key tensor.
-            attention_mask (`torch.Tensor`, *optional*): The attention mask to use. If `None`, no mask is applied.
-
-        Returns:
-            `torch.Tensor`: The attention probabilities/scores.
-        """
-        batch_size, num_heads, seq_len, _ = query.shape
-        value = torch.eye(seq_len).unsqueeze(0).unsqueeze(0).repeat(batch_size, num_heads, 1, 1)
-        value = value.to(query.dtype).to(query.device)
-        attention_scores = F.scaled_dot_product_attention(
-            query, key, value, attn_mask=attention_mask, dropout_p=0.0, is_causal=False
-        )
-        return attention_scores.contiguous().view(batch_size * num_heads, seq_len, seq_len)
-
     def get_attention_scores(
             self,
             query: torch.Tensor,
@@ -278,7 +253,11 @@ class VitonMaskSupAttnProcessor2_0(nn.Module):
         del baddbmm_input
 
         attention_scores = attention_scores.to(dtype)
-        return attention_scores
+        attention_scores = rearrange(attention_scores, "(b h) l d -> b h l d", b=batch_size)
+        attention_scores = torch.mean(attention_scores, dim=1)  # b, l, l
+        attention_scores1 = torch.mean(attention_scores, dim=1)[None]  # [b, l]
+        attention_scores2 = torch.mean(attention_scores, dim=2)[None]  # [b, l]
+        return torch.cat([attention_scores1, attention_scores2], dim=0)  # [2, b, l]
 
     def __call__(
             self,

@@ -228,7 +228,7 @@ class VitonQformerMaskSupUnet(Blip2Base):
     def calculate_attn_loss(self, vton_attn_scores, garm_attn_scores):
         total_loss = 0
         for vton_attn_score, garm_attn_score in zip(vton_attn_scores, garm_attn_scores):
-            garm_attn_score = garm_attn_score.permute(0, 2, 1)
+            garm_attn_score = torch.stack([garm_attn_score[1], garm_attn_score[0]])
             this_loss = torch.nn.functional.mse_loss(garm_attn_score, vton_attn_score)
             total_loss = total_loss + this_loss
 
@@ -499,7 +499,7 @@ class VitonQformerMaskSupUnet(Blip2Base):
                 garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
                 attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
 
-        loss = garm_loss * 0.5 + vton_loss * 0.5 + attn_loss * 0.1
+        loss = garm_loss + vton_loss + attn_loss * 0.1
         return {"loss": loss, "garm_loss": garm_loss, "vton_loss": vton_loss, "attn_loss": attn_loss}
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
