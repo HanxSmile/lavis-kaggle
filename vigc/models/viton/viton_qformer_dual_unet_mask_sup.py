@@ -499,7 +499,7 @@ class VitonQformerMaskSupUnet(Blip2Base):
                 garm_attn_scores = self.extract_attn_scores(self.garm_adapters)
                 attn_loss = self.calculate_attn_loss(vton_attn_scores, garm_attn_scores)
 
-        loss = garm_loss + vton_loss + attn_loss * 0.1
+        loss = garm_loss + vton_loss + attn_loss * 0.02
         return {"loss": loss, "garm_loss": garm_loss, "vton_loss": vton_loss, "attn_loss": attn_loss}
 
     def load_checkpoint_from_config(self, cfg, **kwargs):
