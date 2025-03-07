@@ -1,0 +1,72 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  arch: timm_image_regression
+  model_type: default
+
+  load_finetuned: False
+  finetuned: ""
+
+  model_name: Null
+  label_expand_ratio: 1.0
+
+datasets:
+  # train
+  image_ctr_train:
+    build_info:
+      image_size: 384
+      ann_path: /mnt/data/xuyang/datasets/cv/info.csv
+      media_path: /mnt/data/xuyang/datasets/cv
+      fold_nums: 5
+      fold_idx: 0
+      random_seed: 42
+
+  ## test
+  image_ctr_eval:
+    build_info:
+      image_size: 384
+      ann_path: /mnt/data/xuyang/datasets/cv/info.csv
+      media_path: /mnt/data/xuyang/datasets/cv
+      fold_nums: 5
+      fold_idx: 0
+      random_seed: 42
+
+run:
+  runner: runner_iter
+  task: image_ctr_task
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-3
+  min_lr: 1e-4
+  warmup_lr: 1e-4
+
+  weight_decay: 0.05
+
+  batch_size_train: 256
+  batch_size_eval: 512
+  accum_grad_iters: 1
+
+  num_workers: 4
+  warmup_steps: 625
+
+  iters_per_inner_epoch: 625
+  max_iters: 62500
+
+  seed: 42
+  output_dir: "./output/image_ctr"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+

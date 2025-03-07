@@ -90,6 +90,8 @@ from vigc.datasets.builders.text_rec.ctc_encode_builder import CTCTextRecTrainBu
 from vigc.datasets.builders.asr_data.fleurs_clip_builder import FleursClipTrainBuilder, FleursClipEvalBuilder
 from vigc.datasets.builders.viton import DressCodeTrainBuilder, DressCodeEvalBuilder
 
+from vigc.datasets.builders.image_regression import ImageCTRTrainBuilder, ImageCTREvalBuilder
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -147,6 +149,9 @@ __all__ = [
 
     "DressCodeTrainBuilder",
     "DressCodeEvalBuilder",
+
+    "ImageCTRTrainBuilder",
+    "ImageCTREvalBuilder",
 ]
 
 

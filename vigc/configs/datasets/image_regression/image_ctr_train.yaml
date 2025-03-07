@@ -1,0 +1,9 @@
+datasets:
+  image_ctr_train:
+    data_type: images
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/cv/info.csv
+      media_path: /mnt/data/xuyang/datasets/cv
+      fold_nums: 5
+      fold_idx: 0
+      random_seed: 42

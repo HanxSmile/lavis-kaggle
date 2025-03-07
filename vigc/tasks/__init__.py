@@ -33,6 +33,8 @@ from vigc.tasks.text_rec_train_eval import TextRecTask
 
 from vigc.tasks.viton_tasks import QFormerTrain
 
+from vigc.tasks.image_regressions import ImageCTRTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."

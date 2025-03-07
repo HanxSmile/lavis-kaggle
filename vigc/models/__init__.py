@@ -54,6 +54,8 @@ from vigc.models.textual_inversion import TextualInversionStableDiffusion
 from vigc.models.ootd.ootd_viton import OOTDVitonNet
 from vigc.models.viton import VitonQformer, VitonQformerDualUnet, VitonQformerDualUnetPlus, VitonQformerMaskSupUnet
 
+from vigc.models.image_regression import TimmImageRegressor
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -103,6 +105,8 @@ __all__ = [
     "VitonQformerDualUnet",
     "VitonQformerDualUnetPlus",
     "VitonQformerMaskSupUnet",
+
+    "TimmImageRegressor",
 ]
 
 

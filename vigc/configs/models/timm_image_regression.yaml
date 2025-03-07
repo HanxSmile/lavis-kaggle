@@ -1,0 +1,9 @@
+model:
+  arch: timm_image_regression
+  model_type: default
+
+  load_finetuned: False
+  finetuned: ""
+
+  model_name: Null
+  label_expand_ratio: 1.0
