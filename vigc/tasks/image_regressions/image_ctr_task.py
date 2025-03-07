@@ -37,7 +37,7 @@ class ImageCTRTask(BaseTask):
         for pred_, label_, id_ in zip(preds, labels, ids):
             this_res = {
                 "pred": float(pred_),
-                "label": int(label_),
+                "label": float(label_),
                 "id": id_,
             }
             results.append(this_res)
