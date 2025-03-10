@@ -58,7 +58,7 @@ class TimmImageRegressor(BaseModel):
     ):
         with self.maybe_autocast():
             logits = self.model(samples["image"]).squeeze(-1)
-            probs = F.softmax(logits, dim=-1) / self.label_expand_ratio
+            probs = F.sigmoid(logits) / self.label_expand_ratio
         return probs
 
     def forward(self, samples, **kwargs):
