@@ -22,6 +22,8 @@ class ImageCTRDataset(Dataset):
 
     def load_annotations(self, ann_path):
         df = pd.read_csv(ann_path)
+        if self.fold_idx == -1:
+            return df
         df['fold'] = -1
         kf = KFold(n_splits=self.fold_nums, shuffle=True, random_state=self.random_seed)
         for fold, (_, val_index) in enumerate(kf.split(df)):
