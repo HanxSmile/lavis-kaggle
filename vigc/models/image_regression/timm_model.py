@@ -17,11 +17,16 @@ class TimmImageRegressor(BaseModel):
     def __init__(
             self,
             model_name="./mobilenetv3_large_100.pth",
-            label_expand_ratio=1.0
+            label_expand_ratio=1.0,
+            criterion="cross_entropy",
     ):
         super().__init__()
         self.model = self.prepare_model(model_name)
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.criterion_type = criterion
+        if criterion == "cross_entropy":
+            self.criterion = nn.BCEWithLogitsLoss()
+        else:
+            self.criterion = nn.MSELoss()
         self.label_expand_ratio = label_expand_ratio
 
     def prepare_model(self, model_name):
@@ -58,7 +63,10 @@ class TimmImageRegressor(BaseModel):
     ):
         with self.maybe_autocast():
             logits = self.model(samples["image"]).squeeze(-1)
-            probs = F.sigmoid(logits) / self.label_expand_ratio
+            if self.criterion_type == "cross_entropy":
+                probs = F.sigmoid(logits) / self.label_expand_ratio
+            else:
+                probs = logits / self.label_expand_ratio
         return probs
 
     def forward(self, samples, **kwargs):
@@ -81,10 +89,11 @@ class TimmImageRegressor(BaseModel):
     def from_config(cls, cfg):
         model_name = cfg.get("model_name")
         label_expand_ratio = cfg.get("label_expand_ratio", 1.0)
-
+        criterion = cfg.get("criterion", "cross_entropy")
         model = cls(
             model_name=model_name,
-            label_expand_ratio=label_expand_ratio
+            label_expand_ratio=label_expand_ratio,
+            criterion=criterion,
         )
         model.load_checkpoint_from_config(cfg)
         return model
