@@ -56,6 +56,8 @@ from vigc.models.viton import VitonQformer, VitonQformerDualUnet, VitonQformerDu
 
 from vigc.models.image_regression import TimmImageRegressor
 
+from vigc.models.qwen_vllm import Qwen2_5VLInstruct
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -107,6 +109,7 @@ __all__ = [
     "VitonQformerMaskSupUnet",
 
     "TimmImageRegressor",
+    "Qwen2_5VLInstruct",
 ]
 
 
