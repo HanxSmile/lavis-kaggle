@@ -17,7 +17,7 @@ class Im2MkdownTrainBuilder(BaseDatasetBuilder):
         self.build_processors()
 
         build_info = self.config.build_info
-        anno_path = build_info.ann_path,
+        anno_path = build_info.ann_path
         meidia_dir = build_info.media_dir
         datasets = dict()
 
@@ -46,7 +46,7 @@ class Im2MkdownEvalBuilder(BaseDatasetBuilder):
         self.build_processors()
 
         build_info = self.config.build_info
-        anno_path = build_info.ann_path,
+        anno_path = build_info.ann_path
         meidia_dir = build_info.media_dir
         datasets = dict()
 

@@ -9,7 +9,7 @@ from PIL import Image, ImageOps
 from torchvision.transforms.functional import resize
 import random
 from vigc.processors.nougat_ocr_utils.nougat import Bitmap, Dilation, Erosion
-from vigc.processors.nougat_ocr_utils.weather import Fog, Frost, Snow, Rain, Shadow
+# from vigc.processors.nougat_ocr_utils.weather import Fog, Frost, Snow, Rain, Shadow
 
 
 class NougatImageBaseProcessor(BaseProcessor):
@@ -82,7 +82,7 @@ class NougatImageTrainProcessor(NougatImageBaseProcessor):
                 alb.Compose(
                     [
                         Bitmap(p=0.05),
-                        alb.OneOf([Fog(), Frost(), Snow(), Rain(), Shadow()], p=0.2),
+                        # alb.OneOf([Fog(), Frost(), Snow(), Rain(), Shadow()], p=0.2),
                         alb.OneOf([Erosion((2, 3)), Dilation((2, 3))], p=0.2),
                         alb.ShiftScaleRotate(shift_limit=0, scale_limit=(-.15, 0), rotate_limit=1, border_mode=0,
                                              interpolation=3,

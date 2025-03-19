@@ -2,6 +2,8 @@ model:
   model_name: /mnt/data/wangyesong01/models/texify
   load_finetuned: False
   finetuned: ""
+  load_pretrained: False
+  pretrained: ""
   arch: donut_ocr
   model_type: default
-  max_seq_len: 4096
+  max_seq_len: 1500

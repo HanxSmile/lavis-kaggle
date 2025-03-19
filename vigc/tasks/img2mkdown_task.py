@@ -6,8 +6,8 @@ from vigc.common.dist_utils import main_process
 import os.path as osp
 import json
 import numpy as np
-from torchtext.data import metrics
-from Levenshtein import distance
+from sacrebleu import corpus_bleu, sentence_bleu
+# from Levenshtein import distance
 
 
 @registry.register_task("img2mkdown_train")
@@ -122,17 +122,17 @@ class Img2MarkdownTask(BaseTask):
             pred_token, pred_str, truth_token, truth_str, tok_acc = result["pred_token"], result["pred_str"], result[
                 "truth_token"], result["truth_str"], result["token_acc"]
 
-            if len(truth_str) > 0:
-                edit_dists.append(distance(pred_str, truth_str) / len(truth_str))
+            # if len(truth_str) > 0:
+            #     edit_dists.append(distance(pred_str, truth_str) / len(truth_str))
 
-            all_pred_tokens.append(pred_token)
-            all_truth_tokens.append([truth_token])
+            all_pred_tokens.append(pred_str)
+            all_truth_tokens.append(truth_str)
             token_accs.append(tok_acc)
 
-        bleu_score = metrics.bleu_score(all_pred_tokens, all_truth_tokens)
-        edit_distance = np.mean(edit_dists)
+        bleu_score = corpus_bleu(all_pred_tokens, [all_truth_tokens]).score
+        # edit_distance = np.mean(edit_dists)
         token_accuracy = np.mean(token_accs)
-        eval_ret = {"bleu": bleu_score, "edit_distance": edit_distance, "token_accuracy": token_accuracy}
+        eval_ret = {"bleu": bleu_score, "token_accuracy": token_accuracy}
 
         log_stats = {split_name: {k: v for k, v in eval_ret.items()}}
 
@@ -143,9 +143,9 @@ class Img2MarkdownTask(BaseTask):
 
         coco_res = {k: v for k, v in eval_ret.items()}
         # agg_metrics = sum([v for v in eval_ret.values()])
-        if "edit" in self.agg_metric.lower():  # edit_distance
-            agg_metrics = (1 - edit_distance) * 100
-        elif "bleu" in self.agg_metric.lower():  # bleu_score
+        # if "edit" in self.agg_metric.lower():  # edit_distance
+        #     agg_metrics = (1 - edit_distance) * 100
+        if "bleu" in self.agg_metric.lower():  # bleu_score
             agg_metrics = bleu_score * 100
         elif "token" in self.agg_metric.lower():  # token_accuracy
             agg_metrics = token_accuracy * 100
