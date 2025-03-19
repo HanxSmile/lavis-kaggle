@@ -1,0 +1,6 @@
+datasets:
+  img2markdown_train:
+    data_type: images
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DotA_dataset/train.json
+      media_dir: /mnt/data/xuyang/datasets/DotA_dataset

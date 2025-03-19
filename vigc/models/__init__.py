@@ -58,6 +58,8 @@ from vigc.models.image_regression import TimmImageRegressor
 
 from vigc.models.qwen_vllm import Qwen2_5VLInstruct
 
+from vigc.models.donut import DonutOCRModel
+
 __all__ = [
     "load_model",
     "BaseModel",
@@ -110,6 +112,7 @@ __all__ = [
 
     "TimmImageRegressor",
     "Qwen2_5VLInstruct",
+    "DonutOCRModel",
 ]
 
 

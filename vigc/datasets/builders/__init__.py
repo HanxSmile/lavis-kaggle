@@ -92,6 +92,8 @@ from vigc.datasets.builders.viton import DressCodeTrainBuilder, DressCodeEvalBui
 
 from vigc.datasets.builders.image_regression import ImageCTRTrainBuilder, ImageCTREvalBuilder
 
+from vigc.datasets.builders.img2markdown import Im2MkdownTrainBuilder, Im2MkdownEvalBuilder
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -152,6 +154,9 @@ __all__ = [
 
     "ImageCTRTrainBuilder",
     "ImageCTREvalBuilder",
+
+    "Im2MkdownTrainBuilder",
+    "Im2MkdownEvalBuilder",
 ]
 
 

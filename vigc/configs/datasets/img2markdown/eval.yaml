@@ -1,0 +1,6 @@
+datasets:
+  img2markdown_eval:
+    data_type: images
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DotA_dataset/valid.json
+      media_dir: /mnt/data/xuyang/datasets/DotA_dataset

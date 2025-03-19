@@ -35,6 +35,8 @@ from vigc.tasks.viton_tasks import QFormerTrain
 
 from vigc.tasks.image_regressions import ImageCTRTask
 
+from vigc.tasks.img2mkdown_task import Img2MarkdownTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
