@@ -1,7 +1,7 @@
 model:
-  model_name: vikp/texify
+  model_name: /mnt/data/wangyesong01/models/texify
   load_finetuned: False
   finetuned: ""
   arch: donut_ocr
   model_type: default
-  max_seq_len: 384
+  max_seq_len: 4096

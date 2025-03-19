@@ -1,0 +1,72 @@
+model:
+  model_name: /mnt/data/wangyesong01/models/texify
+  arch: donut_ocr
+  model_type: default
+  max_seq_len: 4096
+
+datasets:
+
+  img2markdown_train:
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DotA_dataset/train.json
+      media_dir: /mnt/data/xuyang/datasets/DotA_dataset
+    vis_processor:
+      train:
+        name: "nougat_image_train"
+        image_size:
+          - 896
+          - 672
+
+  img2markdown_eval:
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DotA_dataset/valid.json
+      media_dir: /mnt/data/xuyang/datasets/DotA_dataset
+
+    vis_processor:
+      eval:
+        name: "nougat_image_eval"
+        image_size:
+          - 896
+          - 672
+
+run:
+  runner: runner_iter
+  task: img2mkdown_train
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 5e-5
+  min_lr: 7.5e-6
+  warmup_lr: 7.5e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 64
+  batch_size_eval: 64
+  accum_grad_iters: 1
+
+  num_workers: 4
+  warmup_steps: 250
+
+  iters_per_inner_epoch: 2000
+  max_iters: 300000
+
+  seed: 42
+  output_dir: "/mnt/data/wangyesong/output/img2markdown"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+  distributed_type: ddp
+
+  generate_cfg:
+    temperature: 0.0
+    do_sample: False
+    top_p: 0.95
