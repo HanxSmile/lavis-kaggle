@@ -1,21 +1,21 @@
 from vigc.common.registry import registry
 from omegaconf import OmegaConf
 import albumentations as alb
-from albumentations.pytorch import ToTensorV2
 from vigc.processors.base_processor import BaseProcessor
 import numpy as np
 import cv2
 from PIL import Image, ImageOps
 from torchvision.transforms.functional import resize
-import random
 from vigc.processors.nougat_ocr_utils.nougat import Bitmap, Dilation, Erosion
+
+
 # from vigc.processors.nougat_ocr_utils.weather import Fog, Frost, Snow, Rain, Shadow
 
 
-class NougatImageBaseProcessor(BaseProcessor):
+class QwenOCRImageBaseProcessor(BaseProcessor):
 
     def __init__(self, image_size):
-        super(NougatImageBaseProcessor, self).__init__()
+        super(QwenOCRImageBaseProcessor, self).__init__()
         self.input_size = [int(_) for _ in image_size]
         assert len(self.input_size) == 2
 
@@ -72,8 +72,8 @@ class NougatImageBaseProcessor(BaseProcessor):
         return ImageOps.expand(img, padding)
 
 
-@registry.register_processor("nougat_image_train")
-class NougatImageTrainProcessor(NougatImageBaseProcessor):
+@registry.register_processor("qwen_ocr_image_train")
+class QwenOCRImageTrainProcessor(QwenOCRImageBaseProcessor):
     def __init__(self, image_size=384):
         super().__init__(image_size)
 
@@ -97,9 +97,9 @@ class NougatImageTrainProcessor(NougatImageBaseProcessor):
                 alb.RandomBrightnessContrast(.05, (-.2, 0), True, p=0.2),
                 alb.ImageCompression(95, p=.3),
                 alb.ToGray(always_apply=True),
-                alb.Normalize((0.7931, 0.7931, 0.7931), (0.1738, 0.1738, 0.1738)),
-                # alb.Sharpen()
-                ToTensorV2(),
+                # alb.Normalize((0.7931, 0.7931, 0.7931), (0.1738, 0.1738, 0.1738)),
+                # # alb.Sharpen()
+                # ToTensorV2(),
             ]
         )
 
@@ -107,7 +107,8 @@ class NougatImageTrainProcessor(NougatImageBaseProcessor):
         img = self.prepare_input(item, random_padding=True)
         if img is None:
             return img
-        return self.transform(image=np.array(img))['image'][:1]
+        image = self.transform(image=np.array(img))['image']
+        return Image.fromarray(image).convert("RGB")
 
     @classmethod
     def from_config(cls, cfg=None):
@@ -121,45 +122,24 @@ class NougatImageTrainProcessor(NougatImageBaseProcessor):
         )
 
 
-@registry.register_processor("nougat_image_multi_scale_train")
-class NougatImageMultiScaleTrainProcessor(NougatImageTrainProcessor):
-    def __init__(self, all_scales):
-        for i, scales in enumerate(all_scales):
-            all_scales[i] = [int(_) for _ in scales]
-        super().__init__(all_scales[0])
-        self.all_scales = all_scales
-
-    @classmethod
-    def from_config(cls, cfg=None):
-        if cfg is None:
-            cfg = OmegaConf.create()
-
-        all_scales = cfg.get("all_scales", [[384, 384]])
-        return cls(
-            all_scales=all_scales
-        )
-
-    def reset_scale(self):
-        self.input_size = random.choice(self.all_scales)
-
-
-@registry.register_processor("nougat_image_eval")
-class NougatImageEvalProcessor(NougatImageBaseProcessor):
+@registry.register_processor("qwen_ocr_image_eval")
+class QwenOCRImageEvalProcessor(QwenOCRImageBaseProcessor):
     def __init__(self, image_size):
         super().__init__(image_size)
 
         self.transform = alb.Compose(
             [
                 alb.ToGray(always_apply=True),
-                alb.Normalize((0.7931, 0.7931, 0.7931), (0.1738, 0.1738, 0.1738)),
-                # alb.Sharpen()
-                ToTensorV2(),
+                # alb.Normalize((0.7931, 0.7931, 0.7931), (0.1738, 0.1738, 0.1738)),
+                # # alb.Sharpen()
+                # ToTensorV2(),
             ]
         )
 
     def __call__(self, item):
         image = self.prepare_input(item)
-        return self.transform(image=np.array(image))['image'][:1]
+        image = self.transform(image=np.array(image))['image']
+        return Image.fromarray(image).convert("RGB")
 
     @classmethod
     def from_config(cls, cfg=None):

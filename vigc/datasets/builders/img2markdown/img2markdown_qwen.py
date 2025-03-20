@@ -1,16 +1,16 @@
 import logging
 from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
-from vigc.datasets.datasets.img2markdown import Im2MkdownDataset
+from vigc.datasets.datasets.img2markdown import QwenIm2MkdownDataset
 
 
-@registry.register_builder("img2markdown_train")
-class Im2MkdownTrainBuilder(BaseDatasetBuilder):
-    train_dataset_cls = Im2MkdownDataset
+@registry.register_builder("qwen_img2markdown_train")
+class QwenIm2MkdownTrainBuilder(BaseDatasetBuilder):
+    train_dataset_cls = QwenIm2MkdownDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/img2markdown/train.yaml"
+        "default": "configs/datasets/img2markdown/qwen_train.yaml"
     }
-    LOG_INFO = "Image 2 Markdown Recognition Train"
+    LOG_INFO = "Image 2 Markdown Recognition Train For Qwen"
 
     def build_datasets(self):
         logging.info(f"Building {self.LOG_INFO} datasets ...")
@@ -33,13 +33,13 @@ class Im2MkdownTrainBuilder(BaseDatasetBuilder):
         return datasets
 
 
-@registry.register_builder("img2markdown_eval")
-class Im2MkdownEvalBuilder(BaseDatasetBuilder):
-    eval_dataset_cls = Im2MkdownDataset
+@registry.register_builder("qwen_img2markdown_eval")
+class QwenIm2MkdownEvalBuilder(BaseDatasetBuilder):
+    eval_dataset_cls = QwenIm2MkdownDataset
     DATASET_CONFIG_DICT = {
-        "default": "configs/datasets/img2markdown/eval.yaml"
+        "default": "configs/datasets/img2markdown/qwen_eval.yaml"
     }
-    LOG_INFO = "Image 2 Markdown Recognition Eval"
+    LOG_INFO = "Image 2 Markdown Recognition Eval For Qwen"
 
     def build_datasets(self):
         logging.info(f"Building {self.LOG_INFO} datasets ...")

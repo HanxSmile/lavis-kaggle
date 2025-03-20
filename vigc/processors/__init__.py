@@ -33,7 +33,8 @@ from vigc.processors.text_rec_processors import (
     TextRecEvalProcessor
 )
 
-from vigc.processors.nougat_processor import NougatImageTrainProcessor, NougatImageEvalProcessor
+from vigc.processors.nougat_ocr_processor import NougatImageTrainProcessor, NougatImageEvalProcessor
+from vigc.processors.qwen_ocr_processor import QwenOCRImageTrainProcessor, QwenOCRImageEvalProcessor
 
 from vigc.common.registry import registry
 
@@ -59,6 +60,8 @@ __all__ = [
     # Nougat
     "NougatImageTrainProcessor",
     "NougatImageEvalProcessor",
+    "QwenOCRImageTrainProcessor",
+    "QwenOCRImageEvalProcessor",
 ]
 
 

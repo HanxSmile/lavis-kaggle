@@ -17,7 +17,7 @@ class Qwen2_5VLInstruct(Blip2Base):
     """
 
     PRETRAINED_MODEL_CONFIG_DICT = {
-        "default": "configs/models/qwen_vl/qwen2_5_vl_instruct.yaml",
+        "default": "configs/models/vllm/qwen2_5_vl_instruct.yaml",
     }
 
     def __init__(
