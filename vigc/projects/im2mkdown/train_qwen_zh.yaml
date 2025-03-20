@@ -1,0 +1,82 @@
+model:
+  model_name: /mnt/data/wangyesong01/models/Qwen2.5-VL-3B-Instruct
+  arch: qwen2_5_vl_instruct
+  model_type: default
+
+  use_grad_checkpoint: False
+  compute_type: bf16
+  max_txt_len: 64
+  max_output_txt_len: 1500
+  q_lora_flag: True
+  load_in_8bit: False
+
+datasets:
+  qwen_img2markdown_train:
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DotA_dataset/train_zh.json
+      media_dir: /mnt/data/xuyang/datasets/DotA_dataset
+    vis_processor:
+      train:
+        name: "qwen_ocr_image_train"
+        image_size:
+          - 896
+          - 672
+
+  qwen_img2markdown_eval:
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DotA_dataset/valid_zh.json
+      media_dir: /mnt/data/xuyang/datasets/DotA_dataset
+
+    vis_processor:
+      eval:
+        name: "qwen_ocr_image_eval"
+        image_size:
+          - 896
+          - 672
+
+run:
+  runner: runner_iter
+  task: zh_img2mkdown_train
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 2e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 1
+  batch_size_eval: 1
+  accum_grad_iters: 4
+
+  num_workers: 4
+  warmup_steps: 256
+
+  iters_per_inner_epoch: 256
+  max_iters: 300000
+
+  seed: 42
+  output_dir: "/mnt/data/wangyesong/output/zh_img2markdown_qwen"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+  distributed_type: ddp
+
+  generate_cfg:
+    do_sample: True
+    num_beams: 5
+    max_new_tokens: 1500
+    top_k: 20
+    top_p: 0.8
+    repetition_penalty: 1.05
+    temperature: 0.7

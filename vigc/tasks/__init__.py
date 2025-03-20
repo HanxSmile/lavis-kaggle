@@ -37,6 +37,9 @@ from vigc.tasks.image_regressions import ImageCTRTask
 
 from vigc.tasks.img2mkdown_task import Img2MarkdownTask
 
+from vigc.tasks.dimtda_task import ZhImg2MarkdownTask
+from vigc.tasks.ds_dimtda_task import DeepSpeedZhImg2MarkdownTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."

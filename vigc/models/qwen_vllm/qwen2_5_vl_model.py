@@ -3,6 +3,24 @@ from transformers import Qwen2Tokenizer
 from vigc.models.qwen_vllm.qwen2_5_vl import Qwen2_5_VLProcessor, Qwen2_5_VLForConditionalGeneration
 from vigc.common.registry import registry
 from vigc.models.blip2_models.blip2 import Blip2Base
+from peft import LoraConfig, get_peft_model
+from transformers import BitsAndBytesConfig
+
+
+def find_all_linear_names(model):
+    cls = torch.nn.Linear
+    lora_module_names = set()
+    multimodal_keywords = ['mm_projector', 'vision_tower', 'vision_resampler', 'visual']
+    for name, module in model.named_modules():
+        if any(mm_keyword in name for mm_keyword in multimodal_keywords):
+            continue
+        if isinstance(module, cls):
+            names = name.split('.')
+            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+
+    if 'lm_head' in lora_module_names:  # needed for 16-bit
+        lora_module_names.remove('lm_head')
+    return list(lora_module_names)
 
 
 @registry.register_model("qwen2_5_vl_instruct")
@@ -27,13 +45,56 @@ class Qwen2_5VLInstruct(Blip2Base):
             compute_type="bf16",
             max_txt_len=128,
             max_output_txt_len=256,
+            q_lora_flag=False,
+            load_in_8bit=True,
+            lora_flag=False,
     ):
+        if q_lora_flag:
+            lora_flag = True
         super().__init__()
         assert compute_type in ["bf16", "f16"]
         self.compute_type = torch.float16 if compute_type == "f16" else torch.bfloat16
         self.processor = Qwen2_5_VLProcessor.from_pretrained(model_name)
         self.tokenizer = Qwen2Tokenizer.from_pretrained(model_name, use_fast=False, truncation_side="left")
-        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_name, torch_dtype=self.compute_type)
+
+        if q_lora_flag:
+            load_in_nbit_cfg = {"load_in_8bit": True} if load_in_8bit else {"load_in_4bit": True}
+            bnb_model_from_pretrained_args = dict()
+            bnb_model_from_pretrained_args.update(dict(
+                # device_map="auto",
+                quantization_config=BitsAndBytesConfig(
+                    llm_int4_skip_modules=["llm_head"],
+                    llm_int8_threshold=6.0,
+                    llm_int8_has_fp16_weight=False,
+                    llm_int8_skip_modules=["lm_head"],
+                    bnb_4bit_compute_dtype=self.compute_type,
+                    bnb_4bit_use_double_quant=False,
+                    bnb_4bit_quant_type="nf4",  # {'fp4', 'nf4'}
+                    **load_in_nbit_cfg
+                )
+            ))
+            model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                model_name,
+                **bnb_model_from_pretrained_args)
+        else:
+            model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_name, torch_dtype=self.compute_type)
+        if lora_flag or q_lora_flag:
+            for name, param in model.named_parameters():
+                param.requires_grad = False
+        if lora_flag:
+            peft_config = LoraConfig(
+                lora_alpha=16,
+                lora_dropout=0.05,
+                r=8,
+                bias="none",
+                target_modules=find_all_linear_names(model),
+                task_type="CAUSAL_LM",
+            )
+            self.model = get_peft_model(model, peft_config)
+            self.model.print_trainable_parameters()
+        else:
+            self.model = model
+
         if use_grad_checkpoint:
             self.model.gradient_checkpointing_enable()
         self.max_txt_len = max_txt_len
@@ -101,7 +162,7 @@ class Qwen2_5VLInstruct(Blip2Base):
             images=image_inputs,
             padding="longest",
             truncation=True,
-            max_length=self.max_txt_len,
+            # max_length=self.max_txt_len,
             # padding_side="right",
             # truncation_side="left",
             return_tensors="pt",
@@ -195,7 +256,7 @@ class Qwen2_5VLInstruct(Blip2Base):
             images=image_inputs,
             padding="longest",
             truncation=True,
-            max_length=self.max_txt_len,
+            # max_length=self.max_txt_len,
             # padding_side="right",
             # truncation_side="left",
             return_tensors="pt",
@@ -230,6 +291,9 @@ class Qwen2_5VLInstruct(Blip2Base):
         compute_type = cfg.get("compute_type", "bf16")
         max_txt_len = cfg.get("max_txt_len", 128)
         max_output_txt_len = cfg.get("max_output_txt_len", 256)
+        q_lora_flag = cfg.get("q_lora_flag", False)
+        load_in_8bit = cfg.get("load_in_8bit", True)
+        lora_flag = cfg.get("lora_flag", False)
 
         model = cls(
             model_name=model_name,
@@ -237,6 +301,9 @@ class Qwen2_5VLInstruct(Blip2Base):
             compute_type=compute_type,
             max_txt_len=max_txt_len,
             max_output_txt_len=max_output_txt_len,
+            q_lora_flag=q_lora_flag,
+            lora_flag=lora_flag,
+            load_in_8bit=load_in_8bit,
         )
 
         model.load_checkpoint_from_config(cfg)
