@@ -30,7 +30,7 @@ class FleursTrain(torch_Dataset):
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        sentence = normalize(ann["transcription"], self.language) if self.pre_normalize else ann["transcription"]
+        sentence = normalize(ann["raw_transcription"], self.language) if self.pre_normalize else ann["raw_transcription"]
         return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):
@@ -105,7 +105,7 @@ class FleursTest(torch_Dataset):
 
     def _parse_ann_info(self, index):
         ann = self.inner_dataset[index]
-        sentence = normalize(ann["transcription"], self.language) if self.pre_normalize else ann["transcription"]
+        sentence = normalize(ann["raw_transcription"], self.language) if self.pre_normalize else ann["raw_transcription"]
         return ann["audio"], sentence, str(index)
 
     def is_valid(self, input_values):

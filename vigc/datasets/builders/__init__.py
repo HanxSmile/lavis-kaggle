@@ -67,7 +67,9 @@ from vigc.datasets.builders.tts_data.vits import (
 from vigc.datasets.builders.sft import (
     AyaSFTTrainBuilder,
     AyaSFTEvalBuilder,
-    TagengoGPT4TrainBuilder
+    TagengoGPT4TrainBuilder,
+    TranslationJsonTrainBuilder,
+    TranslationJsonEvalBuilder,
 )
 
 from vigc.datasets.builders.semantic_segmentation import (
@@ -130,6 +132,8 @@ __all__ = [
     "AyaSFTTrainBuilder",
     "AyaSFTEvalBuilder",
     "TagengoGPT4TrainBuilder",
+    "TranslationJsonTrainBuilder",
+    "TranslationJsonEvalBuilder",
 
     "BDD100kTrainBuilder",
     "BDD100kEvalBuilder",

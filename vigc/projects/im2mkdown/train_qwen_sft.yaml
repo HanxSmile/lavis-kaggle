@@ -1,0 +1,112 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  model_name: /mnt/data/wangyesong01/models/Qwen2.5-3B-Instruct
+  arch: qwen2_instruct
+
+  model_type: default
+
+  use_grad_checkpoint: False
+  compute_type: bf16
+  max_txt_len: 512
+  max_output_txt_len: 512
+
+
+datasets:
+
+  translation_json_train:
+    data_root: /mnt/data/xuyang/datasets/DotA_dataset/translation_train.json
+    source_lang: en
+    target_lang: zh
+
+  translation_json_eval:
+    data_root: /mnt/data/xuyang/datasets/DotA_dataset/translation_eval.json
+    source_lang: en
+    target_lang: zh
+
+run:
+  runner: runner_iter_ds
+  task: qwen_caption
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 2e-5
+  min_lr: 1e-5
+  warmup_lr: 1e-6
+
+  weight_decay: 0.05
+
+  batch_size_train: 8
+  batch_size_eval: 16
+
+  num_workers: 4
+  warmup_steps: 2000
+
+  iters_per_inner_epoch: 1000
+  max_iters: 60000
+
+  seed: 42
+  output_dir: "/mnt/data/wangyesong/output/zh_img2markdown_qwen"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
+  only_save_best: True
+
+  generate_cfg:
+    do_sample: True
+    num_beams: 5
+    max_new_tokens: 512
+    top_k: 20
+    top_p: 0.8
+    repetition_penalty: 1.05
+    temperature: 0.7
+
+  deepspeed_config:
+    gradient_accumulation_steps: 8
+    train_micro_batch_size_per_gpu: 2
+
+    gradient_clipping: 1.
+    steps_per_print: 128
+    wall_clock_breakdown: False
+    dump_state: False
+
+    fp16:
+      enabled: False
+      loss_scale: 0
+      loss_scale_window: 1000
+      initial_scale_power: 16
+      hysteresis: 2
+      min_loss_scale: 1
+
+    bf16:
+      enabled: True
+
+    optimizer:
+      type: "AdamW"
+      params:
+        lr: 1e-4
+        betas: [ 0.9,0.99 ]
+        eps: 1e-7
+        weight_decay: 0.05
+
+    zero_optimization:
+      stage: 2
+      offload_optimizer:
+        device: "cpu"
+        pin_memory: True
+      overlap_comm: True
+      contiguous_gradients: True
+      sub_group_size: 1e9

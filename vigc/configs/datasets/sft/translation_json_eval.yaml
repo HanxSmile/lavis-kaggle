@@ -1,0 +1,6 @@
+datasets:
+  translation_json_eval:
+    data_type: text
+    data_root: Null
+    source_lang: en
+    target_lang: zh
