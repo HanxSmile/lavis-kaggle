@@ -29,7 +29,7 @@ datasets:
 
 run:
   runner: runner_iter_ds
-  task: qwen_caption
+  task: qwen_translation
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
   init_lr: 2e-5

@@ -31,7 +31,7 @@ class TranslationJsonDataset(torch_Dataset):
     def __getitem__(self, index):
         item = self.inner_dataset[index]
         text_input, text_output = item["text_input"].strip(), item["text_output"].strip()
-        system_input = f"You are a helpful assistant. Please translate this Markdown format English document image into Chinese."
+        system_input = f"You are a helpful assistant. Please translate this Markdown format English document paragraph into Chinese."
         sample = {
             "system_input": system_input,
             "text_input": text_input,

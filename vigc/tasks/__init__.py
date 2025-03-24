@@ -39,6 +39,7 @@ from vigc.tasks.img2mkdown_task import Img2MarkdownTask
 
 from vigc.tasks.dimtda_task import ZhImg2MarkdownTask
 from vigc.tasks.ds_dimtda_task import DeepSpeedZhImg2MarkdownTask
+from vigc.tasks.qwen_translation_task import QwenTranslationTask
 
 
 def setup_task(cfg):
