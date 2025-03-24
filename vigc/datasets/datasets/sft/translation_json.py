@@ -22,6 +22,8 @@ class TranslationJsonDataset(torch_Dataset):
                 "text_input": item[self.source_lang],
                 "text_output": item[self.target_lang],
             }
+            if "id" in item:
+                this_item["id"] = item["id"]
             results.append(this_item)
         return results
 
@@ -37,7 +39,7 @@ class TranslationJsonDataset(torch_Dataset):
             "text_input": text_input,
             "text_output": text_output,
             "language": None,
-            "id": str(index)
+            "id": item["id"] if "id" in item else str(index)
         }
         return sample
 
