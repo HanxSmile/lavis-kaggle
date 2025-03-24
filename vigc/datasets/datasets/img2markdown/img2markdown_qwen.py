@@ -9,7 +9,7 @@ class QwenIm2MkdownDataset(Im2MkdownDataset):
     def __getitem__(self, index):
         ann = self.inner_dataset[index]
         image = Image.open(ann['image']).convert('RGB')
-        with open(ann['text'], 'r') as f:
+        with open(ann['text'], 'r', encoding="utf-8") as f:
             text = f.read().strip()
         try:
             image = self.vis_processor(image)

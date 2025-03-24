@@ -207,8 +207,8 @@ class ZhImg2MarkdownTask(BaseTask):
 
         steds_lst = [STEDS(pred_tree, ref_tree) for pred_tree, ref_tree in zip(pred_tree_lst, truth_tree_lst)]
 
-        bleu_score = corpus_bleu(pred_clean_str_lst, [truth_clean_str_lst]).score * 100
-        bleu_pt_score = corpus_bleu(pred_clean_table_math_str_lst, [truth_clean_table_math_str_lst]).score * 100
+        bleu_score = corpus_bleu(pred_clean_str_lst, [truth_clean_str_lst]).score
+        bleu_pt_score = corpus_bleu(pred_clean_table_math_str_lst, [truth_clean_table_math_str_lst]).score
         steds_score = sum(steds_lst) / len(steds_lst) * 100
 
         eval_ret = {"bleu": bleu_score, "bleu_pt": bleu_pt_score, "steds": steds_score}
