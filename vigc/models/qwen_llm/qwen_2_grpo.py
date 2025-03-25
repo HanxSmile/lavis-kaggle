@@ -139,9 +139,10 @@ class Qwen2Instruct(Blip2Base):
         all_rewards = list()
         for sample, response_lst in zip(samples, responses):
             model_input = sample["text_input"]
+            model_gt = sample["text_output"]
             this_reward_lst = [0 for _ in response_lst]
             for reward_func in reward_funcs:
-                reward_lst = [reward_func(model_input, _) for _ in response_lst]
+                reward_lst = [reward_func(model_input, model_gt, _) for _ in response_lst]
                 this_reward_lst = [a + b for a, b in zip(this_reward_lst, reward_lst)]
             all_rewards.append(this_reward_lst)
         all_rewards = torch.FloatTensor(all_rewards).to(self.device)  # [B, G]
