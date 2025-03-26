@@ -36,7 +36,7 @@ from vigc.models.machine_translator.opus_translator import OpusTranslator
 from vigc.models.gpt_sovits.vits_model import VQVits
 from vigc.models.vits.vits import Vits
 
-from vigc.models.qwen_llm import Qwen2Instruct
+from vigc.models.qwen_llm import Qwen2Instruct, Qwen2GRPO
 from vigc.models.llama_llm import Llama3Instruct
 
 from vigc.models.bge import BgeEmbeddingModel, MistralEmbeddingModel, LLMRerankerModel, BgeEmbeddingClsModel
@@ -87,6 +87,7 @@ __all__ = [
 
     "Qwen2Instruct",
     "Llama3Instruct",
+    "Qwen2GRPO",
 
     "BgeEmbeddingModel",
     "MistralEmbeddingModel",

@@ -1,0 +1,27 @@
+model:
+  model_name: Qwen/Qwen2.5-3B-Instruct
+  load_finetuned: False
+  finetuned: ""
+  load_pretrained: False
+  pretrained: ""
+  arch: qwen2_grpo
+
+  model_type: default
+
+  use_grad_checkpoint: False
+  compute_type: bf16
+  max_txt_len: 128
+  max_output_txt_len: 256
+
+  epsilon: 0.2
+  beta: 0.04
+  num_generations: 16
+
+  generate_cfg:
+    # do_sample: True
+    # num_beams: 5
+    max_new_tokens: 512
+    top_k: 20
+    top_p: 0.8
+    repetition_penalty: 1.05
+    temperature: 0.7

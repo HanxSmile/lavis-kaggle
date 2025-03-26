@@ -11,6 +11,7 @@ class Registry:
     mapping = {
         "builder_name_mapping": {},
         "task_name_mapping": {},
+        "reward_function_name_mapping": {},
         "processor_name_mapping": {},
         "model_name_mapping": {},
         "lr_scheduler_name_mapping": {},
@@ -48,6 +49,31 @@ class Registry:
                 )
             cls.mapping["builder_name_mapping"][name] = builder_cls
             return builder_cls
+
+        return wrap
+
+    @classmethod
+    def register_reward_func(cls, name):
+        r"""Register a reward function to registry with key 'name'
+
+        Args:
+            name: Key with which the reward function will be registered.
+
+        Usage:
+
+            from lavis.common.registry import registry
+        """
+
+        def wrap(reward_func):
+            assert callable(reward_func), "All reward functions must be callable"
+            if name in cls.mapping["reward_function_name_mapping"]:
+                raise KeyError(
+                    "Name '{}' already registered for {}.".format(
+                        name, cls.mapping["reward_function_name_mapping"][name]
+                    )
+                )
+            cls.mapping["reward_function_name_mapping"][name] = reward_func
+            return reward_func
 
         return wrap
 
@@ -239,6 +265,10 @@ class Registry:
         return cls.mapping["model_name_mapping"].get(name, None)
 
     @classmethod
+    def get_reward_function(cls, name):
+        return cls.mapping["reward_function_name_mapping"].get(name, None)
+
+    @classmethod
     def get_task_class(cls, name):
         return cls.mapping["task_name_mapping"].get(name, None)
 
@@ -303,9 +333,9 @@ class Registry:
                 break
 
         if (
-            "writer" in cls.mapping["state"]
-            and value == default
-            and no_warning is False
+                "writer" in cls.mapping["state"]
+                and value == default
+                and no_warning is False
         ):
             cls.mapping["state"]["writer"].warning(
                 "Key {} is not present in registry, returning default value "

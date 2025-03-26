@@ -16,6 +16,7 @@ from vigc.datasets.builders import *
 from vigc.models import *
 from vigc.processors import *
 from vigc.tasks import *
+from vigc.reward_functions import *
 
 
 root_dir = os.path.dirname(os.path.abspath(__file__))

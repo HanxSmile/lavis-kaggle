@@ -30,6 +30,7 @@ from vigc.models import *
 from vigc.processors import *
 from vigc.runners import *
 from vigc.tasks import *
+from vigc.reward_functions import *
 
 
 def parse_args():
