@@ -1,0 +1,5 @@
+datasets:
+  gsm8k_chinese_train:
+    data_type: text
+    data_root: Null
+    split: train

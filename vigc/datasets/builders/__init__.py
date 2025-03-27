@@ -97,6 +97,8 @@ from vigc.datasets.builders.image_regression import ImageCTRTrainBuilder, ImageC
 from vigc.datasets.builders.img2markdown import Im2MkdownTrainBuilder, Im2MkdownEvalBuilder
 from vigc.datasets.builders.img2markdown import QwenIm2MkdownTrainBuilder, QwenIm2MkdownEvalBuilder
 
+from vigc.datasets.builders.grpo import Gsm8kChineseTrainBuilder, Gsm8kChineseEvalBuilder
+
 __all__ = [
     "HMSDoubleInputsTrainBuilder",
     "HMSDoubleInputsEvalBuilder",
@@ -164,6 +166,9 @@ __all__ = [
     "Im2MkdownEvalBuilder",
     "QwenIm2MkdownTrainBuilder",
     "QwenIm2MkdownEvalBuilder",
+
+    "Gsm8kChineseEvalBuilder",
+    "Gsm8kChineseTrainBuilder",
 ]
 
 

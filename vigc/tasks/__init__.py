@@ -41,6 +41,8 @@ from vigc.tasks.dimtda_task import ZhImg2MarkdownTask
 from vigc.tasks.ds_dimtda_task import DeepSpeedZhImg2MarkdownTask
 from vigc.tasks.qwen_translation_task import QwenTranslationTask
 
+from vigc.tasks.grpo_ds_task import GRPODsTask
+
 
 def setup_task(cfg):
     assert "task" in cfg.run_cfg, "Task name must be provided."
