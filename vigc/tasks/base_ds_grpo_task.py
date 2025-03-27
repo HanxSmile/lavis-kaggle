@@ -74,16 +74,16 @@ class DeepSpeedGRPOBaseTask(BaseTask):
             if i >= iters_per_epoch:
                 break
 
-            samples = next(data_loader)
-
-            samples = prepare_sample(samples)
-            samples.update(
-                {
-                    "epoch": inner_epoch,
-                    "num_iters_per_epoch": iters_per_epoch,
-                    "iters": i,
-                }
-            )
+            if grpo_inputs is None:
+                samples = next(data_loader)
+                samples = prepare_sample(samples)
+                samples.update(
+                    {
+                        "epoch": inner_epoch,
+                        "num_iters_per_epoch": iters_per_epoch,
+                        "iters": i,
+                    }
+                )
 
             lr_scheduler.step(cur_epoch=inner_epoch, cur_step=i)
             model_dtype = next(model.parameters()).dtype
