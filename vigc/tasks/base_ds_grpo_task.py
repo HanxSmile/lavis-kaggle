@@ -94,9 +94,11 @@ class DeepSpeedGRPOBaseTask(BaseTask):
                 if grpo_inputs is None:
                     # TODO: consider ZERO-3
                     if hasattr(model, "module"):
-                        this_grpo_inputs = model.module(samples=samples, prepare_inputs_flag=True)
+                        this_grpo_inputs = model.module(samples=samples, prepare_inputs_flag=True,
+                                                        reward_funcs=self.reward_funcs)
                     else:
-                        this_grpo_inputs = model(samples=samples, prepare_inputs_flag=True)
+                        this_grpo_inputs = model(samples=samples, prepare_inputs_flag=True,
+                                                 reward_funcs=self.reward_funcs)
                     grpo_inputs = {}
                     num_generations = len(this_grpo_inputs["llm_inputs"])
                     group_index = list(range(num_generations))

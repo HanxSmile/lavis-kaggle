@@ -155,7 +155,7 @@ class Qwen2GRPO(Blip2Base):
                 ).logits / self.generate_cfg.temperature
 
             logits = logits[:, :-1, :]
-            sft_targets = sft_targets[:, 1:, :]
+            sft_targets = sft_targets[:, 1:]
             labels = sft_targets.clone()
             labels[labels == -100] = 0  # dummy token
             per_token_logps = torch.gather(logits.log_softmax(-1), dim=2, index=labels.unsqueeze(2)).squeeze(2)
@@ -223,9 +223,8 @@ class Qwen2GRPO(Blip2Base):
 
     def compute_advantages(self, samples, responses, reward_funcs):
         all_rewards = list()
-        for sample, response_lst in zip(samples, responses):
-            model_input = sample["text_input"]
-            model_gt = sample["text_output"]
+        text_inputs, text_outputs = samples["text_input"], samples["text_output"]
+        for model_input, model_gt, response_lst in zip(text_inputs, text_outputs, responses):
             this_reward_lst = [0 for _ in response_lst]
             for reward_func in reward_funcs:
                 reward_lst = [reward_func(model_input, model_gt, _) for _ in response_lst]

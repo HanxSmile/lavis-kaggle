@@ -21,7 +21,7 @@ class Gsm8kChineseDataset(torch_Dataset):
 
     def __getitem__(self, index):
         item = self.inner_dataset[index]
-        text_input, text_output = item["question_zh-cn"].strip(), item["answer_only"].strip()
+        text_input, text_output = item["question_zh-cn"].strip(), str(item["answer_only"]).strip()
         sample = {
             "system_input": self.system_prompt,
             "text_input": text_input,
