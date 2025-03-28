@@ -16,6 +16,7 @@ class Registry:
         "model_name_mapping": {},
         "lr_scheduler_name_mapping": {},
         "runner_name_mapping": {},
+        "constant_mapping": {},
         "state": {},
         "paths": {},
     }
@@ -230,6 +231,12 @@ class Registry:
         cls.mapping["paths"][name] = path
 
     @classmethod
+    def register_constant(cls, name, value):
+        if name in cls.mapping["constant_mapping"]:
+            logging.warning("Name '{}' already registered.".format(name))
+        cls.mapping["constant_mapping"][name] = value
+
+    @classmethod
     def register(cls, name, obj):
         r"""Register an item to registry with key 'name'
 
@@ -267,6 +274,10 @@ class Registry:
     @classmethod
     def get_reward_function(cls, name):
         return cls.mapping["reward_function_name_mapping"].get(name, None)
+
+    @classmethod
+    def get_constant(cls, name):
+        return cls.mapping["constant_mapping"].get(name, None)
 
     @classmethod
     def get_task_class(cls, name):

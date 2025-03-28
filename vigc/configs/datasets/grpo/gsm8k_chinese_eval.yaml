@@ -2,4 +2,5 @@ datasets:
   gsm8k_chinese_eval:
     data_type: text
     data_root: Null
+    system_prompt: Null
     split: train

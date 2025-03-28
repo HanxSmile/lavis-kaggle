@@ -2,14 +2,6 @@ import re
 from vigc.common.registry import registry
 
 
-@registry.register_reward_func("think_format")
-def reward_format(model_input, model_output, response):
-    pattern = r"^<think>.*?</think>[\n ]*<answer>.*?</answer>$"
-    think_count = response.count("<think>") + response.count("</think>")
-    answer_count = response.count("<answer>") + response.count("</answer>")
-    return 1 if re.match(pattern, response, re.DOTALL | re.VERBOSE) and think_count == 2 and answer_count == 2 else -1
-
-
 def extract_answer(text):
     answer = text.split("<answer>")[-1]
     answer = answer.split("</answer>")[0]
@@ -18,16 +10,16 @@ def extract_answer(text):
 
 def mark_num(text):
     reward = 0
-    if text.count("<think>\n") == 1:
+    if text.count("<think>") == 1:
         reward += 0.125
 
-    if text.count("</think>\n") == 1:
+    if text.count("</think>") == 1:
         reward += 0.125
 
-    if text.count("<answer>\n") == 1:
+    if text.count("<answer>") == 1:
         reward += 0.125
 
-    if text.count("</answer>\n") == 1:
+    if text.count("</answer>") == 1:
         reward += 0.125
     return reward
 
@@ -36,7 +28,7 @@ def mark_num(text):
 def correctness_reward(model_input, model_output, response, **kwargs):
     response = extract_answer(response)
     reward = 0.0
-    if str(model_output) == response:
+    if str(model_output).strip() == response.strip():
         reward = 2.0
     return reward
 
@@ -54,7 +46,7 @@ def digit_reward(model_input, model_output, response, **kwargs):
 # 格式奖励
 @registry.register_reward_func("hard_format_reward")
 def hard_format_reward(model_input, model_output, response, **kwargs):
-    pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
+    pattern = r"^<think>.*?</think>\s*<answer>.*?</answer>$"
     reward = 0.0
     if re.match(pattern, response):
         reward = 0.5

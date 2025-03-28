@@ -32,10 +32,12 @@ datasets:
 
   gsm8k_chinese_train:
     data_root: /mnt/data/wangyesong01/data/gsm8k_chinese
+    system_prompt: deepseek_r1_system_prompt
     split: train
 
   gsm8k_chinese_eval:
     data_root: /mnt/data/wangyesong01/data/gsm8k_chinese
+    system_prompt: deepseek_r1_system_prompt
     split: test
 
 run:

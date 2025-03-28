@@ -3,7 +3,6 @@ from vigc.common.registry import registry
 from vigc.datasets.builders.base_dataset_builder import BaseDatasetBuilder
 from vigc.datasets.datasets.grpo import Gsm8kChineseDataset
 
-SYSTEM_PROMPT = "You are a helpful AI Assistant that provides well-reasoned and detailed responses. You first think about the reasoning process as an internal monologue and then provide the user with the answer. Respond in the following format: <think>\n...\n</think>\n<answer>\n...\n</answer>"
 
 @registry.register_builder("gsm8k_chinese_train")
 class Gsm8kChineseTrainBuilder(BaseDatasetBuilder):
@@ -17,12 +16,17 @@ class Gsm8kChineseTrainBuilder(BaseDatasetBuilder):
         datasets = dict()
 
         cfg = self.config
+        system_prompt = None
+        system_prompt_name = cfg.get("system_prompt", None)
+        if system_prompt_name is not None:
+            system_prompt = registry.get_constant(system_prompt_name)
         datasets["train"] = self.train_dataset_cls(
             data_root=cfg.get("data_root"),
             split=cfg.get("split", "train"),
-            system_prompt=SYSTEM_PROMPT
+            system_prompt=system_prompt
         )
         _ = datasets["train"][0]
+        logging.info(f"You are using system prompt: '{system_prompt}'")
         return datasets
 
 
@@ -38,10 +42,15 @@ class Gsm8kChineseEvalBuilder(BaseDatasetBuilder):
         datasets = dict()
 
         cfg = self.config
+        system_prompt = None
+        system_prompt_name = cfg.get("system_prompt", None)
+        if system_prompt_name is not None:
+            system_prompt = registry.get_constant(system_prompt_name)
         datasets["eval"] = self.eval_dataset_cls(
             data_root=cfg.get("data_root"),
             split=cfg.get("split", "test"),
-            system_prompt=SYSTEM_PROMPT
+            system_prompt=system_prompt
         )
+        logging.info(f"You are using system prompt: '{system_prompt}'")
         _ = datasets["eval"][0]
         return datasets
