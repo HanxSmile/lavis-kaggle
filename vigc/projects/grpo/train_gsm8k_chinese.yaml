@@ -15,7 +15,7 @@ model:
   max_output_txt_len: 512
 
   epsilon: 0.2
-  beta: 0.02
+  beta: 0.001
   num_generations: 16
 
   generate_cfg:
@@ -45,8 +45,8 @@ run:
   task: grpo_ds_train
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 2e-5
-  min_lr: 1e-5
+  init_lr: 5e-6
+  min_lr: 1e-6
   warmup_lr: 1e-6
 
   weight_decay: 0.05
@@ -80,7 +80,7 @@ run:
 
   # grpo
   num_iterations: 2
-  reward_funcs: [ "correctness_reward", "digit_reward", "hard_format_reward", "soft_format_reward", "mark_reward" ]
+  reward_funcs: [ "correctness_reward", "digit_reward", "soft_format_reward" ]
   agg_metric: correctness_reward
 
   generate_cfg:

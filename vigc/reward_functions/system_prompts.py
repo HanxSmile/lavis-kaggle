@@ -6,7 +6,8 @@ deepseek_r1_system_prompt = (
     "The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, "
     "i.e. <think> reasoning process here </think><answer> answer here </answer>. "
     "If the user's question is math related, "
-    "please directly put your final answer which is a number within <answer> </answer> tags without other words."
+    "please put your final answer which is a number within <answer> </answer> tags, "
+    "i.e. <think> reasoning process here </think><answer> number </answer>."
 )
 
 registry.register_constant("deepseek_r1_system_prompt", deepseek_r1_system_prompt)
