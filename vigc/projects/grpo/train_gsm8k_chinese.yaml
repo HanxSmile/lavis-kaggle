@@ -4,15 +4,15 @@
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 
 model:
-  model_name: Qwen/Qwen2.5-3B-Instruct
+  model_name: /mnt/data/wangyesong01/models/Qwen2.5-3B-Instruct
   arch: qwen2_grpo
 
   model_type: default
 
   use_grad_checkpoint: False
   compute_type: bf16
-  max_txt_len: 128
-  max_output_txt_len: 256
+  max_txt_len: 512
+  max_output_txt_len: 512
 
   epsilon: 0.2
   beta: 0.02
@@ -25,7 +25,7 @@ model:
     top_k: Null
     top_p: Null
     repetition_penalty: 1.05
-    temperature: 1.0
+    temperature: 0.6
 
 
 datasets:
@@ -49,14 +49,14 @@ run:
 
   weight_decay: 0.05
 
-  batch_size_train: 8
-  batch_size_eval: 16
+  batch_size_train: 4
+  batch_size_eval: 8
 
   num_workers: 4
-  warmup_steps: 2000
+  warmup_steps: 128
 
-  iters_per_inner_epoch: 1000
-  max_iters: 60000
+  iters_per_inner_epoch: 256
+  max_iters: 25600
 
   seed: 42
   output_dir: "/mnt/data/wangyesong/output/grpo"
@@ -123,6 +123,6 @@ run:
       offload_optimizer:
         device: "cpu"
         pin_memory: True
-      overlap_comm: True
+      overlap_comm: False
       contiguous_gradients: True
       sub_group_size: 1e9
