@@ -22,6 +22,7 @@ class DeepSpeedGRPOBaseTask(BaseTask):
             reward_funcs = [reward_funcs]
         self.num_iterations = num_iterations
         self.reward_funcs = {k: registry.get_reward_function(k) for k in reward_funcs}
+        self.reward_func_keys = sorted(self.reward_funcs.keys())
 
     def _train_inner_loop(
             self,
@@ -117,6 +118,10 @@ class DeepSpeedGRPOBaseTask(BaseTask):
                 if len(grpo_inputs["llm_inputs"]) == 0:
                     grpo_inputs = None
                 output = model(**model_input, prepare_inputs_flag=False)
+                rewards_info = output.pop("rewards_info")
+                rewards_info = {k: rewards_info[i] for i, k in enumerate(self.reward_func_keys)}
+                output.update(rewards_info)
+
                 loss_dict = {}
                 for k, v in output.items():
                     if "loss" in k or "reward" in k:
