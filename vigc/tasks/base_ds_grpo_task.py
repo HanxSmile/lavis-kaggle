@@ -21,7 +21,7 @@ class DeepSpeedGRPOBaseTask(BaseTask):
         if isinstance(reward_funcs, str):
             reward_funcs = [reward_funcs]
         self.num_iterations = num_iterations
-        self.reward_funcs = [registry.get_reward_function(_) for _ in reward_funcs]
+        self.reward_funcs = {k: registry.get_reward_function(k) for k in reward_funcs}
 
     def _train_inner_loop(
             self,

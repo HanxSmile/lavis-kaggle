@@ -22,8 +22,7 @@ class GRPODsTask(DeepSpeedGRPOBaseTask):
         self.num_beams = num_beams
         self.evaluate = evaluate
         self.agg_metric = agg_metric
-        self.reward_func_dic = {k: registry.get_reward_function(k) for k in reward_funcs}
-        assert agg_metric in self.reward_func_dic
+        assert agg_metric in self.reward_funcs
         self.report_metric = report_metric
 
     @classmethod
@@ -76,7 +75,7 @@ class GRPODsTask(DeepSpeedGRPOBaseTask):
         )
 
         for text_input, text_output, pred, id_ in zip(text_inputs, text_outputs, preds, ids):
-            rewards = {k: v(text_input, text_output, pred) for k, v in self.reward_func_dic.items()}
+            rewards = {k: v(text_input, text_output, pred) for k, v in self.reward_funcs.items()}
 
             this_item = {
                 "input_text": text_input,

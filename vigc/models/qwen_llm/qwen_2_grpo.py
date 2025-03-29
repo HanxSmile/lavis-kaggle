@@ -92,11 +92,14 @@ class Qwen2GRPO(Blip2Base):
         return llm_tokens, input_part_targets_len
 
     def forward(self, *, prepare_inputs_flag=False, samples=None, reward_funcs=None, llm_inputs=None, advantages=None,
-                rewards=None, old_per_token_logps=None, ref_per_token_logps=None):
+                rewards=None, old_per_token_logps=None, ref_per_token_logps=None, rewards_info=None):
         if not prepare_inputs_flag:
             loss, per_token_loss, per_token_kl = self.compute_loss(
                 llm_inputs, advantages, old_per_token_logps, ref_per_token_logps)
-            return {"loss": loss, "rewards": rewards.mean(), "loss_logit": per_token_loss, "loss_kl": per_token_kl}
+            result = {"loss": loss, "rewards": rewards.mean(), "loss_logit": per_token_loss, "loss_kl": per_token_kl}
+            if rewards_info is not None:
+                result.update(rewards_info)
+            return result
         else:
             return self.prepare_grpo_inputs(samples, reward_funcs)
 
@@ -185,7 +188,7 @@ class Qwen2GRPO(Blip2Base):
             samples, self.num_generations, self.generate_cfg.max_new_tokens, self.generate_cfg.top_k,
             self.generate_cfg.top_p, self.generate_cfg.repetition_penalty, self.generate_cfg.temperature
         )  # [B, G]
-        advantages, rewards = self.compute_advantages(samples, responses, reward_funcs)
+        advantages, rewards, rewards_info = self.compute_advantages(samples, responses, reward_funcs)
         advantages = list(advantages.permute(1, 0))  # [G, B]
         rewards = list(rewards.permute(1, 0))
         llm_inputs = self._prepare_llm_inputs(samples, responses)  # [G, B]
@@ -197,6 +200,7 @@ class Qwen2GRPO(Blip2Base):
             "llm_inputs": llm_inputs,
             "advantages": advantages,
             "rewards": rewards,
+            "rewards_info": rewards_info,
             "old_per_token_logps": old_per_token_logps,
             "ref_per_token_logps": ref_per_token_logps,
         }
@@ -237,15 +241,19 @@ class Qwen2GRPO(Blip2Base):
         return loss, per_token_loss, per_token_kl
 
     def compute_advantages(self, samples, responses, reward_funcs):
-        all_rewards = list()
+
         text_inputs, text_outputs = samples["text_input"], samples["text_output"]
-        for model_input, model_gt, response_lst in zip(text_inputs, text_outputs, responses):
-            this_reward_lst = [0 for _ in response_lst]
-            for reward_func in reward_funcs:
-                reward_lst = [reward_func(model_input, model_gt, _) for _ in response_lst]
-                this_reward_lst = [a + b for a, b in zip(this_reward_lst, reward_lst)]
-            all_rewards.append(this_reward_lst)
-        all_rewards = torch.FloatTensor(all_rewards).to(self.device)  # [B, G]
+        all_reward_keys = list(reward_funcs)
+        all_rewards_info = torch.zeros(len(responses), len(responses[0]), len(all_reward_keys)).float().to(
+            self.device)  # [B, G, R]
+        for b, (model_input, model_gt, response_lst) in enumerate(zip(text_inputs, text_outputs, responses)):
+            for g, response in enumerate(response_lst):
+                for r, reward_func_name in enumerate(all_reward_keys):
+                    reward_func = reward_funcs[reward_func_name]
+                    this_reward = reward_func(model_input, model_gt, response)
+                    all_rewards_info[b, g, r] = this_reward
+
+        all_rewards = all_rewards_info.sum(dim=-1)  # [B, G]
         if not self.use_batch_advantages:
             mean_grouped_rewards = all_rewards.mean(dim=1, keepdim=True)
             std_grouped_rewards = all_rewards.std(dim=1, keepdim=True)
@@ -259,7 +267,9 @@ class Qwen2GRPO(Blip2Base):
                 std_grouped_rewards = all_rewards.std()
 
         advantages = (all_rewards - mean_grouped_rewards) / (std_grouped_rewards + 1e-4)
-        return advantages, all_rewards  # [B, G]
+        all_rewards_info = all_rewards_info.permute(2, 0, 1).mean(dim=[1, 2]).cpu()  # [R]
+        all_rewards_info = {k: float(v) for k, v in zip(all_reward_keys, all_rewards_info)}
+        return advantages, all_rewards, all_rewards_info
 
     def _dist_gather_tensor(self, t: torch.Tensor):
         t = t.contiguous()
