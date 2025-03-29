@@ -18,6 +18,9 @@ model:
   beta: 0.001
   num_generations: 16
 
+  use_inbatch_advantages: False
+  batch_advantages_cross_device: False
+
   generate_cfg:
     max_new_tokens: 512
 #    top_k: 20
@@ -96,7 +99,7 @@ run:
     gradient_accumulation_steps: 8
     train_micro_batch_size_per_gpu: 2
 
-    gradient_clipping: 1.
+    gradient_clipping: 0.1
     steps_per_print: 128
     wall_clock_breakdown: False
     dump_state: False

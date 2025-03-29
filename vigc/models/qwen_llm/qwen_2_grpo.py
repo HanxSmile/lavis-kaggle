@@ -3,7 +3,7 @@ Requires Transformer 4.28 and above, implementation may change according the Lla
 """
 import torch
 from transformers import Qwen2ForCausalLM, Qwen2Tokenizer
-
+import torch.distributed as dist
 from vigc.common.registry import registry
 from vigc.models.blip2_models.blip2 import Blip2Base, disabled_train
 
@@ -36,6 +36,10 @@ class Qwen2GRPO(Blip2Base):
             # generate cfg
             generate_cfg=None,
             num_generations=8,
+            # advantages
+            use_inbatch_advantages=False,
+            batch_advantages_cross_device=False
+
     ):
         super().__init__()
         assert compute_type in ["bf16", "f16"]
@@ -55,6 +59,13 @@ class Qwen2GRPO(Blip2Base):
         self.beta = beta
         self.generate_cfg = generate_cfg
         self.num_generations = num_generations
+        self.use_batch_advantages = use_inbatch_advantages
+        self.batch_advantages_cross_device = batch_advantages_cross_device
+        if self.batch_advantages_cross_device:
+            if not dist.is_initialized():
+                raise ValueError('Distributed training has not been initialized for representation all gather.')
+            self.process_rank = dist.get_rank()
+            self.world_size = dist.get_world_size()
 
     def concat_text_input_output(self, input_ids, input_atts, output_ids, output_atts):
         input_part_targets_len = []
@@ -83,8 +94,9 @@ class Qwen2GRPO(Blip2Base):
     def forward(self, *, prepare_inputs_flag=False, samples=None, reward_funcs=None, llm_inputs=None, advantages=None,
                 rewards=None, old_per_token_logps=None, ref_per_token_logps=None):
         if not prepare_inputs_flag:
-            loss = self.compute_loss(llm_inputs, advantages, old_per_token_logps, ref_per_token_logps)
-            return {"loss": loss, "rewards": rewards.mean()}
+            loss, per_token_loss, per_token_kl = self.compute_loss(
+                llm_inputs, advantages, old_per_token_logps, ref_per_token_logps)
+            return {"loss": loss, "rewards": rewards.mean(), "loss_logit": per_token_loss, "loss_kl": per_token_kl}
         else:
             return self.prepare_grpo_inputs(samples, reward_funcs)
 
@@ -214,12 +226,15 @@ class Qwen2GRPO(Blip2Base):
         per_token_loss1 = coef_1 * advantages.unsqueeze(1)
         per_token_loss2 = coef_2 * advantages.unsqueeze(1)
         per_token_loss = -torch.min(per_token_loss1, per_token_loss2)
-        if self.beta != 0.0:
-            per_token_loss = per_token_loss + self.beta * per_token_kl
         completion_mask = torch.ones_like(labels)
         completion_mask[labels == -100] = 0
-        loss = (per_token_loss * completion_mask).sum() / completion_mask.sum()
-        return loss
+
+        per_token_kl = (per_token_kl * completion_mask).sum() / completion_mask.sum()
+        per_token_loss = (per_token_loss * completion_mask).sum() / completion_mask.sum()
+
+        loss = per_token_loss + self.beta * per_token_kl
+
+        return loss, per_token_loss, per_token_kl
 
     def compute_advantages(self, samples, responses, reward_funcs):
         all_rewards = list()
@@ -231,10 +246,31 @@ class Qwen2GRPO(Blip2Base):
                 this_reward_lst = [a + b for a, b in zip(this_reward_lst, reward_lst)]
             all_rewards.append(this_reward_lst)
         all_rewards = torch.FloatTensor(all_rewards).to(self.device)  # [B, G]
-        mean_grouped_rewards = all_rewards.mean(dim=1, keepdim=True)
-        std_grouped_rewards = all_rewards.std(dim=1, keepdim=True)
+        if not self.use_batch_advantages:
+            mean_grouped_rewards = all_rewards.mean(dim=1, keepdim=True)
+            std_grouped_rewards = all_rewards.std(dim=1, keepdim=True)
+        else:
+            if self.batch_advantages_cross_device:
+                all_rewards_cross_device = self._dist_gather_tensor(all_rewards)
+                mean_grouped_rewards = all_rewards_cross_device.mean()
+                std_grouped_rewards = all_rewards_cross_device.std()
+            else:
+                mean_grouped_rewards = all_rewards.mean()
+                std_grouped_rewards = all_rewards.std()
+
         advantages = (all_rewards - mean_grouped_rewards) / (std_grouped_rewards + 1e-4)
         return advantages, all_rewards  # [B, G]
+
+    def _dist_gather_tensor(self, t: torch.Tensor):
+        t = t.contiguous()
+
+        all_tensors = [torch.empty_like(t) for _ in range(self.world_size)]
+        dist.all_gather(all_tensors, t)
+
+        all_tensors[self.process_rank] = t
+        all_tensors = torch.cat(all_tensors, dim=0)  # [W * B, D]
+
+        return all_tensors
 
     @torch.no_grad()
     def generate_group_responses(
@@ -359,6 +395,9 @@ class Qwen2GRPO(Blip2Base):
         # generate cfg
         generate_cfg = cfg.generate_cfg
         num_generations = cfg.get("num_generations", 8)
+        # advantage
+        use_inbatch_advantages = cfg.get("use_inbatch_advantages", False)
+        batch_advantages_cross_device = cfg.get("batch_advantages_cross_device", False)
 
         model = cls(
             model_name=model_name,
@@ -370,6 +409,8 @@ class Qwen2GRPO(Blip2Base):
             beta=beta,
             generate_cfg=generate_cfg,
             num_generations=num_generations,
+            use_inbatch_advantages=use_inbatch_advantages,
+            batch_advantages_cross_device=batch_advantages_cross_device,
         )
 
         model.load_checkpoint_from_config(cfg)
