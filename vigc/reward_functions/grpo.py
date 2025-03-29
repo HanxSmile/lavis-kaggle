@@ -36,7 +36,7 @@ def correctness_reward(model_input, model_output, response, **kwargs):
 # 生成答案是否是数字的奖励（单纯依赖结果是否正确进行奖励，条件很苛刻，会导致奖励比较稀疏，模型难以收敛，所以加上答案是否是数字的奖励，虽然答案错误，但是至少生成的是数字（对于数学问题），也要给予适当奖励）
 @registry.register_reward_func("digit_reward")
 def digit_reward(model_input, model_output, response, **kwargs):
-    pattern = r"<think>(.|\s)*?</think>\s*<answer>(.|\s)*?</answer>"
+    pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
     if not re.match(pattern, response.strip()):
         return 0.0
     response = extract_answer(response)
@@ -60,7 +60,7 @@ def hard_format_reward(model_input, model_output, response, **kwargs):
 # 格式奖励
 @registry.register_reward_func("soft_format_reward")
 def soft_format_reward(model_input, model_output, response, **kwargs):
-    pattern = r"<think>(.|\s)*?</think>\s*<answer>(.|\s)*?</answer>"
+    pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
     reward = 0.0
     if re.match(pattern, response):
         reward = 0.5

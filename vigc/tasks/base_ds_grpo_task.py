@@ -12,6 +12,7 @@ from vigc.common.registry import registry
 from vigc.common.logger import MetricLogger, SmoothedValue
 from vigc.datasets.data_utils import prepare_sample
 from vigc.tasks.base_task import BaseTask
+import torch.distributed as dist
 
 
 class DeepSpeedGRPOBaseTask(BaseTask):
@@ -107,6 +108,7 @@ class DeepSpeedGRPOBaseTask(BaseTask):
                         for k, v in this_grpo_inputs.items():
                             v = [v[_] for _ in group_index]
                             grpo_inputs[k] = grpo_inputs.get(k, []) + v
+                    dist.barrier()
 
                 input_idx = 0
                 model_input = {k: v[input_idx] for k, v in grpo_inputs.items()}
