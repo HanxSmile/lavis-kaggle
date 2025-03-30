@@ -48,9 +48,9 @@ run:
   task: grpo_ds_train
   # optimizer
   lr_sched: "linear_warmup_cosine_lr"
-  init_lr: 5e-6
-  min_lr: 1e-6
-  warmup_lr: 1e-6
+  init_lr: 1e-6
+  min_lr: 5e-7
+  warmup_lr: 5e-7
 
   weight_decay: 0.05
 
@@ -96,7 +96,7 @@ run:
     temperature: 0.7
 
   deepspeed_config:
-    gradient_accumulation_steps: 8
+    gradient_accumulation_steps: 16
     train_micro_batch_size_per_gpu: 2
 
     gradient_clipping: 0.1
