@@ -11,18 +11,20 @@ import torch
 from vigc.common.registry import registry
 from vigc.common.logger import MetricLogger, SmoothedValue
 from vigc.datasets.data_utils import prepare_sample
+from vigc.tasks.utils.deepspeed_utils import unwrap_model_for_generation
 from vigc.tasks.base_task import BaseTask
 import torch.distributed as dist
 
 
 class DeepSpeedGRPOBaseTask(BaseTask):
-    def __init__(self, reward_funcs, num_iterations=1, **kwargs):
+    def __init__(self, reward_funcs, num_iterations=1, ds3_gather_for_generation=False, **kwargs):
         super().__init__(**kwargs)
         if isinstance(reward_funcs, str):
             reward_funcs = [reward_funcs]
         self.num_iterations = num_iterations
         self.reward_funcs = {k: registry.get_reward_function(k) for k in reward_funcs}
         self.reward_func_keys = sorted(self.reward_funcs.keys())
+        self.ds3_gather_for_generation = ds3_gather_for_generation or False
 
     def _train_inner_loop(
             self,
@@ -95,12 +97,9 @@ class DeepSpeedGRPOBaseTask(BaseTask):
                                           cache_enabled=False) if model_dtype != torch.float32 else contextlib.nullcontext()):
                 if grpo_inputs is None:
                     # TODO: consider ZERO-3
-                    if hasattr(model, "module"):
-                        this_grpo_inputs = model.module(samples=samples, prepare_inputs_flag=True,
-                                                        reward_funcs=self.reward_funcs)
-                    else:
-                        this_grpo_inputs = model(samples=samples, prepare_inputs_flag=True,
-                                                 reward_funcs=self.reward_funcs)
+                    with unwrap_model_for_generation(model, self.ds3_gather_for_generation) as unwrapped_model:
+                        this_grpo_inputs = unwrapped_model(samples=samples, prepare_inputs_flag=True,
+                                                           reward_funcs=self.reward_funcs)
                     grpo_inputs = {}
                     num_generations = len(this_grpo_inputs["llm_inputs"])
                     group_index = list(range(num_generations))

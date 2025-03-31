@@ -1,0 +1,144 @@
+# Copyright (c) 2022, salesforce.com, inc.
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+# For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+
+model:
+  model_name: /mnt/data/wangyesong01/models/Qwen2.5-3B-Instruct
+  arch: qwen2_grpo
+
+  model_type: default
+
+  use_grad_checkpoint: False
+  compute_type: bf16
+  max_txt_len: 512
+  max_output_txt_len: 512
+
+  epsilon: 0.2
+  beta: 0.001
+  num_generations: 16
+
+  use_inbatch_advantages: False
+  batch_advantages_cross_device: False
+
+  generate_cfg:
+    max_new_tokens: 512
+#    top_k: 20
+#    top_p: 0.8
+    top_k: Null
+    top_p: Null
+    repetition_penalty: 1.05
+    temperature: 0.6
+
+
+datasets:
+
+  gsm8k_chinese_train:
+    data_root: /mnt/data/wangyesong01/data/gsm8k_chinese
+    system_prompt: deepseek_r1_system_prompt
+    split: train
+
+  gsm8k_chinese_eval:
+    data_root: /mnt/data/wangyesong01/data/gsm8k_chinese
+    system_prompt: deepseek_r1_system_prompt
+    split: test
+
+run:
+  runner: runner_iter_ds
+  task: grpo_ds_train
+  # optimizer
+  lr_sched: "linear_warmup_cosine_lr"
+  init_lr: 1e-6
+  min_lr: 5e-7
+  warmup_lr: 5e-7
+
+  weight_decay: 0.05
+
+  batch_size_train: 4
+  batch_size_eval: 8
+
+  num_workers: 4
+  warmup_steps: 128
+
+  iters_per_inner_epoch: 256
+  max_iters: 25600
+
+  seed: 42
+  output_dir: "/mnt/data/wangyesong/output/grpo"
+  save_opt_ckpt: False
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: False
+  train_splits: [ "train" ]
+  valid_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+
+  only_save_best: True
+
+  # grpo
+  num_iterations: 2
+  reward_funcs: [ "correctness_reward", "digit_reward", "soft_format_reward" ]
+  agg_metric: correctness_reward
+  ds3_gather_for_generation: True
+
+  generate_cfg:
+    do_sample: True
+    num_beams: 5
+    max_new_tokens: 512
+    top_k: 20
+    top_p: 0.8
+    repetition_penalty: 1.05
+    temperature: 0.7
+
+  deepspeed_config:
+    gradient_accumulation_steps: 8
+    train_micro_batch_size_per_gpu: 2
+
+    gradient_clipping: 0.1
+    steps_per_print: 128
+    wall_clock_breakdown: False
+    dump_state: False
+
+    fp16:
+      enabled: False
+      loss_scale: 0
+      loss_scale_window: 1000
+      initial_scale_power: 16
+      hysteresis: 2
+      min_loss_scale: 1
+
+    bf16:
+      enabled: True
+
+    optimizer:
+      type: "AdamW"
+      params:
+        lr: 1e-4
+        betas: [ 0.9,0.99 ]
+        eps: 1e-7
+        weight_decay: 0.05
+
+    zero_optimization:
+      stage: 3
+      offload_optimizer:
+        device: "cpu"
+        pin_memory: True
+      offload_param:
+        device: "none"
+        pin_memory: True
+      allgather_partitions: True
+      allgather_bucket_size: 5e8
+      overlap_comm: False
+      reduce_scatter: True
+      reduce_bucket_size: 5e8
+      contiguous_gradients: True
+      stage3_max_live_parameters: 1e9
+      stage3_max_reuse_distance: 1e9
+      stage3_prefetch_bucket_size: 5e8
+      stage3_param_persistence_threshold: 1e5

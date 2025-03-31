@@ -10,9 +10,9 @@ import numpy as np
 class GRPODsTask(DeepSpeedGRPOBaseTask):
 
     def __init__(self, temperature, do_sample, top_p, top_k, repetition_penalty, max_new_tokens, num_beams,
-                 evaluate, reward_funcs, num_iterations=1, report_metric=True,
+                 evaluate, reward_funcs, num_iterations=1, ds3_gather_for_generation=False, report_metric=True,
                  agg_metric=""):
-        super(GRPODsTask, self).__init__(reward_funcs, num_iterations)
+        super(GRPODsTask, self).__init__(reward_funcs, num_iterations, ds3_gather_for_generation)
         self.temperature = temperature
         self.do_sample = do_sample
         self.top_p = top_p
@@ -42,6 +42,8 @@ class GRPODsTask(DeepSpeedGRPOBaseTask):
         report_metric = run_cfg.get("report_metric", True)
         agg_metric = run_cfg.get("agg_metric", "correctness_reward")
 
+        ds3_gather_for_generation = run_cfg.get("ds3_gather_for_generation", False)
+
         reward_funcs = run_cfg.reward_funcs
         num_iterations = run_cfg.get("num_iterations", 1)
 
@@ -58,6 +60,7 @@ class GRPODsTask(DeepSpeedGRPOBaseTask):
             agg_metric=agg_metric,
             reward_funcs=reward_funcs,
             num_iterations=num_iterations,
+            ds3_gather_for_generation=ds3_gather_for_generation,
         )
 
     def valid_step(self, model, samples):
