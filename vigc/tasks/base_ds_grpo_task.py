@@ -13,6 +13,7 @@ from vigc.common.logger import MetricLogger, SmoothedValue
 from vigc.datasets.data_utils import prepare_sample
 from vigc.tasks.utils.deepspeed_utils import unwrap_model_for_generation
 from vigc.tasks.base_task import BaseTask
+from vigc.common.dist_utils import is_dist_avail_and_initialized
 import torch.distributed as dist
 
 
@@ -25,6 +26,25 @@ class DeepSpeedGRPOBaseTask(BaseTask):
         self.reward_funcs = {k: registry.get_reward_function(k) for k in reward_funcs}
         self.reward_func_keys = sorted(self.reward_funcs.keys())
         self.ds3_gather_for_generation = ds3_gather_for_generation or False
+
+    def evaluation(self, model, data_loader, cuda_enabled=True):
+        metric_logger = MetricLogger(delimiter="  ")
+        header = "Evaluation"
+        # TODO make it configurable
+        print_freq = 10
+
+        results = []
+        with unwrap_model_for_generation(model, self.ds3_gather_for_generation) as unwrapped_model:
+
+            for samples in metric_logger.log_every(data_loader, print_freq, header):
+                samples = prepare_sample(samples, cuda_enabled=cuda_enabled)
+                eval_output = self.valid_step(model=unwrapped_model, samples=samples)
+                results.extend(eval_output)
+
+        if is_dist_avail_and_initialized():
+            dist.barrier()
+
+        return results
 
     def _train_inner_loop(
             self,
