@@ -70,6 +70,7 @@ from vigc.datasets.builders.sft import (
     TagengoGPT4TrainBuilder,
     TranslationJsonTrainBuilder,
     TranslationJsonEvalBuilder,
+    TranslationJsonTestBuilder,
 )
 
 from vigc.datasets.builders.semantic_segmentation import (
@@ -136,6 +137,7 @@ __all__ = [
     "TagengoGPT4TrainBuilder",
     "TranslationJsonTrainBuilder",
     "TranslationJsonEvalBuilder",
+    "TranslationJsonTestBuilder",
 
     "BDD100kTrainBuilder",
     "BDD100kEvalBuilder",

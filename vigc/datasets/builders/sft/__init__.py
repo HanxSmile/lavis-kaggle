@@ -1,6 +1,10 @@
 from .aya_builder import AyaSFTTrainBuilder, AyaSFTEvalBuilder
 from .tagengo_gpt4_builder import TagengoGPT4TrainBuilder
-from .translation_json_builder import TranslationJsonTrainBuilder, TranslationJsonEvalBuilder
+from .translation_json_builder import (
+    TranslationJsonTrainBuilder,
+    TranslationJsonEvalBuilder,
+    TranslationJsonTestBuilder
+)
 
 __all__ = [
     "AyaSFTTrainBuilder",
@@ -8,4 +12,5 @@ __all__ = [
     "TagengoGPT4TrainBuilder",
     "TranslationJsonTrainBuilder",
     "TranslationJsonEvalBuilder",
+    "TranslationJsonTestBuilder",
 ]
