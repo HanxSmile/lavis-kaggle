@@ -17,7 +17,13 @@ class TranslationJsonDataset(torch_Dataset):
         results = []
         with open(data_root, 'r') as f:
             data = json.load(f)
+        all_data = dict()
         for item in data:
+            all_data[item[self.source_lang]] = 0
+        for item in data:
+            all_data[item[self.source_lang]] += 1
+            if all_data[item[self.source_lang]] > 1:
+                continue
             this_item = {
                 "text_input": item[self.source_lang],
                 "text_output": item[self.target_lang],
