@@ -1,0 +1,6 @@
+datasets:
+  img2markdown_test:
+    data_type: images
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DIMT2025.ICDAR.Track_2/answer.json
+      media_dir: /mnt/data/xuyang/datasets/DIMT2025.ICDAR.Track_2/competition_testset_images

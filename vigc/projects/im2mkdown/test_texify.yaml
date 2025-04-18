@@ -1,0 +1,50 @@
+model:
+  model_name: /mnt/data/wangyesong01/models/texify
+  arch: donut_ocr
+  model_type: default
+  max_seq_len: 1500
+  load_finetuned: True
+  finetuned: "/mnt/data/wangyesong/output/img2markdown/20250319203/checkpoint_best.pth"
+
+datasets:
+
+  img2markdown_test:
+    build_info:
+      ann_path: /mnt/data/xuyang/datasets/DIMT2025.ICDAR.Track_2/answer.json
+      media_dir: /mnt/data/xuyang/datasets/DIMT2025.ICDAR.Track_2/competition_testset_images
+
+    vis_processor:
+      eval:
+        name: "nougat_image_eval"
+        image_size:
+          - 896
+          - 672
+
+run:
+  runner: runner_iter
+  task: img2mkdown_train
+
+  batch_size_train: 8
+  batch_size_eval: 16
+
+  num_workers: 4
+  seed: 42
+  output_dir: "/mnt/data/wangyesong/inference/img2markdown"
+
+  amp: True
+  resume_ckpt_path: null
+
+  evaluate: True
+  report_metric: False
+  test_splits: [ "eval" ]
+
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+  distributed_type: ddp
+
+  generate_cfg:
+    temperature: 0.0
+    do_sample: False
+    top_p: 0.95

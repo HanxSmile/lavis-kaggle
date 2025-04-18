@@ -94,7 +94,7 @@ from vigc.datasets.builders.viton import DressCodeTrainBuilder, DressCodeEvalBui
 
 from vigc.datasets.builders.image_regression import ImageCTRTrainBuilder, ImageCTREvalBuilder
 
-from vigc.datasets.builders.img2markdown import Im2MkdownTrainBuilder, Im2MkdownEvalBuilder
+from vigc.datasets.builders.img2markdown import Im2MkdownTrainBuilder, Im2MkdownEvalBuilder, Im2MkdownTestBuilder
 from vigc.datasets.builders.img2markdown import QwenIm2MkdownTrainBuilder, QwenIm2MkdownEvalBuilder
 
 from vigc.datasets.builders.grpo import Gsm8kChineseTrainBuilder, Gsm8kChineseEvalBuilder
@@ -164,6 +164,7 @@ __all__ = [
 
     "Im2MkdownTrainBuilder",
     "Im2MkdownEvalBuilder",
+    "Im2MkdownTestBuilder",
     "QwenIm2MkdownTrainBuilder",
     "QwenIm2MkdownEvalBuilder",
 
